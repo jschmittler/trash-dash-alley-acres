@@ -14,13 +14,14 @@ import {
   playGameMusic,
   setGameMusicMuted,
 } from "./music-controller.mjs";
+import { createEnemyPatrol } from "./enemy-surface.mjs";
 
 type Screen = "title" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
 type PlatformKind = "ground" | "branch" | "metal" | "box";
 type PickupKind = "trash" | "taco" | "cap";
 type EnemyKind =
-  | "pigeon" | "slime" | "beetle" | "possum" | "bottle" | "boss"
+  | "pigeon" | "slime" | "beetle" | "possum" | "boss"
   | "bat" | "wasp" | "mosquito" | "moth"
   | "snake" | "spider" | "rat" | "hedgehog"
   | "fox" | "crow" | "boar" | "frog";
@@ -51,6 +52,8 @@ interface Enemy extends Rect {
   hitCooldown: number;
   originX: number;
   surfaceY: number;
+  patrolMinX: number;
+  patrolMaxX: number;
 }
 
 interface Particle {
@@ -265,11 +268,6 @@ const sprites = {
     [103, 742, 91, 72],
     [199, 742, 91, 72],
   ] as Frame[],
-  bottle: [
-    [356, 742, 74, 72],
-    [433, 742, 74, 72],
-    [512, 742, 74, 72],
-  ] as Frame[],
   boss: [
     [1000, 650, 126, 158],
     [1124, 650, 124, 158],
@@ -332,7 +330,6 @@ const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y): Enemy => {
     slime: [46, 38],
     beetle: [50, 34],
     possum: [58, 38],
-    bottle: [48, 36],
     boss: [96, 96],
     bat: [50, 34],
     wasp: [48, 32],
@@ -348,19 +345,29 @@ const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y): Enemy => {
     frog: [48, 30],
   };
   const [w, h] = sizes[kind];
+  const patrolRadius = kind === "boss" ? 245 : kind === "slime" ? 85 : 105;
+  const patrol = createEnemyPatrol({
+    x,
+    width: w,
+    surfaceY: y,
+    patrolRadius,
+    grounded: !flyingEnemies.has(kind),
+  }, platforms);
   return {
     kind,
-    x,
-    y: y - h,
+    x: patrol.spawnX,
+    y: patrol.surfaceY - h,
     w,
     h,
-    vx: kind === "bottle" ? -105 : kind === "fox" || kind === "boar" ? -78 : flyingEnemies.has(kind) ? -64 : -42,
+    vx: kind === "fox" || kind === "boar" ? -78 : flyingEnemies.has(kind) ? -64 : -42,
     active: true,
     phase: x / 100,
     hp: kind === "boss" ? 3 : 1,
     hitCooldown: 0,
-    originX: x,
-    surfaceY: y,
+    originX: patrol.spawnX,
+    surfaceY: patrol.surfaceY,
+    patrolMinX: patrol.minX,
+    patrolMaxX: patrol.maxX,
   };
 };
 
@@ -393,12 +400,12 @@ const initialEnemies = () => [
   makeEnemy("rat", 3060),
   makeEnemy("pigeon", 3430, 372),
   makeEnemy("hedgehog", 3690),
-  makeEnemy("bottle", 4040),
+  makeEnemy("rat", 4040),
   makeEnemy("beetle", 4210, 350),
   makeEnemy("fox", 4320),
   makeEnemy("slime", 4510),
   makeEnemy("crow", 4810, 322),
-  makeEnemy("bottle", 5030),
+  makeEnemy("rat", 5030),
   makeEnemy("beetle", 5280, 330),
   makeEnemy("possum", 5400),
   makeEnemy("boar", 5570),
@@ -955,7 +962,6 @@ export function TrashDashGame() {
         enemy.phase += dt * Math.max(3.4, Math.abs(enemy.vx) / 26);
         enemy.hitCooldown = Math.max(0, enemy.hitCooldown - dt);
 
-        const patrolRadius = enemy.kind === "boss" ? 245 : enemy.kind === "slime" ? 85 : 105;
         if (enemy.kind === "slime") {
           enemy.x += enemy.vx * 0.35 * dt;
         } else if (enemy.kind === "possum") {
@@ -967,8 +973,8 @@ export function TrashDashGame() {
           enemy.x += enemy.vx * dt;
         }
 
-        const patrolMin = enemy.originX - patrolRadius;
-        const patrolMax = enemy.originX + patrolRadius;
+        const patrolMin = enemy.patrolMinX;
+        const patrolMax = enemy.patrolMaxX;
         if (enemy.x <= patrolMin) {
           enemy.x = patrolMin;
           enemy.vx = Math.abs(enemy.vx);
@@ -1323,7 +1329,6 @@ export function TrashDashGame() {
         if (enemy.kind === "slime") drawEnemy(enemyMotion.slime[frameIndex], 62, 62, 1, enemyMotionRef.current);
         if (enemy.kind === "beetle") drawEnemy(enemyMotion.beetle[frameIndex], 68, 68, 1, enemyMotionRef.current);
         if (enemy.kind === "possum") drawEnemy(enemyMotion.possum[frameIndex], 78, 78, 1, enemyMotionRef.current);
-        if (enemy.kind === "bottle") drawEnemy(hazardMotion.bottle[frameIndex], 68, 68, 1, hazardMotionRef.current);
         const varietyKind = enemy.kind as keyof typeof varietyEnemyMotion;
         const varietyFrames = varietyEnemyMotion[varietyKind];
         if (varietyFrames) {
