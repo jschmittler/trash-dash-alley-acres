@@ -12,7 +12,7 @@ Private, unintegrated prop exploration for the post-boss goal reveal. This works
 - Row 0 (frames 0–3): ambient idle loop — restrained lid creak, trash settling, and/or fly movement.
 - Row 1 (frames 4–7): stink loop — curling muted green-brown odor wisps that rise and change shape.
 
-Suggested playback is 140–180 ms per frame. Loop frames 0–3 and 4–7 independently; the stink loop may be enabled only while the goal is visible. Keep motion subtle enough for a stationary prop.
+Final frame indices are 0–3 for idle and 4–7 for stink. Suggested playback is 140–180 ms per frame. Loop frames 0–3 and 4–7 independently; the stink loop may be enabled only while the goal is visible. Keep motion subtle enough for a stationary prop.
 
 ## Visual target
 
