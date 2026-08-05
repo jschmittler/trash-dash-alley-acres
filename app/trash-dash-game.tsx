@@ -13,13 +13,12 @@ import {
   pauseGameMusic,
   playGameMusic,
   setGameMusicMuted,
+  switchGameMusic,
 } from "./music-controller.mjs";
 import { createEnemyPatrol } from "./enemy-surface.mjs";
 import {
   advanceHurtTimer,
   beginPlayerHurt,
-  bossAnimationState,
-  bossFrameIndex,
   nextEnemyIntent,
   resolvePitFall,
 } from "./gameplay-animation-state.mjs";
@@ -29,6 +28,20 @@ import {
   isTailSwipeActive,
   selectPlayerAnimation,
 } from "./player-animation.mjs";
+import {
+  BOSS_ANIMATIONS,
+  BOSS_SEQUENCE_DURATIONS,
+  bossAnimationFrame,
+  isBossChargeActive,
+  selectBossAnimation,
+} from "./boss-animation.mjs";
+import {
+  BOSS_ARENA_TRIGGER_X,
+  activateBossArena,
+  bossArenaCameraX,
+  clampArenaBossX,
+  clampArenaPlayerX,
+} from "./boss-arena.mjs";
 
 type Screen = "title" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
@@ -61,7 +74,7 @@ interface Enemy extends Rect {
   kind: EnemyKind;
   vx: number;
   facing: 1 | -1;
-  animationState: "walking" | "hit";
+  animationState: keyof typeof BOSS_ANIMATIONS | "walking" | "hit";
   active: boolean;
   phase: number;
   hp: number;
@@ -70,6 +83,10 @@ interface Enemy extends Rect {
   surfaceY: number;
   patrolMinX: number;
   patrolMaxX: number;
+  actionTimer: number;
+  attackCooldown: number;
+  ragePlayed: boolean;
+  rageQueued: boolean;
 }
 
 interface Particle {
@@ -117,6 +134,7 @@ interface World {
   checkpoint: number;
   checkpointReached: boolean;
   bossDefeated: boolean;
+  arenaActive: boolean;
   trash: number;
   score: number;
   lives: number;
@@ -198,11 +216,6 @@ const varietyEnemyDrawSizes: Record<keyof typeof varietyEnemyMotion, [number, nu
 const assetRow = (row: number, count: number): Frame[] =>
   Array.from({ length: count }, (_, index) => [index * ASSET_CELL, row * ASSET_CELL, ASSET_CELL, ASSET_CELL] as Frame);
 
-const hazardMotion = {
-  bottle: assetRow(0, 4),
-  boss: assetRow(1, 4),
-};
-
 const recycleCrates = assetRow(0, 2);
 
 const midgroundProps = {
@@ -282,13 +295,6 @@ const sprites = {
     [103, 742, 91, 72],
     [199, 742, 91, 72],
   ] as Frame[],
-  boss: [
-    [1000, 650, 126, 158],
-    [1124, 650, 124, 158],
-    [1245, 650, 127, 158],
-    [1352, 650, 94, 158],
-  ] as Frame[],
-  bossHit: [941, 646, 121, 132] as Frame,
   ground: [14, 812, 58, 65] as Frame,
   branch: [793, 888, 151, 49] as Frame,
   metal: [514, 882, 112, 59] as Frame,
@@ -322,7 +328,6 @@ const platforms: Platform[] = [
   { x: 4380, y: 402, w: 160, h: 22, kind: "metal" },
   { x: 4980, y: 382, w: 180, h: 22, kind: "metal" },
   { x: 5200, y: 330, w: 170, h: 22, kind: "metal" },
-  { x: 5500, y: 402, w: 150, h: 22, kind: "metal" },
 ];
 
 const scenery = [
@@ -360,7 +365,7 @@ const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y): Enemy => {
     frog: [48, 30],
   };
   const [w, h] = sizes[kind];
-  const patrolRadius = kind === "boss" ? 245 : kind === "slime" ? 85 : 105;
+  const patrolRadius = kind === "boss" ? 360 : kind === "slime" ? 85 : 105;
   const patrol = createEnemyPatrol({
     x,
     width: w,
@@ -368,7 +373,7 @@ const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y): Enemy => {
     patrolRadius,
     grounded: !flyingEnemies.has(kind),
   }, platforms);
-  const vx = kind === "fox" || kind === "boar" ? -78 : flyingEnemies.has(kind) ? -64 : -42;
+  const vx = kind === "boss" ? 0 : kind === "fox" || kind === "boar" ? -78 : flyingEnemies.has(kind) ? -64 : -42;
   return {
     kind,
     x: patrol.spawnX,
@@ -386,6 +391,10 @@ const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y): Enemy => {
     surfaceY: patrol.surfaceY,
     patrolMinX: patrol.minX,
     patrolMaxX: patrol.maxX,
+    actionTimer: 0,
+    attackCooldown: kind === "boss" ? 1.1 : 0,
+    ragePlayed: false,
+    rageQueued: false,
   };
 };
 
@@ -424,11 +433,9 @@ const initialEnemies = () => [
   makeEnemy("slime", 4510),
   makeEnemy("crow", 4810, 322),
   makeEnemy("rat", 5030),
-  makeEnemy("beetle", 5280, 330),
-  makeEnemy("possum", 5400),
-  makeEnemy("boar", 5570),
-  makeEnemy("boss", 5790),
-  makeEnemy("frog", 6150),
+  makeEnemy("beetle", 5100),
+  makeEnemy("boar", 5180),
+  makeEnemy("boss", 6120),
 ];
 
 const initialPickups = () => [
@@ -457,9 +464,9 @@ const initialPickups = () => [
   makePickup("taco", 4670, 410),
   makePickup("trash", 5025, 330, 1),
   makePickup("trash", 5260, 278, 2),
-  makePickup("trash", 5570, 352, 3),
-  makePickup("trash", 6100, 410),
-  makePickup("trash", 6200, 410, 2),
+  makePickup("trash", 5320, 410),
+  makePickup("trash", 5405, 410, 2),
+  makePickup("trash", 5460, 410, 3),
 ];
 
 const makeWorld = (): World => ({
@@ -499,6 +506,7 @@ const makeWorld = (): World => ({
   checkpoint: 125,
   checkpointReached: false,
   bossDefeated: false,
+  arenaActive: false,
   trash: 0,
   score: 0,
   lives: 3,
@@ -523,11 +531,11 @@ export function TrashDashGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const atlasRef = useRef<HTMLImageElement | null>(null);
   const playerHeroMotionRef = useRef<HTMLImageElement | null>(null);
+  const bossMotionRef = useRef<HTMLImageElement | null>(null);
   const enemyMotionRef = useRef<HTMLImageElement | null>(null);
   const varietyEnemyMotionRef = useRef<HTMLImageElement | null>(null);
   const trashPickupMotionRef = useRef<HTMLImageElement | null>(null);
   const tacoPowerMotionRef = useRef<HTMLImageElement | null>(null);
-  const hazardMotionRef = useRef<HTMLImageElement | null>(null);
   const midgroundPropsRef = useRef<HTMLImageElement | null>(null);
   const recycleCratesRef = useRef<HTMLImageElement | null>(null);
   const groundTileRef = useRef<HTMLImageElement | null>(null);
@@ -541,6 +549,7 @@ export function TrashDashGame() {
   const screenRef = useRef<Screen>("title");
   const audioRef = useRef<AudioContext | null>(null);
   const musicRef = useRef<HTMLAudioElement | null>(null);
+  const musicSwitchIdRef = useRef(0);
   const mutedRef = useRef(false);
   const lastFrameRef = useRef(0);
   const hudTickRef = useRef(0);
@@ -610,11 +619,25 @@ export function TrashDashGame() {
       audioRef.current = new AudioContext();
     }
     void audioRef.current.resume();
-    if (!musicRef.current) {
-      musicRef.current = createGameMusic(assetUrl("assets/audio/raccoon-rush-loop.m4a"));
-    }
+    musicSwitchIdRef.current += 1;
+    disposeGameMusic(musicRef.current);
+    musicRef.current = createGameMusic(assetUrl("assets/audio/raccoon-rush-loop.m4a"));
     void playGameMusic(musicRef.current, { muted: mutedRef.current, restart: true });
-    worldRef.current = makeWorld();
+    const nextWorld = makeWorld();
+    const bossTest = import.meta.env.DEV ? new URLSearchParams(window.location.search).get("bossTest") : null;
+    if (bossTest) {
+      nextWorld.player.x = bossTest === "arena" ? 5690 : 5590;
+      nextWorld.player.y = GROUND_Y - 58;
+      nextWorld.player.w = 38;
+      nextWorld.player.h = 58;
+      nextWorld.player.large = true;
+      nextWorld.player.animationName = "large_idle";
+      nextWorld.trash = 5;
+      nextWorld.checkpoint = 5590;
+      nextWorld.checkpointReached = true;
+      nextWorld.cameraX = 5280;
+    }
+    worldRef.current = nextWorld;
     lastFrameRef.current = performance.now();
     changeScreen("playing");
     tone(520, 0.08);
@@ -676,11 +699,11 @@ export function TrashDashGame() {
     void Promise.all([
       loadImage(assetUrl("assets/raccoon-sprites.png")),
       loadImage(assetUrl("assets/generated/player-hero-motion.png")),
+      loadImage(assetUrl("assets/generated/boss-motion.png")),
       loadImage(assetUrl("assets/enemy-motion.png")),
       loadImage(assetUrl("assets/generated/enemy-variety-motion.png")),
       loadImage(assetUrl("assets/generated/trash-pickups-motion.png")),
       loadImage(assetUrl("assets/generated/taco-power-motion.png")),
-      loadImage(assetUrl("assets/hazard-motion.png")),
       loadImage(assetUrl("assets/midground-props.png")),
       loadImage(assetUrl("assets/recycle-crates-v2.png")),
       loadImage(assetUrl("assets/ground-seamless.png")),
@@ -689,15 +712,15 @@ export function TrashDashGame() {
       loadImage(assetUrl("assets/backgrounds/city-far.png")),
       loadImage(assetUrl("assets/backgrounds/city-near.png")),
     ])
-      .then(([atlas, playerHeroAtlas, enemyAtlas, varietyEnemyAtlas, trashPickupAtlas, tacoPowerAtlas, hazardAtlas, propAtlas, crateAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
+      .then(([atlas, playerHeroAtlas, bossAtlas, enemyAtlas, varietyEnemyAtlas, trashPickupAtlas, tacoPowerAtlas, propAtlas, crateAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
         if (cancelled) return;
         atlasRef.current = atlas;
         playerHeroMotionRef.current = playerHeroAtlas;
+        bossMotionRef.current = bossAtlas;
         enemyMotionRef.current = enemyAtlas;
         varietyEnemyMotionRef.current = varietyEnemyAtlas;
         trashPickupMotionRef.current = trashPickupAtlas;
         tacoPowerMotionRef.current = tacoPowerAtlas;
-        hazardMotionRef.current = hazardAtlas;
         midgroundPropsRef.current = propAtlas;
         recycleCratesRef.current = crateAtlas;
         groundTileRef.current = groundTile;
@@ -821,7 +844,7 @@ export function TrashDashGame() {
 
     const respawn = (world: World) => {
       const player = world.player;
-      player.x = world.checkpoint;
+      player.x = world.arenaActive ? clampArenaPlayerX(BOSS_ARENA_TRIGGER_X, player.w) : world.checkpoint;
       player.y = GROUND_Y - player.h;
       player.vx = 0;
       player.vy = 0;
@@ -841,7 +864,7 @@ export function TrashDashGame() {
       player.endTimer = 0;
       player.hurtTimer = 0;
       player.pendingDamage = null;
-      world.cameraX = Math.max(0, world.checkpoint - 180);
+      world.cameraX = world.arenaActive ? bossArenaCameraX() : Math.max(0, world.checkpoint - 180);
       setMessage(world, "Back on your paws!", 1.7);
     };
 
@@ -911,26 +934,145 @@ export function TrashDashGame() {
       else changeScreen("gameover");
     };
 
+    const setBossState = (
+      enemy: Enemy,
+      state: keyof typeof BOSS_ANIMATIONS,
+      duration = 0,
+    ) => {
+      enemy.animationState = state;
+      enemy.actionTimer = duration;
+      enemy.phase = 0;
+    };
+
+    const enterBossArena = (world: World) => {
+      const activated = activateBossArena(world.enemies);
+      world.enemies = activated.enemies;
+      world.arenaActive = activated.arenaActive;
+      const boss = world.enemies.find((enemy) => enemy.kind === "boss");
+      if (boss) {
+        boss.active = true;
+        boss.vx = 0;
+        boss.attackCooldown = 0.85;
+        setBossState(boss, "idle");
+      }
+      setMessage(world, "TRASH HEAP TYRANT", 2.4);
+      tone(92, 0.32, "sawtooth");
+
+      const switchId = ++musicSwitchIdRef.current;
+      void switchGameMusic(
+        musicRef.current,
+        assetUrl("assets/audio/trash-heap-tyrant-loop.m4a"),
+        { muted: mutedRef.current },
+      ).then((nextMusic) => {
+        if (switchId === musicSwitchIdRef.current) musicRef.current = nextMusic;
+        else if (nextMusic !== musicRef.current) disposeGameMusic(nextMusic);
+      });
+    };
+
     const damageEnemy = (world: World, enemy: Enemy, stomp = false) => {
-      if (!enemy.active || enemy.hitCooldown > 0) return;
+      if (!enemy.active || enemy.hitCooldown > 0 || (enemy.kind === "boss" && enemy.animationState === "defeat")) return;
       enemy.hp -= 1;
       enemy.hitCooldown = 0.5;
-      if (enemy.kind === "boss") enemy.animationState = "hit";
       burst(world, enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, enemy.kind === "boss" ? "#ffd248" : "#c7f170", enemy.kind === "boss" ? 12 : 7);
       tone(enemy.kind === "boss" ? 170 : 260, 0.09, "square");
-      if (enemy.hp <= 0) {
-        enemy.active = false;
-        world.score += enemy.kind === "boss" ? 2500 : stomp ? 250 : 180;
-        if (enemy.kind === "boss") {
-          world.bossDefeated = true;
-          setMessage(world, "Alley cleared — depot ahead!", 3);
-          tone(420, 0.12);
-          window.setTimeout(() => tone(620, 0.15), 100);
+      if (enemy.kind === "boss") {
+        enemy.vx = 0;
+        if (enemy.hp <= 0) {
+          enemy.hp = 0;
+          world.score += 2500;
+          setBossState(enemy, "defeat", BOSS_SEQUENCE_DURATIONS.defeat);
+          setMessage(world, "The tyrant is falling!", 2);
+        } else {
+          if (enemy.hp === 1 && !enemy.ragePlayed) enemy.rageQueued = true;
+          setBossState(enemy, "hit", BOSS_SEQUENCE_DURATIONS.hit);
+          setMessage(world, `${enemy.hp} hits left!`, 1.2);
         }
-      } else if (enemy.kind === "boss") {
-        enemy.vx *= -1.35;
-        setMessage(world, `${enemy.hp} hits left!`, 1.2);
+      } else if (enemy.hp <= 0) {
+        enemy.active = false;
+        world.score += stomp ? 250 : 180;
       }
+    };
+
+    const finishBossDefeat = (world: World, boss: Enemy) => {
+      boss.active = false;
+      boss.vx = 0;
+      world.bossDefeated = true;
+      setMessage(world, "Alley cleared — depot ahead!", 3);
+      tone(420, 0.12);
+      window.setTimeout(() => tone(620, 0.15), 100);
+    };
+
+    const updateBoss = (world: World, boss: Enemy, dt: number) => {
+      boss.phase += dt;
+      boss.hitCooldown = Math.max(0, boss.hitCooldown - dt);
+      boss.actionTimer = Math.max(0, boss.actionTimer - dt);
+      if (!world.arenaActive) {
+        boss.vx = 0;
+        boss.animationState = "idle";
+        boss.y = boss.surfaceY - boss.h;
+        return;
+      }
+
+      const state = boss.animationState;
+      if (state === "defeat") {
+        boss.vx = 0;
+        if (boss.actionTimer <= 0) finishBossDefeat(world, boss);
+      } else if (state === "hit") {
+        boss.vx = 0;
+        if (boss.actionTimer <= 0) {
+          if (boss.rageQueued) {
+            boss.rageQueued = false;
+            boss.ragePlayed = true;
+            setBossState(boss, "rage", BOSS_SEQUENCE_DURATIONS.rage);
+          } else {
+            boss.attackCooldown = boss.ragePlayed ? 0.58 : 0.92;
+            setBossState(boss, "walk");
+          }
+        }
+      } else if (state === "rage") {
+        boss.vx = 0;
+        if (boss.actionTimer <= 0) {
+          boss.attackCooldown = 0.4;
+          setBossState(boss, "walk");
+        }
+      } else if (state === "windup") {
+        boss.vx = 0;
+        if (boss.actionTimer <= 0) {
+          boss.facing = world.player.x < boss.x ? -1 : 1;
+          boss.vx = boss.facing * (boss.ragePlayed ? 360 : 310);
+          setBossState(boss, "charge", BOSS_SEQUENCE_DURATIONS.charge);
+        }
+      } else if (state === "charge") {
+        boss.x += boss.vx * dt;
+        const clampedX = clampArenaBossX(boss.x, boss.w);
+        const hitWall = clampedX !== boss.x;
+        boss.x = clampedX;
+        if (boss.actionTimer <= 0 || hitWall) {
+          boss.vx = 0;
+          setBossState(boss, "recover", BOSS_SEQUENCE_DURATIONS.recover);
+        }
+      } else if (state === "recover") {
+        boss.vx = 0;
+        if (boss.actionTimer <= 0) {
+          boss.attackCooldown = boss.ragePlayed ? 0.62 : 1.05;
+          setBossState(boss, "walk");
+        }
+      } else {
+        boss.attackCooldown = Math.max(0, boss.attackCooldown - dt);
+        boss.facing = world.player.x < boss.x ? -1 : 1;
+        boss.vx = boss.facing * (boss.ragePlayed ? 88 : 66);
+        boss.x = clampArenaBossX(boss.x + boss.vx * dt, boss.w);
+        if (boss.attackCooldown <= 0) setBossState(boss, "windup", BOSS_SEQUENCE_DURATIONS.windup);
+      }
+
+      boss.y = boss.surfaceY - boss.h;
+      boss.animationState = selectBossAnimation({
+        defeated: boss.animationState === "defeat",
+        hit: boss.animationState === "hit",
+        raging: boss.animationState === "rage",
+        action: boss.animationState,
+        vx: boss.vx,
+      }) as Enemy["animationState"];
     };
 
     const update = (world: World, dt: number) => {
@@ -1051,6 +1193,9 @@ export function TrashDashGame() {
         return;
       }
 
+      if (!world.arenaActive && player.x >= BOSS_ARENA_TRIGGER_X) enterBossArena(world);
+      if (world.arenaActive) player.x = clampArenaPlayerX(player.x, player.w);
+
       if (!world.checkpointReached && player.x > 3050) {
         world.checkpointReached = true;
         world.checkpoint = 3060;
@@ -1106,43 +1251,40 @@ export function TrashDashGame() {
 
       for (const enemy of world.enemies) {
         if (!enemy.active) continue;
-        enemy.phase += dt * Math.max(3.4, Math.abs(enemy.vx) / 26);
-        enemy.hitCooldown = Math.max(0, enemy.hitCooldown - dt);
         if (enemy.kind === "boss") {
-          enemy.animationState = bossAnimationState(enemy.hitCooldown);
-        }
-
-        const intent = nextEnemyIntent({
-          kind: enemy.kind,
-          enemyX: enemy.x,
-          originX: enemy.originX,
-          playerX: player.x,
-          vx: enemy.vx,
-          facing: enemy.facing,
-        });
-        enemy.vx = intent.vx;
-        enemy.facing = intent.facing;
-
-        if (enemy.kind === "slime") {
-          enemy.x += enemy.vx * 0.35 * dt;
-        } else if (enemy.kind === "possum") {
-          enemy.x += enemy.vx * dt;
+          updateBoss(world, enemy, dt);
+          if (!enemy.active) continue;
         } else {
-          enemy.x += enemy.vx * dt;
+          enemy.phase += dt * Math.max(3.4, Math.abs(enemy.vx) / 26);
+          enemy.hitCooldown = Math.max(0, enemy.hitCooldown - dt);
         }
 
-        const patrolMin = enemy.patrolMinX;
-        const patrolMax = enemy.patrolMaxX;
-        if (enemy.x <= patrolMin) {
-          enemy.x = patrolMin;
-          enemy.vx = Math.abs(enemy.vx);
-          enemy.facing = 1;
-        } else if (enemy.x >= patrolMax) {
-          enemy.x = patrolMax;
-          enemy.vx = -Math.abs(enemy.vx);
-          enemy.facing = -1;
+        if (enemy.kind !== "boss") {
+          const intent = nextEnemyIntent({
+            kind: enemy.kind,
+            enemyX: enemy.x,
+            originX: enemy.originX,
+            playerX: player.x,
+            vx: enemy.vx,
+            facing: enemy.facing,
+          });
+          enemy.vx = intent.vx;
+          enemy.facing = intent.facing;
+          enemy.x += enemy.vx * (enemy.kind === "slime" ? 0.35 : 1) * dt;
+
+          const patrolMin = enemy.patrolMinX;
+          const patrolMax = enemy.patrolMaxX;
+          if (enemy.x <= patrolMin) {
+            enemy.x = patrolMin;
+            enemy.vx = Math.abs(enemy.vx);
+            enemy.facing = 1;
+          } else if (enemy.x >= patrolMax) {
+            enemy.x = patrolMax;
+            enemy.vx = -Math.abs(enemy.vx);
+            enemy.facing = -1;
+          }
+          enemy.y = enemy.surfaceY - enemy.h + (flyingEnemies.has(enemy.kind) ? Math.sin(enemy.phase * 0.82) * 11 : 0);
         }
-        enemy.y = enemy.surfaceY - enemy.h + (flyingEnemies.has(enemy.kind) ? Math.sin(enemy.phase * 0.82) * 11 : 0);
 
         const playerAnimation = PLAYER_ANIMATIONS[player.animationName];
         const playerFrameIndex = animationFrame(playerAnimation, player.animationElapsed);
@@ -1157,11 +1299,16 @@ export function TrashDashGame() {
         }
 
         if (!intersects(player, enemy)) continue;
+        const bossAnimation = enemy.kind === "boss" ? BOSS_ANIMATIONS[enemy.animationState as keyof typeof BOSS_ANIMATIONS] : null;
+        const bossFrame = bossAnimation ? bossAnimationFrame(bossAnimation, enemy.phase) : 0;
+        const bossCanDamage = enemy.kind !== "boss"
+          || enemy.animationState === "walk"
+          || (enemy.animationState === "charge" && isBossChargeActive(bossFrame));
         const stomped = player.vy > 80 && previousBottom <= enemy.y + 16;
         if (stomped) {
           player.vy = -360;
           damageEnemy(world, enemy, true);
-        } else if (enemy.hitCooldown <= 0) {
+        } else if (bossCanDamage && enemy.hitCooldown <= 0) {
           hurtPlayer(world, player.x < enemy.x ? -1 : 1);
         }
       }
@@ -1192,8 +1339,10 @@ export function TrashDashGame() {
         window.setTimeout(() => tone(800, 0.18), 120);
       }
 
-      const cameraTarget = Math.max(0, Math.min(WORLD_WIDTH - WIDTH, player.x - WIDTH * 0.36));
-      world.cameraX += (cameraTarget - world.cameraX) * Math.min(1, dt * 5.5);
+      const cameraTarget = world.arenaActive
+        ? bossArenaCameraX()
+        : Math.max(0, Math.min(WORLD_WIDTH - WIDTH, player.x - WIDTH * 0.36));
+      world.cameraX += (cameraTarget - world.cameraX) * Math.min(1, dt * (world.arenaActive ? 9 : 5.5));
       pressedRef.current.clear();
     };
 
@@ -1350,6 +1499,13 @@ export function TrashDashGame() {
       drawTiledLayer(forestNearRef.current, camera, 0.13, -8, 1540, 514, forestMix * 0.82);
       drawTiledLayer(cityFarRef.current, camera, 0.045, 18, 1540, 514, cityMix * 0.72);
       drawTiledLayer(cityNearRef.current, camera, 0.11, 34, 1540, 514, cityMix * 0.9);
+      if (world.arenaActive) {
+        const arenaShade = context.createLinearGradient(0, 0, 0, GROUND_Y);
+        arenaShade.addColorStop(0, "rgba(8, 9, 24, 0.46)");
+        arenaShade.addColorStop(1, "rgba(31, 10, 29, 0.2)");
+        context.fillStyle = arenaShade;
+        context.fillRect(0, 0, WIDTH, GROUND_Y);
+      }
 
       for (const item of scenery) {
         const x = item.x - camera;
@@ -1502,14 +1658,20 @@ export function TrashDashGame() {
           drawEnemy(varietyFrames[frameIndex], drawW, drawH, 1, varietyEnemyMotionRef.current);
         }
         if (enemy.kind === "boss") {
-          const bossHit = enemy.animationState === "hit";
-          const bossFrame = bossHit ? sprites.bossHit : hazardMotion.boss[bossFrameIndex(enemy.phase)];
+          const bossAnimation = BOSS_ANIMATIONS[enemy.animationState as keyof typeof BOSS_ANIMATIONS];
+          const bossFrameIndex = bossAnimationFrame(bossAnimation, enemy.phase);
+          const bossFrame = [
+            bossFrameIndex * ASSET_CELL,
+            bossAnimation.row * ASSET_CELL,
+            ASSET_CELL,
+            ASSET_CELL,
+          ] as Frame;
           drawEnemy(
             bossFrame,
-            bossHit ? 133 : 150,
-            bossHit ? 145 : 150,
+            bossAnimation.drawWidth,
+            bossAnimation.drawHeight,
             1,
-            bossHit ? atlasRef.current : hazardMotionRef.current,
+            bossMotionRef.current,
           );
           context.fillStyle = "#173e3b";
           context.fillRect(x + 4, enemy.y - 48, 88, 9);

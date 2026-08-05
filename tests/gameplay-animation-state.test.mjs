@@ -5,8 +5,6 @@ import {
   PLAYER_HURT_DURATION,
   advanceHurtTimer,
   beginPlayerHurt,
-  bossAnimationState,
-  bossFrameIndex,
   nextEnemyIntent,
   resolvePitFall,
 } from "../app/gameplay-animation-state.mjs";
@@ -42,12 +40,6 @@ test("zero velocity preserves explicit facing", () => {
     vx: 0,
     facing: -1,
   }), { vx: 0, facing: -1 });
-});
-
-test("boss walk ping-pongs and hit cooldown owns its state", () => {
-  assert.deepEqual([0, 1, 2, 3, 4, 5].map(bossFrameIndex), [0, 1, 2, 3, 2, 1]);
-  assert.equal(bossAnimationState(0.4), "hit");
-  assert.equal(bossAnimationState(0), "walking");
 });
 
 test("ordinary large damage queues shrink without applying it", () => {

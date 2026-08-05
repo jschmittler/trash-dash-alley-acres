@@ -30,11 +30,15 @@ test("builds a complete GitHub Pages artifact under the repository base path", a
 
   assert.match(javascript, /\/trash-dash-alley-acres\//);
   assert.match(javascript, /assets\/generated\/player-hero-motion\.png/);
+  assert.match(javascript, /assets\/generated\/boss-motion\.png/);
+  assert.match(javascript, /assets\/audio\/trash-heap-tyrant-loop\.m4a/);
   assert.match(javascript, /assets\/recycle-crates-v2\.png/);
   assert.doesNotMatch(javascript, /["']\/assets\/generated\/player-hero-motion\.png/);
 
   await access(new URL(".nojekyll", pagesRoot));
   await access(new URL("assets/generated/player-hero-motion.png", pagesRoot));
+  await access(new URL("assets/generated/boss-motion.png", pagesRoot));
+  await access(new URL("assets/audio/trash-heap-tyrant-loop.m4a", pagesRoot));
   await access(new URL("assets/recycle-crates-v2.png", pagesRoot));
   await access(new URL("assets/audio/raccoon-rush-loop.m4a", pagesRoot));
   await access(new URL("og.png", pagesRoot));

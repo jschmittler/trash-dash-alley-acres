@@ -1,6 +1,5 @@
 export const POSSUM_CHASE_RADIUS = 250;
 export const POSSUM_FACING_DEAD_ZONE = 18;
-export const BOSS_WALK_FRAMES = [0, 1, 2, 3, 2, 1];
 export const PLAYER_HURT_DURATION = 0.48;
 
 const facingFromVelocity = (vx, fallback) => (
@@ -29,14 +28,6 @@ export function nextEnemyIntent({ kind, enemyX, originX, playerX, vx, facing }) 
     vx: nextVelocity,
     facing: facingFromVelocity(nextVelocity, facing),
   };
-}
-
-export function bossFrameIndex(phase) {
-  return BOSS_WALK_FRAMES[Math.floor(phase) % BOSS_WALK_FRAMES.length];
-}
-
-export function bossAnimationState(hitCooldown) {
-  return hitCooldown > 0 ? "hit" : "walking";
 }
 
 export function beginPlayerHurt({

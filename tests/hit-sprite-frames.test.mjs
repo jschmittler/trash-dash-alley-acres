@@ -54,7 +54,7 @@ function countLargeComponents(alpha, width, height) {
 test("hit reaction frames contain one complete sprite without clipped borders", async () => {
   const atlas = fileURLToPath(new URL("../public/assets/raccoon-sprites.png", import.meta.url));
 
-  for (const name of ["smallHurt", "largeHurt", "bossHit"]) {
+  for (const name of ["smallHurt", "largeHurt"]) {
     const [left, top, width, height] = namedFrame(name);
     const { data, info } = await sharp(atlas)
       .extract({ left, top, width, height })
