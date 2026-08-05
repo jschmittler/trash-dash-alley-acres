@@ -44,4 +44,4 @@
 
 - [x] Run `npm test`, `npm run lint`, `npm run build:pages`, `npm run test:pages`, and `git diff --check`.
 - [x] Run the local browser preview and inspect the entrance and boss runway; browser diagnostics are clean.
-- [ ] Commit the pass as `feat: rebalance level one encounter layout`.
+- [x] Commit the pass as `feat: rebalance level one encounter layout`.
