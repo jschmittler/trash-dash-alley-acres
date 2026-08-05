@@ -2,6 +2,8 @@
 
 A short browser platformer built for ChatGPT Sites. Collect trash, grow into the large raccoon form, unlock the bottle-cap glider, defeat the trash-bag monster, and reach the recycling depot.
 
+[Play Trash Dash: Alley Acres](https://jschmittler.github.io/trash-dash-alley-acres/)
+
 ## Controls
 
 - Move: `A` / `D` or arrow keys

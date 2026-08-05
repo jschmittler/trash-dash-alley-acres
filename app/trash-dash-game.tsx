@@ -86,6 +86,8 @@ const WORLD_WIDTH = 6600;
 const MOTION_CELL = 192;
 const ASSET_CELL = 256;
 
+const assetUrl = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\/+/, "")}`;
+
 const motionRow = (row: number, count: number): Frame[] =>
   Array.from({ length: count }, (_, index) => [index * MOTION_CELL, row * MOTION_CELL, MOTION_CELL, MOTION_CELL] as Frame);
 
@@ -507,18 +509,18 @@ export function TrashDashGame() {
       });
 
     void Promise.all([
-      loadImage("/assets/raccoon-sprites.png"),
-      loadImage("/assets/player-motion.png"),
-      loadImage("/assets/enemy-motion.png"),
-      loadImage("/assets/hazard-motion.png"),
-      loadImage("/assets/glider-motion.png"),
-      loadImage("/assets/midground-props.png"),
-      loadImage("/assets/recycle-crates-v2.png"),
-      loadImage("/assets/ground-seamless.png"),
-      loadImage("/assets/backgrounds/forest-far.png"),
-      loadImage("/assets/backgrounds/forest-near.png"),
-      loadImage("/assets/backgrounds/city-far.png"),
-      loadImage("/assets/backgrounds/city-near.png"),
+      loadImage(assetUrl("assets/raccoon-sprites.png")),
+      loadImage(assetUrl("assets/player-motion.png")),
+      loadImage(assetUrl("assets/enemy-motion.png")),
+      loadImage(assetUrl("assets/hazard-motion.png")),
+      loadImage(assetUrl("assets/glider-motion.png")),
+      loadImage(assetUrl("assets/midground-props.png")),
+      loadImage(assetUrl("assets/recycle-crates-v2.png")),
+      loadImage(assetUrl("assets/ground-seamless.png")),
+      loadImage(assetUrl("assets/backgrounds/forest-far.png")),
+      loadImage(assetUrl("assets/backgrounds/forest-near.png")),
+      loadImage(assetUrl("assets/backgrounds/city-far.png")),
+      loadImage(assetUrl("assets/backgrounds/city-near.png")),
     ])
       .then(([atlas, playerAtlas, enemyAtlas, hazardAtlas, gliderAtlas, propAtlas, crateAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
         if (cancelled) return;
