@@ -15,6 +15,8 @@ SHEETS = ROOT / "sheets"
 OUTPUT = ROOT / "dumpster-animation-atlas.png"
 FRAME_SIZE = 192
 ROW_SIZE = FRAME_SIZE * 4
+STINK_SCALE_X = 0.94
+TARGET_CONTACT_Y = 142
 
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
@@ -96,9 +98,39 @@ def load_row(name: str) -> bytearray:
     return pixels
 
 
+def normalize_stink_row(pixels: bytearray) -> bytearray:
+    """Match stink-cell footprint to idle while keeping the wisps animated."""
+    normalized = bytearray(len(pixels))
+    scaled_width = round(FRAME_SIZE * STINK_SCALE_X)
+    x_offset = (FRAME_SIZE - scaled_width) // 2
+    for cell in range(4):
+        cell_start = cell * FRAME_SIZE * 4
+        contact_y = max(
+            source_y
+            for source_y in range(FRAME_SIZE)
+            for source_x in range(FRAME_SIZE)
+            if pixels[source_y * ROW_SIZE * 4 + cell_start + source_x * 4 + 3]
+        )
+        shift_y = TARGET_CONTACT_Y - contact_y
+        for source_y in range(FRAME_SIZE):
+            target_y = source_y + shift_y
+            if not 0 <= target_y < FRAME_SIZE:
+                continue
+            for source_x in range(FRAME_SIZE):
+                source_offset = (source_y * ROW_SIZE * 4 + cell * FRAME_SIZE * 4 + source_x * 4)
+                if pixels[source_offset + 3] == 0:
+                    continue
+                target_x = x_offset + round(source_x * STINK_SCALE_X)
+                if not 0 <= target_x < FRAME_SIZE:
+                    continue
+                target_offset = (target_y * ROW_SIZE * 4 + cell * FRAME_SIZE * 4 + target_x * 4)
+                normalized[target_offset : target_offset + 4] = pixels[source_offset : source_offset + 4]
+    return normalized
+
+
 def main() -> None:
     idle = load_row("dumpster-idle")
-    stink = load_row("dumpster-stink")
+    stink = normalize_stink_row(load_row("dumpster-stink"))
 
     atlas = idle + stink
     write_png(OUTPUT, ROW_SIZE, FRAME_SIZE * 2, atlas)
