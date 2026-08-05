@@ -659,9 +659,7 @@ export function TrashDashGame() {
 
       for (const pickup of world.pickups) {
         if (!pickup.active) continue;
-        pickup.phase += dt * 3;
-        const pickupRect = { ...pickup, y: pickup.y + Math.sin(pickup.phase) * 4 };
-        if (!intersects(player, pickupRect)) continue;
+        if (!intersects(player, pickup)) continue;
         pickup.active = false;
         world.score += pickup.kind === "trash" ? 100 : 500;
         if (pickup.kind === "trash") {
@@ -693,10 +691,12 @@ export function TrashDashGame() {
         if (enemy.kind === "slime") {
           enemy.y = GROUND_Y - enemy.h - Math.max(0, Math.sin(enemy.phase)) * 34;
           enemy.x += enemy.vx * 0.35 * dt;
+          if (Math.abs(enemy.x - enemy.originX) > 85) enemy.vx *= -1;
         } else if (enemy.kind === "possum") {
           const distance = player.x - enemy.x;
-          const charge = Math.abs(distance) < 250 ? Math.sign(distance) * 125 : enemy.vx;
-          enemy.x += charge * dt;
+          if (Math.abs(distance) < 250) enemy.vx = Math.sign(distance || 1) * 125;
+          else if (Math.abs(enemy.x - enemy.originX) > 105) enemy.vx = Math.sign(enemy.originX - enemy.x) * 55;
+          enemy.x += enemy.vx * dt;
         } else if (enemy.kind === "boss") {
           if (enemy.x < 5570 || enemy.x > 6060) enemy.vx *= -1;
           enemy.x += enemy.vx * dt;
@@ -763,38 +763,89 @@ export function TrashDashGame() {
     ) => {
       const atlas = atlasRef.current;
       if (!atlas) return;
+      const drawX = Math.round(x);
+      const drawY = Math.round(y);
+      const drawW = Math.round(w);
+      const drawH = Math.round(h);
       context.save();
       context.globalAlpha = alpha;
       if (flip) {
-        context.translate(x + w, y);
+        context.translate(drawX + drawW, drawY);
         context.scale(-1, 1);
-        context.drawImage(atlas, frame[0], frame[1], frame[2], frame[3], 0, 0, w, h);
+        context.drawImage(atlas, frame[0], frame[1], frame[2], frame[3], 0, 0, drawW, drawH);
       } else {
-        context.drawImage(atlas, frame[0], frame[1], frame[2], frame[3], x, y, w, h);
+        context.drawImage(atlas, frame[0], frame[1], frame[2], frame[3], drawX, drawY, drawW, drawH);
       }
       context.restore();
     };
 
+    const drawCloud = (x: number, y: number, scale: number) => {
+      const unit = Math.max(4, Math.round(8 * scale));
+      const left = Math.round(x);
+      const top = Math.round(y);
+      context.fillStyle = "#d9eef1";
+      context.fillRect(left + unit, top + unit * 2, unit * 9, unit * 2);
+      context.fillStyle = "#fff7d8";
+      context.fillRect(left + unit * 2, top + unit, unit * 7, unit * 2);
+      context.fillRect(left + unit * 3, top, unit * 3, unit * 3);
+      context.fillRect(left + unit * 6, top + unit, unit * 3, unit * 2);
+    };
+
     const render = (world: World) => {
-      const camera = world.cameraX;
+      const camera = Math.round(world.cameraX);
       context.clearRect(0, 0, WIDTH, HEIGHT);
-      context.fillStyle = "#6fd3f2";
+      context.fillStyle = "#73d8f4";
       context.fillRect(0, 0, WIDTH, HEIGHT);
 
-      const woodlandHorizon = [554, 952, 250, 133] as Frame;
-      const woodlandOffset = -((camera * 0.08) % 248);
-      for (let index = -1; index < 6; index += 1) {
-        drawSprite(woodlandHorizon, woodlandOffset + index * 248, 278, 250, 133);
+      context.fillStyle = "#65c9e8";
+      context.fillRect(0, 0, WIDTH, 210);
+      context.fillStyle = "#6fd2ed";
+      context.fillRect(0, 210, WIDTH, 195);
+
+      const cloudLayout = [
+        { x: 80, y: 55, scale: 1.05, speed: 0.035 },
+        { x: 335, y: 145, scale: 0.8, speed: 0.055 },
+        { x: 610, y: 72, scale: 1.2, speed: 0.04 },
+        { x: 875, y: 215, scale: 0.72, speed: 0.065 },
+        { x: 1110, y: 125, scale: 0.9, speed: 0.05 },
+      ];
+      for (const cloud of cloudLayout) {
+        const cloudX = ((cloud.x - camera * cloud.speed + 180) % 1180 + 1180) % 1180 - 180;
+        drawCloud(cloudX, cloud.y, cloud.scale);
       }
+
+      const hillOffset = -Math.round((camera * 0.04) % 150);
+      context.fillStyle = "#4c9d68";
+      for (let index = -1; index < 9; index += 1) {
+        const hillX = hillOffset + index * 150;
+        context.beginPath();
+        context.arc(hillX + 75, 405, 92, Math.PI, 0);
+        context.fill();
+      }
+      context.fillStyle = "#347d5b";
+      for (let index = -1; index < 11; index += 1) {
+        const hillX = hillOffset * 1.35 + index * 115;
+        context.beginPath();
+        context.arc(hillX + 58, 414, 68, Math.PI, 0);
+        context.fill();
+      }
+
       const junkyardMix = Math.max(0, Math.min(1, (camera - 2380) / 900));
       if (junkyardMix > 0) {
-        const horizonOffset = -((camera * 0.12) % 878);
-        for (let index = -1; index < 3; index += 1) {
-          drawSprite(sprites.horizon, horizonOffset + index * 878, 278, 879, 133, false, junkyardMix);
+        context.save();
+        context.globalAlpha = junkyardMix;
+        context.fillStyle = "#285f6d";
+        const cityOffset = -Math.round((camera * 0.07) % 120);
+        for (let index = -1; index < 11; index += 1) {
+          const buildingX = cityOffset + index * 120;
+          const buildingHeight = 55 + (index % 4) * 18;
+          context.fillRect(buildingX, 405 - buildingHeight, 72, buildingHeight);
+          context.fillRect(buildingX + 18, 405 - buildingHeight - 18, 10, 18);
         }
+        context.restore();
       }
       context.fillStyle = "#84c969";
-      context.fillRect(0, 405, WIDTH, 80);
+      context.fillRect(0, 405, WIDTH, GROUND_Y - 405);
 
       for (const item of scenery) {
         const x = item.x - camera;
@@ -844,17 +895,17 @@ export function TrashDashGame() {
         if (!pickup.active) continue;
         const x = pickup.x - camera;
         if (x < -80 || x > WIDTH + 80) continue;
-        const y = pickup.y + Math.sin(pickup.phase) * 4;
+        const y = pickup.y;
         if (pickup.kind === "bag") drawSprite(sprites.bag, x - 6, y - 7, 45, 49);
         else if (pickup.kind === "cap") drawSprite(sprites.cap, x - 9, y - 7, 50, 42);
-        else drawSprite(Math.floor(pickup.phase) % 2 ? sprites.trashCan : sprites.banana, x, y, 32, 34);
+        else drawSprite(sprites.trashCan, x, y, 32, 34);
       }
 
       for (const enemy of world.enemies) {
         if (!enemy.active) continue;
         const x = enemy.x - camera;
         if (x < -150 || x > WIDTH + 150) continue;
-        const frameIndex = Math.floor(enemy.phase * 2) % 3;
+        const frameIndex = 0;
         const flip = enemy.vx > 0;
         const drawEnemy = (frame: Frame, drawW: number, drawH: number, alpha = 1) => {
           drawSprite(
@@ -873,7 +924,7 @@ export function TrashDashGame() {
         if (enemy.kind === "possum") drawEnemy(sprites.possum[frameIndex], 70, 53);
         if (enemy.kind === "bottle") drawEnemy(sprites.bottle[frameIndex], 56, 50);
         if (enemy.kind === "boss") {
-          const bossFrame = sprites.boss[Math.floor(enemy.phase) % sprites.boss.length];
+          const bossFrame = sprites.boss[0];
           drawEnemy(bossFrame, 122, 132, enemy.hitCooldown > 0 && Math.floor(enemy.hitCooldown * 20) % 2 ? 0.35 : 1);
           context.fillStyle = "#173e3b";
           context.fillRect(x + 4, enemy.y - 45, 88, 9);
@@ -890,11 +941,11 @@ export function TrashDashGame() {
       let drawH = player.large ? 88 : 72;
 
       if (player.glider > 0 && !player.grounded) {
-        frame = sprites.glider[Math.floor(player.anim * 8) % sprites.glider.length];
+        frame = sprites.glider[0];
         drawW = 108;
         drawH = 76;
       } else if (player.attackTimer > 0 && player.large) {
-        frame = sprites.largeAttack[Math.min(3, Math.floor((0.32 - player.attackTimer) * 13))];
+        frame = sprites.largeAttack[1];
         drawW = 96;
         drawH = 88;
       } else if (!player.grounded) {
@@ -907,10 +958,7 @@ export function TrashDashGame() {
             : sprites.smallFall;
       } else if (Math.abs(player.vx) > 22) {
         const frames = player.large ? sprites.largeWalk : running ? sprites.smallRun : sprites.smallWalk;
-        frame = frames[Math.floor(player.anim * (running ? 12 : 9)) % frames.length];
-      }
-      if (player.invulnerable > 0 && Math.floor(player.invulnerable * 16) % 2) {
-        frame = player.large ? sprites.largeHurt : sprites.smallHurt;
+        frame = frames[0];
       }
 
       drawSprite(

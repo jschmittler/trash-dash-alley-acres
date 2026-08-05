@@ -40,6 +40,10 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /raccoon-sprites\.png/);
   assert.match(game, /touch-controls/);
   assert.match(game, /localStorage/);
+  assert.match(game, /const camera = Math\.round\(world\.cameraX\)/);
+  assert.match(game, /else drawSprite\(sprites\.trashCan, x, y, 32, 34\)/);
+  assert.match(game, /const frameIndex = 0/);
+  assert.doesNotMatch(game, /Math\.floor\(pickup\.phase\).*sprites\.trashCan/);
   assert.match(styles, /image-rendering:\s*pixelated/);
   assert.match(styles, /prefers-reduced-motion/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
