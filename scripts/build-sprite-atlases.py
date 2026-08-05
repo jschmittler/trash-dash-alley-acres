@@ -3,7 +3,7 @@
 
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 
 CELL = 192
@@ -225,9 +225,121 @@ def build_player_attack() -> None:
     isolate_largest_pose(crowded_attack).save(OUTPUT / "player-attack.png", optimize=True)
 
 
+def cell_pose(sheet: Image.Image, cell_size: int, column: int, row: int = 0) -> Image.Image:
+    cell = sheet.crop((column * cell_size, row * cell_size, (column + 1) * cell_size, (row + 1) * cell_size))
+    try:
+        return isolate_largest_pose(cell)
+    except ValueError as error:
+        raise ValueError(f"empty player source cell {row}:{column}") from error
+
+
+def strip_pose(sheet: Image.Image, column: int, count: int) -> Image.Image:
+    left = round(column * sheet.width / count)
+    right = round((column + 1) * sheet.width / count)
+    return isolate_largest_pose(sheet.crop((left, 0, right, sheet.height)))
+
+
+def adjusted_pose(pose: Image.Image, width_scale: float = 1, height_scale: float = 1) -> Image.Image:
+    return nearest(pose, (max(1, round(pose.width * width_scale)), max(1, round(pose.height * height_scale))))
+
+
+def place_player_pose(
+    atlas: Image.Image,
+    pose: Image.Image,
+    row: int,
+    column: int,
+    max_size: tuple[int, int],
+    grounded: bool = True,
+    x_offset: int = 0,
+    y_offset: int = 0,
+) -> None:
+    scale = min(max_size[0] / pose.width, max_size[1] / pose.height)
+    size = (max(1, round(pose.width * scale)), max(1, round(pose.height * scale)))
+    frame = nearest(pose, size)
+    x = column * CELL + (CELL - frame.width) // 2 + x_offset
+    if grounded:
+        y = (row + 1) * CELL - BASELINE_MARGIN - frame.height + y_offset
+    else:
+        y = row * CELL + (CELL - frame.height) // 2 + y_offset
+    atlas.alpha_composite(frame, (x, y))
+
+
+def build_player_hero_atlas() -> None:
+    motion = Image.open(OUTPUT.parent / "player-motion.png").convert("RGBA")
+    glider = Image.open(OUTPUT.parent / "glider-motion.png").convert("RGBA")
+    source = Image.open(OUTPUT.parent / "raccoon-sprites.png").convert("RGBA")
+    tail_swipe = Image.open(OUTPUT / "player-tail-swipe.png").convert("RGBA")
+
+    small = [cell_pose(motion, CELL, column, 0) for column in range(6)]
+    large = [cell_pose(motion, CELL, column, 1) for column in range(6)]
+    glides = [cell_pose(glider, 256, column) for column in range(6)]
+    small_hurt = source.crop((1307, 100, 1412, 183))
+    large_hurt = source.crop((1328, 225, 1428, 308))
+    swipe_sources = [strip_pose(tail_swipe, column, 5) for column in range(5)]
+
+    atlas = Image.new("RGBA", (CELL * 6, CELL * 22), (0, 0, 0, 0))
+
+    recipes = {
+        0: (small, [0, 1, 0, 5], (100, 100), True),
+        1: (small, [0, 1, 2, 3, 4, 5], (100, 100), True),
+        2: (small, [0, 2, 4, 1, 3, 5], (104, 100), True),
+        3: (small, [2, 3], (102, 104), False),
+        4: (small, [3, 4], (102, 104), False),
+        5: ([adjusted_pose(small[5], 1.05, .88), small[0]], [0, 1], (104, 92), True),
+        6: ([small_hurt, small_hurt, small_hurt], [0, 1, 2], (108, 92), True),
+        7: (small, [4, 3, 2], (106, 98), True),
+        8: ([small_hurt] * 4, [0, 1, 2, 3], (108, 92), True),
+        9: (small, [0, 2, 4, 2], (102, 104), True),
+        10: (large, [0, 1, 0, 5], (128, 126), True),
+        11: (large, [0, 1, 2, 3, 4, 5], (128, 126), True),
+        12: (large, [0, 2, 4, 1, 3, 5], (134, 126), True),
+        13: (large, [2, 3], (130, 132), False),
+        14: (large, [3, 4], (130, 132), False),
+        15: ([adjusted_pose(large[5], 1.06, .88), large[0]], [0, 1], (134, 116), True),
+        16: (swipe_sources, [0, 1, 2, 3, 4], (150, 126), True),
+        17: ([large_hurt] * 3, [0, 1, 2], (138, 112), True),
+        18: ([large_hurt, large_hurt, large_hurt, small[0]], [0, 1, 2, 3], (138, 112), True),
+        19: (glides, [0, 1, 2, 3, 4, 5], (164, 150), False),
+        20: (large, [4, 3, 2], (136, 124), True),
+        21: (large, [0, 2, 4, 2], (132, 132), True),
+    }
+
+    for row, (poses, indexes, max_size, grounded) in recipes.items():
+        for column, index in enumerate(indexes):
+            pose = poses[index]
+            x_offset = 0
+            y_offset = 0
+            if row in (6, 8, 17):
+                x_offset = (-2, 0, 2, 0)[column]
+            if row in (9, 21):
+                y_offset = (0, -5, -9, -4)[column]
+            if row == 18:
+                scale = (1, .84, .68, .78)[column]
+                pose = adjusted_pose(pose, scale, scale)
+            place_player_pose(atlas, pose, row, column, max_size, grounded, x_offset, y_offset)
+
+    atlas.save(OUTPUT / "player-hero-motion.png", optimize=True)
+
+    label_width = 128
+    contact = Image.new("RGBA", (label_width + atlas.width, atlas.height), (15, 37, 36, 255))
+    contact.alpha_composite(atlas, (label_width, 0))
+    draw = ImageDraw.Draw(contact)
+    names = [
+        "small idle", "small walk", "small run", "small jump", "small fall", "small land",
+        "small hurt", "small skid", "small defeat", "small victory", "large idle", "large walk",
+        "large run", "large jump", "large fall", "large land", "tail swipe", "large hurt",
+        "large shrink", "large glide", "large skid", "large victory",
+    ]
+    for row, name in enumerate(names):
+        draw.text((8, row * CELL + 82), name, fill=(255, 177, 59, 255))
+        draw.line((label_width, (row + 1) * CELL - BASELINE_MARGIN, contact.width, (row + 1) * CELL - BASELINE_MARGIN), fill=(255, 177, 59, 100), width=1)
+    contact.save(OUTPUT / "player-hero-contact-sheet.png", optimize=True)
+
+
 if __name__ == "__main__":
     OUTPUT.mkdir(parents=True, exist_ok=True)
     build_enemy_atlas()
     build_pickup_atlas()
     build_taco_strip()
     build_player_attack()
+    build_player_hero_atlas()
