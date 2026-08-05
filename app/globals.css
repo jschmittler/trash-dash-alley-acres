@@ -247,79 +247,91 @@ button {
   box-shadow: 0 18px 42px rgb(0 19 20 / 36%);
 }
 
-.powerup-overlay {
+.powerup-flash {
   position: absolute;
   inset: 0;
   z-index: 30;
   display: grid;
   place-items: center;
-  padding: clamp(20px, 6vw, 72px);
-  background: rgb(9 25 29 / 76%);
-  backdrop-filter: blur(5px) saturate(0.86);
-  animation: powerup-fade-in 180ms ease-out both;
+  overflow: hidden;
+  pointer-events: none;
+  background: radial-gradient(circle, rgb(255 177 59 / 20%), rgb(9 25 29 / 10%) 42%, transparent 72%);
+  animation: powerup-flash 900ms cubic-bezier(.2, .75, .25, 1) both;
 }
 
-.powerup-card {
-  width: min(560px, 90%);
-  display: grid;
-  justify-items: center;
-  gap: 12px;
-  padding: clamp(24px, 5vw, 52px);
-  border: 3px solid rgb(255 244 206 / 72%);
-  border-radius: 24px;
-  text-align: center;
-  background:
-    radial-gradient(circle at 50% 0, rgb(255 177 59 / 24%), transparent 58%),
-    #163c3c;
-  box-shadow: 0 24px 70px rgb(0 10 12 / 58%), inset 0 0 0 1px rgb(255 244 206 / 14%);
-  animation: powerup-card-pop 260ms cubic-bezier(.2, .9, .25, 1.15) both;
+.powerup-flash::before,
+.powerup-flash::after {
+  content: "";
+  position: absolute;
+  width: 140%;
+  height: 8px;
+  background: rgb(255 225 116 / 80%);
+  box-shadow: 0 0 14px rgb(255 177 59 / 92%);
+  transform: rotate(-17deg) scaleX(0);
+  animation: powerup-rays 900ms ease-out both;
 }
 
-.powerup-card.cap {
-  background:
-    radial-gradient(circle at 50% 0, rgb(255 225 116 / 24%), transparent 58%),
-    #163c3c;
+.powerup-flash::after {
+  transform: rotate(17deg) scaleX(0);
+  animation: powerup-rays-right 900ms ease-out 30ms both;
 }
 
-.powerup-kicker,
-.powerup-timer {
-  color: #c5e5d0;
-  font-size: 0.72rem;
-  font-weight: 1000;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+.powerup-flash.cap {
+  background: radial-gradient(circle, rgb(255 225 116 / 20%), rgb(9 25 29 / 10%) 42%, transparent 72%);
 }
 
-.powerup-card h2 {
-  margin: 0;
-  color: #ffb13b;
+.powerup-flash-title {
+  position: relative;
+  z-index: 1;
+  max-width: 92%;
+  color: #ffbd32;
   font-family: var(--font-display), sans-serif;
-  font-size: clamp(2.2rem, 8vw, 5.4rem);
-  line-height: 0.9;
+  font-size: clamp(3.2rem, 13vw, 9rem);
+  line-height: 0.82;
   letter-spacing: -0.04em;
-  text-shadow: 0 5px 0 #7a3d1b, 0 12px 24px rgb(0 25 26 / 38%);
+  text-align: center;
+  text-wrap: balance;
+  -webkit-text-stroke: clamp(2px, .45vw, 6px) #fff7d4;
+  paint-order: stroke fill;
+  text-shadow:
+    0 8px 0 #7a3d1b,
+    8px 12px 0 #1b2628,
+    -8px 12px 0 #1b2628,
+    0 20px 28px rgb(0 25 26 / 56%);
+  animation: powerup-text 900ms cubic-bezier(.16, .9, .24, 1) both;
 }
 
-.powerup-card.cap h2 {
+.powerup-flash.cap .powerup-flash-title {
   color: #ffe174;
-  text-shadow: 0 5px 0 #725e20, 0 12px 24px rgb(0 25 26 / 38%);
+  text-shadow:
+    0 8px 0 #725e20,
+    8px 12px 0 #1b2628,
+    -8px 12px 0 #1b2628,
+    0 20px 28px rgb(0 25 26 / 56%);
 }
 
-.powerup-card p {
-  margin: 0;
-  color: #e3f0d0;
-  font-size: clamp(1rem, 2.3vw, 1.25rem);
-  font-weight: 850;
+@keyframes powerup-flash {
+  0% { opacity: 0; }
+  16% { opacity: 1; }
+  64% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
-@keyframes powerup-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+@keyframes powerup-text {
+  0% { opacity: 0; transform: translateY(20px) scale(.68) rotate(-2deg); }
+  18% { opacity: 1; transform: translateY(0) scale(1.05) rotate(0); }
+  60% { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
+  100% { opacity: 0; transform: translateY(-18px) scale(1.08) rotate(1deg); }
 }
 
-@keyframes powerup-card-pop {
-  from { opacity: 0; transform: translateY(12px) scale(0.92); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+@keyframes powerup-rays {
+  0%, 100% { opacity: 0; transform: rotate(-17deg) scaleX(0); }
+  22%, 62% { opacity: 1; transform: rotate(-17deg) scaleX(1); }
+}
+
+@keyframes powerup-rays-right {
+  0%, 100% { opacity: 0; transform: rotate(17deg) scaleX(0); }
+  22%, 62% { opacity: 1; transform: rotate(17deg) scaleX(1); }
 }
 
 .game-title {

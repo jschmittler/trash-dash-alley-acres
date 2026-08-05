@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  POWERUP_PAUSE_DURATION,
   POWERUP_NOTICE_DURATION,
   createPowerupNotice,
   powerupNoticeProgress,
@@ -11,10 +12,14 @@ test("power-up notices provide distinct player-facing copy", () => {
   assert.deepEqual(createPowerupNotice("taco"), {
     kind: "taco",
     title: "TACO POWER!",
-    detail: "Big raccoon mode unlocked.",
     accent: "#ffb13b",
   });
-  assert.match(createPowerupNotice("cap").detail, /float/i);
+  assert.equal(createPowerupNotice("cap").title, "GLIDER READY!");
+});
+
+test("power-up hit-stop is brief while the visual notice lasts longer", () => {
+  assert.equal(POWERUP_PAUSE_DURATION, 0.5);
+  assert.ok(POWERUP_NOTICE_DURATION > POWERUP_PAUSE_DURATION);
 });
 
 test("power-up notice progress clamps to the takeover duration", () => {

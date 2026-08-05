@@ -1,16 +1,15 @@
-export const POWERUP_NOTICE_DURATION = 1.8;
+export const POWERUP_PAUSE_DURATION = 0.5;
+export const POWERUP_NOTICE_DURATION = 0.9;
 
 const POWERUP_NOTICES = {
   taco: {
     kind: "taco",
     title: "TACO POWER!",
-    detail: "Big raccoon mode unlocked.",
     accent: "#ffb13b",
   },
   cap: {
     kind: "cap",
     title: "GLIDER READY!",
-    detail: "Hold jump to float across the gaps.",
     accent: "#ffe174",
   },
 };

@@ -88,10 +88,10 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /bossArenaCameraX/);
   assert.match(game, /createBossTransition/);
   assert.match(game, /advanceBossTransition/);
-  assert.match(game, /powerupNoticeRef\.current === null/);
+  assert.match(game, /!powerupPausedRef\.current/);
   assert.match(game, /showPowerupNotice\("taco"\)/);
   assert.match(game, /showPowerupNotice\("cap"\)/);
-  assert.match(game, /powerup-overlay/);
+  assert.match(game, /powerup-flash/);
   assert.match(game, /createPowerupNotice/);
   assert.match(game, /const activated = activateBossArena\(world\.enemies\)/);
   assert.match(game, /trash-heap-tyrant-loop\.m4a/);
@@ -124,7 +124,8 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(styles, /100dvh/);
   assert.match(styles, /orientation:\s*landscape/);
   assert.match(styles, /prefers-reduced-motion/);
-  assert.match(styles, /powerup-card-pop/);
+  assert.match(styles, /powerup-text/);
+  assert.match(styles, /powerup-rays/);
   assert.match(mobileExperience, /fullscreenchange/);
   assert.match(mobileExperience, /orientationchange/);
   assert.match(mobileExperience, /clearInputState/);

@@ -48,6 +48,7 @@ import {
 } from "./boss-transition.mjs";
 import {
   createPowerupNotice,
+  POWERUP_PAUSE_DURATION,
   POWERUP_NOTICE_DURATION,
 } from "./powerup-announcement.mjs";
 
@@ -563,7 +564,9 @@ export function TrashDashGame() {
   const lastFrameRef = useRef(0);
   const hudTickRef = useRef(0);
   const fullscreenPendingRef = useRef(false);
+  const powerupPauseTimerRef = useRef<number | null>(null);
   const powerupNoticeTimerRef = useRef<number | null>(null);
+  const powerupPausedRef = useRef(false);
   const powerupNoticeRef = useRef<PowerupNotice | null>(null);
   const browserExperienceRef = useRef(INITIAL_BROWSER_EXPERIENCE);
   const [screen, setScreen] = useState<Screen>("title");
@@ -627,20 +630,32 @@ export function TrashDashGame() {
   }, []);
 
   const dismissPowerupNotice = useCallback(() => {
+    if (powerupPauseTimerRef.current !== null) {
+      window.clearTimeout(powerupPauseTimerRef.current);
+      powerupPauseTimerRef.current = null;
+    }
     if (powerupNoticeTimerRef.current !== null) {
       window.clearTimeout(powerupNoticeTimerRef.current);
       powerupNoticeTimerRef.current = null;
     }
+    powerupPausedRef.current = false;
     powerupNoticeRef.current = null;
     setPowerupNotice(null);
     lastFrameRef.current = performance.now();
   }, []);
 
   const showPowerupNotice = useCallback((kind: PowerupNoticeKind) => {
+    if (powerupPauseTimerRef.current !== null) window.clearTimeout(powerupPauseTimerRef.current);
     if (powerupNoticeTimerRef.current !== null) window.clearTimeout(powerupNoticeTimerRef.current);
     const notice = createPowerupNotice(kind) as PowerupNotice;
+    powerupPausedRef.current = true;
     powerupNoticeRef.current = notice;
     setPowerupNotice(notice);
+    powerupPauseTimerRef.current = window.setTimeout(() => {
+      powerupPausedRef.current = false;
+      powerupPauseTimerRef.current = null;
+      lastFrameRef.current = performance.now();
+    }, POWERUP_PAUSE_DURATION * 1000);
     powerupNoticeTimerRef.current = window.setTimeout(dismissPowerupNotice, POWERUP_NOTICE_DURATION * 1000);
     tone(kind === "taco" ? 760 : 980, 0.16, "triangle");
   }, [dismissPowerupNotice, tone]);
@@ -778,6 +793,7 @@ export function TrashDashGame() {
 
   useEffect(() => {
     return () => {
+      if (powerupPauseTimerRef.current !== null) window.clearTimeout(powerupPauseTimerRef.current);
       if (powerupNoticeTimerRef.current !== null) window.clearTimeout(powerupNoticeTimerRef.current);
       disposeGameMusic(musicRef.current);
       musicRef.current = null;
@@ -1777,7 +1793,7 @@ export function TrashDashGame() {
       const dt = Math.min(0.033, Math.max(0, elapsed));
       lastFrameRef.current = timestamp;
       const world = worldRef.current;
-      if (screenRef.current === "playing" && powerupNoticeRef.current === null) update(world, dt);
+      if (screenRef.current === "playing" && !powerupPausedRef.current) update(world, dt);
       render(world);
 
       if (timestamp - hudTickRef.current > 100) {
@@ -1924,14 +1940,8 @@ export function TrashDashGame() {
           {overlay}
 
           {powerupNotice && screen === "playing" && (
-            <div className="powerup-overlay" role="dialog" aria-modal="true" aria-labelledby="powerup-title">
-              <div className={`powerup-card ${powerupNotice.kind}`}>
-                <span className="powerup-kicker">Special find</span>
-                <h2 id="powerup-title">{powerupNotice.title}</h2>
-                <p>{powerupNotice.detail}</p>
-                <button className="primary-button" type="button" onClick={dismissPowerupNotice}>Keep rummaging</button>
-                <span className="powerup-timer">Resuming automatically</span>
-              </div>
+            <div className={`powerup-flash ${powerupNotice.kind}`} role="status" aria-live="polite" aria-label={powerupNotice.title}>
+              <span className="powerup-flash-title">{powerupNotice.title}</span>
             </div>
           )}
 
