@@ -36,5 +36,6 @@ test("builds a complete GitHub Pages artifact under the repository base path", a
   await access(new URL(".nojekyll", pagesRoot));
   await access(new URL("assets/player-motion.png", pagesRoot));
   await access(new URL("assets/recycle-crates-v2.png", pagesRoot));
+  await access(new URL("assets/audio/raccoon-rush-loop.m4a", pagesRoot));
   await access(new URL("og.png", pagesRoot));
 });

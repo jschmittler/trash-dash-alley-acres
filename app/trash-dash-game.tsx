@@ -7,12 +7,23 @@ import {
   subscribeBrowserExperience,
   toggleGameFullscreen,
 } from "./mobile-experience.mjs";
+import {
+  createGameMusic,
+  disposeGameMusic,
+  pauseGameMusic,
+  playGameMusic,
+  setGameMusicMuted,
+} from "./music-controller.mjs";
 
 type Screen = "title" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
 type PlatformKind = "ground" | "branch" | "metal" | "box";
-type PickupKind = "trash" | "bag" | "cap";
-type EnemyKind = "pigeon" | "slime" | "beetle" | "possum" | "bottle" | "boss";
+type PickupKind = "trash" | "taco" | "cap";
+type EnemyKind =
+  | "pigeon" | "slime" | "beetle" | "possum" | "bottle" | "boss"
+  | "bat" | "wasp" | "mosquito" | "moth"
+  | "snake" | "spider" | "rat" | "hedgehog"
+  | "fox" | "crow" | "boar" | "frog";
 
 interface Rect {
   x: number;
@@ -113,6 +124,51 @@ const enemyMotion = {
   slime: motionRow(1, 4),
   beetle: motionRow(2, 4),
   possum: motionRow(3, 4),
+};
+
+const varietyEnemyMotion = {
+  bat: motionRow(0, 4),
+  wasp: motionRow(1, 4),
+  mosquito: motionRow(2, 4),
+  moth: motionRow(3, 4),
+  snake: motionRow(4, 4),
+  spider: motionRow(5, 4),
+  rat: motionRow(6, 4),
+  hedgehog: motionRow(7, 4),
+  fox: motionRow(8, 4),
+  crow: motionRow(9, 4),
+  boar: motionRow(10, 4),
+  frog: motionRow(11, 4),
+};
+
+const trashPickupMotion = {
+  can: motionRow(0, 4),
+  bottle: motionRow(1, 4),
+  banana: motionRow(2, 4),
+  appleCore: motionRow(3, 4),
+};
+const trashPickupRows = [
+  trashPickupMotion.can,
+  trashPickupMotion.bottle,
+  trashPickupMotion.banana,
+  trashPickupMotion.appleCore,
+];
+
+const tacoPowerMotion = motionRow(0, 4);
+const flyingEnemies = new Set<EnemyKind>(["bat", "wasp", "mosquito", "moth", "crow"]);
+const varietyEnemyDrawSizes: Record<keyof typeof varietyEnemyMotion, [number, number]> = {
+  bat: [68, 68],
+  wasp: [66, 66],
+  mosquito: [64, 64],
+  moth: [68, 68],
+  snake: [74, 64],
+  spider: [70, 64],
+  rat: [72, 66],
+  hedgehog: [70, 66],
+  fox: [82, 72],
+  crow: [72, 70],
+  boar: [84, 74],
+  frog: [66, 62],
 };
 
 const assetRow = (row: number, count: number): Frame[] =>
@@ -278,6 +334,18 @@ const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y): Enemy => {
     possum: [58, 38],
     bottle: [48, 36],
     boss: [96, 96],
+    bat: [50, 34],
+    wasp: [48, 32],
+    mosquito: [46, 30],
+    moth: [50, 34],
+    snake: [58, 28],
+    spider: [52, 30],
+    rat: [54, 34],
+    hedgehog: [52, 34],
+    fox: [62, 40],
+    crow: [52, 36],
+    boar: [62, 42],
+    frog: [48, 30],
   };
   const [w, h] = sizes[kind];
   return {
@@ -286,7 +354,7 @@ const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y): Enemy => {
     y: y - h,
     w,
     h,
-    vx: kind === "bottle" ? -105 : -42,
+    vx: kind === "bottle" ? -105 : kind === "fox" || kind === "boar" ? -78 : flyingEnemies.has(kind) ? -64 : -42,
     active: true,
     phase: x / 100,
     hp: kind === "boss" ? 3 : 1,
@@ -310,20 +378,32 @@ const initialEnemies = () => [
   makeEnemy("pigeon", 520),
   makeEnemy("pigeon", 610),
   makeEnemy("pigeon", 640, 366),
+  makeEnemy("bat", 820, 310),
   makeEnemy("slime", 1090),
   makeEnemy("possum", 1280),
+  makeEnemy("wasp", 1450, 292),
+  makeEnemy("snake", 1540),
   makeEnemy("pigeon", 1710, 352),
+  makeEnemy("mosquito", 1870, 276),
   makeEnemy("beetle", 2040, 294),
   makeEnemy("slime", 2320),
+  makeEnemy("spider", 2440),
+  makeEnemy("moth", 2600, 306),
   makeEnemy("possum", 2790),
+  makeEnemy("rat", 3060),
   makeEnemy("pigeon", 3430, 372),
+  makeEnemy("hedgehog", 3690),
   makeEnemy("bottle", 4040),
   makeEnemy("beetle", 4210, 350),
+  makeEnemy("fox", 4320),
   makeEnemy("slime", 4510),
+  makeEnemy("crow", 4810, 322),
   makeEnemy("bottle", 5030),
   makeEnemy("beetle", 5280, 330),
   makeEnemy("possum", 5400),
+  makeEnemy("boar", 5570),
   makeEnemy("boss", 5790),
+  makeEnemy("frog", 6150),
 ];
 
 const initialPickups = () => [
@@ -331,7 +411,7 @@ const initialPickups = () => [
   makePickup("trash", 400, 410, 1),
   makePickup("trash", 690, 320, 2),
   makePickup("trash", 760, 320, 3),
-  makePickup("bag", 935, 374),
+  makePickup("taco", 935, 374),
   makePickup("trash", 1220, 342, 1),
   makePickup("trash", 1545, 406, 2),
   makePickup("trash", 1660, 305, 3),
@@ -349,7 +429,7 @@ const initialPickups = () => [
   makePickup("trash", 4150, 300, 3),
   makePickup("trash", 4250, 300, 4),
   makePickup("trash", 4460, 352),
-  makePickup("bag", 4670, 410),
+  makePickup("taco", 4670, 410),
   makePickup("trash", 5025, 330, 1),
   makePickup("trash", 5260, 278, 2),
   makePickup("trash", 5570, 352, 3),
@@ -409,6 +489,9 @@ export function TrashDashGame() {
   const atlasRef = useRef<HTMLImageElement | null>(null);
   const playerMotionRef = useRef<HTMLImageElement | null>(null);
   const enemyMotionRef = useRef<HTMLImageElement | null>(null);
+  const varietyEnemyMotionRef = useRef<HTMLImageElement | null>(null);
+  const trashPickupMotionRef = useRef<HTMLImageElement | null>(null);
+  const tacoPowerMotionRef = useRef<HTMLImageElement | null>(null);
   const hazardMotionRef = useRef<HTMLImageElement | null>(null);
   const gliderMotionRef = useRef<HTMLImageElement | null>(null);
   const midgroundPropsRef = useRef<HTMLImageElement | null>(null);
@@ -423,6 +506,7 @@ export function TrashDashGame() {
   const pressedRef = useRef(new Set<string>());
   const screenRef = useRef<Screen>("title");
   const audioRef = useRef<AudioContext | null>(null);
+  const musicRef = useRef<HTMLAudioElement | null>(null);
   const mutedRef = useRef(false);
   const lastFrameRef = useRef(0);
   const hudTickRef = useRef(0);
@@ -437,6 +521,7 @@ export function TrashDashGame() {
   const [best, setBest] = useState({ score: 0, time: 0 });
 
   const changeScreen = useCallback((next: Screen) => {
+    if (next !== "playing") pauseGameMusic(musicRef.current);
     screenRef.current = next;
     setScreen(next);
   }, []);
@@ -491,6 +576,10 @@ export function TrashDashGame() {
       audioRef.current = new AudioContext();
     }
     void audioRef.current.resume();
+    if (!musicRef.current) {
+      musicRef.current = createGameMusic(assetUrl("assets/audio/raccoon-rush-loop.m4a"));
+    }
+    void playGameMusic(musicRef.current, { muted: mutedRef.current, restart: true });
     worldRef.current = makeWorld();
     lastFrameRef.current = performance.now();
     changeScreen("playing");
@@ -503,12 +592,17 @@ export function TrashDashGame() {
     else if (screenRef.current === "paused") {
       lastFrameRef.current = performance.now();
       changeScreen("playing");
+      void playGameMusic(musicRef.current, { muted: mutedRef.current });
     }
   }, [changeScreen]);
 
   const toggleMute = useCallback(() => {
     mutedRef.current = !mutedRef.current;
     setMuted(mutedRef.current);
+    setGameMusicMuted(musicRef.current, mutedRef.current);
+    if (!mutedRef.current && screenRef.current === "playing") {
+      void playGameMusic(musicRef.current);
+    }
   }, []);
 
   const setTouchKey = useCallback((code: string, active: boolean) => {
@@ -533,9 +627,10 @@ export function TrashDashGame() {
   useEffect(() => {
     const storedScore = Number(window.localStorage.getItem("trash-dash-high-score") ?? 0);
     const storedTime = Number(window.localStorage.getItem("trash-dash-best-time") ?? 0);
-    setBest({ score: storedScore, time: storedTime });
-
     let cancelled = false;
+    window.queueMicrotask(() => {
+      if (!cancelled) setBest({ score: storedScore, time: storedTime });
+    });
     const loadImage = (source: string) =>
       new Promise<HTMLImageElement>((resolve, reject) => {
         const image = new Image();
@@ -548,6 +643,9 @@ export function TrashDashGame() {
       loadImage(assetUrl("assets/raccoon-sprites.png")),
       loadImage(assetUrl("assets/player-motion.png")),
       loadImage(assetUrl("assets/enemy-motion.png")),
+      loadImage(assetUrl("assets/generated/enemy-variety-motion.png")),
+      loadImage(assetUrl("assets/generated/trash-pickups-motion.png")),
+      loadImage(assetUrl("assets/generated/taco-power-motion.png")),
       loadImage(assetUrl("assets/hazard-motion.png")),
       loadImage(assetUrl("assets/glider-motion.png")),
       loadImage(assetUrl("assets/midground-props.png")),
@@ -558,11 +656,14 @@ export function TrashDashGame() {
       loadImage(assetUrl("assets/backgrounds/city-far.png")),
       loadImage(assetUrl("assets/backgrounds/city-near.png")),
     ])
-      .then(([atlas, playerAtlas, enemyAtlas, hazardAtlas, gliderAtlas, propAtlas, crateAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
+      .then(([atlas, playerAtlas, enemyAtlas, varietyEnemyAtlas, trashPickupAtlas, tacoPowerAtlas, hazardAtlas, gliderAtlas, propAtlas, crateAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
         if (cancelled) return;
         atlasRef.current = atlas;
         playerMotionRef.current = playerAtlas;
         enemyMotionRef.current = enemyAtlas;
+        varietyEnemyMotionRef.current = varietyEnemyAtlas;
+        trashPickupMotionRef.current = trashPickupAtlas;
+        tacoPowerMotionRef.current = tacoPowerAtlas;
         hazardMotionRef.current = hazardAtlas;
         gliderMotionRef.current = gliderAtlas;
         midgroundPropsRef.current = propAtlas;
@@ -580,6 +681,13 @@ export function TrashDashGame() {
 
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      disposeGameMusic(musicRef.current);
+      musicRef.current = null;
     };
   }, []);
 
@@ -826,12 +934,12 @@ export function TrashDashGame() {
           tone(620 + (world.trash % 5) * 65, 0.07);
           if (world.trash % 5 === 0 && !player.large) {
             transformPlayer(player, true);
-            setMessage(world, "Five snacks — powered up!", 2.2);
+            setMessage(world, "Five scraps — powered up!", 2.2);
             tone(820, 0.16, "triangle");
           }
-        } else if (pickup.kind === "bag") {
+        } else if (pickup.kind === "taco") {
           transformPlayer(player, true);
-          setMessage(world, "Big rummage energy!", 2);
+          setMessage(world, "Taco power!", 2);
           tone(760, 0.15, "triangle");
         } else {
           player.glider = 14;
@@ -868,7 +976,7 @@ export function TrashDashGame() {
           enemy.x = patrolMax;
           enemy.vx = -Math.abs(enemy.vx);
         }
-        enemy.y = enemy.surfaceY - enemy.h;
+        enemy.y = enemy.surfaceY - enemy.h + (flyingEnemies.has(enemy.kind) ? Math.sin(enemy.phase * 0.82) * 11 : 0);
 
         if (player.attackTimer > 0.08 && player.large) {
           const attackRect: Rect = {
@@ -1176,9 +1284,15 @@ export function TrashDashGame() {
         const x = pickup.x - camera;
         if (x < -80 || x > WIDTH + 80) continue;
         const y = pickup.y + Math.sin(world.elapsed * 1.65 + pickup.phase) * 2;
-        if (pickup.kind === "bag") drawSprite(sprites.bag, x - 6, y - 7, 45, 49);
-        else if (pickup.kind === "cap") drawSprite(sprites.cap, x - 9, y - 7, 50, 42);
-        else drawSprite(sprites.trashCan, x, y, 32, 34);
+        const pickupFrame = Math.floor(world.elapsed * 5 + pickup.phase) % 4;
+        if (pickup.kind === "taco") {
+          drawSprite(tacoPowerMotion[pickupFrame], x - 10, y - 12, 58, 58, false, 1, tacoPowerMotionRef.current);
+        } else if (pickup.kind === "cap") {
+          drawSprite(sprites.cap, x - 9, y - 7, 50, 42);
+        } else {
+          const trashFrames = trashPickupRows[Math.abs(Math.floor(pickup.phase)) % trashPickupRows.length];
+          drawSprite(trashFrames[pickupFrame], x - 8, y - 10, 46, 46, false, 1, trashPickupMotionRef.current);
+        }
       }
 
       for (const enemy of world.enemies) {
@@ -1210,6 +1324,12 @@ export function TrashDashGame() {
         if (enemy.kind === "beetle") drawEnemy(enemyMotion.beetle[frameIndex], 68, 68, 1, enemyMotionRef.current);
         if (enemy.kind === "possum") drawEnemy(enemyMotion.possum[frameIndex], 78, 78, 1, enemyMotionRef.current);
         if (enemy.kind === "bottle") drawEnemy(hazardMotion.bottle[frameIndex], 68, 68, 1, hazardMotionRef.current);
+        const varietyKind = enemy.kind as keyof typeof varietyEnemyMotion;
+        const varietyFrames = varietyEnemyMotion[varietyKind];
+        if (varietyFrames) {
+          const [drawW, drawH] = varietyEnemyDrawSizes[varietyKind];
+          drawEnemy(varietyFrames[frameIndex], drawW, drawH, 1, varietyEnemyMotionRef.current);
+        }
         if (enemy.kind === "boss") {
           const bossFrame = hazardMotion.boss[frameIndex];
           drawEnemy(
