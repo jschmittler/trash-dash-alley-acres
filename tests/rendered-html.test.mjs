@@ -52,6 +52,7 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /const camera = Math\.round\(world\.cameraX\)/);
   assert.match(game, /trash-pickups-motion\.png/);
   assert.match(game, /taco-power-motion\.png/);
+  assert.match(game, /dumpster-animation-atlas\.png/);
   assert.match(game, /enemy-variety-motion\.png/);
   assert.match(game, /type PickupKind = "trash" \| "taco" \| "cap"/);
   assert.match(game, /const flyingEnemies = new Set<EnemyKind>/);
@@ -152,6 +153,7 @@ test("ships the playable assets and removes the starter preview", async () => {
   await access(new URL("../public/assets/generated/enemy-variety-motion.png", import.meta.url));
   await access(new URL("../public/assets/generated/trash-pickups-motion.png", import.meta.url));
   await access(new URL("../public/assets/generated/taco-power-motion.png", import.meta.url));
+  await access(new URL("../public/assets/generated/dumpster-animation-atlas.png", import.meta.url));
   await access(new URL("../public/assets/glider-motion.png", import.meta.url));
   await access(new URL("../public/assets/midground-props.png", import.meta.url));
   await access(new URL("../public/assets/recycle-crates-v2.png", import.meta.url));

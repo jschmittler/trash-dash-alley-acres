@@ -216,6 +216,10 @@ const trashPickupRows = [
 ];
 
 const tacoPowerMotion = motionRow(0, 4);
+const dumpsterMotion = {
+  idle: motionRow(0, 4),
+  stink: motionRow(1, 4),
+};
 const flyingEnemies = new Set<EnemyKind>(["bat", "wasp", "mosquito", "moth", "crow"]);
 const varietyEnemyDrawSizes: Record<keyof typeof varietyEnemyMotion, [number, number]> = {
   bat: [68, 68],
@@ -547,6 +551,7 @@ export function TrashDashGame() {
   const varietyEnemyMotionRef = useRef<HTMLImageElement | null>(null);
   const trashPickupMotionRef = useRef<HTMLImageElement | null>(null);
   const tacoPowerMotionRef = useRef<HTMLImageElement | null>(null);
+  const dumpsterMotionRef = useRef<HTMLImageElement | null>(null);
   const midgroundPropsRef = useRef<HTMLImageElement | null>(null);
   const recycleCratesRef = useRef<HTMLImageElement | null>(null);
   const groundTileRef = useRef<HTMLImageElement | null>(null);
@@ -775,6 +780,7 @@ export function TrashDashGame() {
       loadImage(assetUrl("assets/generated/enemy-variety-motion.png")),
       loadImage(assetUrl("assets/generated/trash-pickups-motion.png")),
       loadImage(assetUrl("assets/generated/taco-power-motion.png")),
+      loadImage(assetUrl("assets/generated/dumpster-animation-atlas.png")),
       loadImage(assetUrl("assets/midground-props.png")),
       loadImage(assetUrl("assets/recycle-crates-v2.png")),
       loadImage(assetUrl("assets/ground-seamless.png")),
@@ -783,7 +789,7 @@ export function TrashDashGame() {
       loadImage(assetUrl("assets/backgrounds/city-far.png")),
       loadImage(assetUrl("assets/backgrounds/city-near.png")),
     ])
-      .then(([atlas, playerHeroAtlas, bossAtlas, enemyAtlas, varietyEnemyAtlas, trashPickupAtlas, tacoPowerAtlas, propAtlas, crateAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
+      .then(([atlas, playerHeroAtlas, bossAtlas, enemyAtlas, varietyEnemyAtlas, trashPickupAtlas, tacoPowerAtlas, dumpsterAtlas, propAtlas, crateAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
         if (cancelled) return;
         atlasRef.current = atlas;
         playerHeroMotionRef.current = playerHeroAtlas;
@@ -792,6 +798,7 @@ export function TrashDashGame() {
         varietyEnemyMotionRef.current = varietyEnemyAtlas;
         trashPickupMotionRef.current = trashPickupAtlas;
         tacoPowerMotionRef.current = tacoPowerAtlas;
+        dumpsterMotionRef.current = dumpsterAtlas;
         midgroundPropsRef.current = propAtlas;
         recycleCratesRef.current = crateAtlas;
         groundTileRef.current = groundTile;
@@ -1678,6 +1685,22 @@ export function TrashDashGame() {
         world.bossDefeated ? 1 : 0.5,
         midgroundPropsRef.current,
       );
+      if (world.bossDefeated) {
+        const dumpsterFrameIndex = Math.floor(world.elapsed * 5) % 4;
+        const dumpsterFrame = world.elapsed > 0.8
+          ? dumpsterMotion.stink[dumpsterFrameIndex]
+          : dumpsterMotion.idle[dumpsterFrameIndex];
+        drawSprite(
+          dumpsterFrame,
+          6160 - camera,
+          GROUND_Y - 150,
+          180,
+          180,
+          false,
+          1,
+          dumpsterMotionRef.current,
+        );
+      }
 
       context.save();
       context.font = "900 15px var(--font-body), sans-serif";
