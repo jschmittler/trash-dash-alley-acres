@@ -111,6 +111,10 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /shrinkTimer: number/);
   assert.match(game, /endSequence: "won" \| "gameover" \| null/);
   assert.match(game, /player\.endSequence = "won"/);
+  assert.match(game, /YOU WIN!/);
+  assert.match(game, /victory-confetti/);
+  assert.match(game, /victoryRecord/);
+  assert.match(game, /NEW BEST!/);
   assert.doesNotMatch(game, /const groundedFrames =/);
   assert.doesNotMatch(game, /player\.large \? sprites\.largeHurt : sprites\.smallHurt/);
   assert.doesNotMatch(game, /player\.y > HEIGHT \+ 120\) \{\s*hurtPlayer\(world, 0\)/);
@@ -126,6 +130,8 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(styles, /prefers-reduced-motion/);
   assert.match(styles, /powerup-text/);
   assert.match(styles, /powerup-rays/);
+  assert.match(styles, /victory-wash/);
+  assert.match(styles, /confetti-fall/);
   assert.match(mobileExperience, /fullscreenchange/);
   assert.match(mobileExperience, /orientationchange/);
   assert.match(mobileExperience, /clearInputState/);

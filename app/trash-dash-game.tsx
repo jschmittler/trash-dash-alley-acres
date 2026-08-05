@@ -51,6 +51,7 @@ import {
   POWERUP_PAUSE_DURATION,
   POWERUP_NOTICE_DURATION,
 } from "./powerup-announcement.mjs";
+import { evaluateVictoryRecord } from "./victory-phase.mjs";
 
 type Screen = "title" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
@@ -576,6 +577,7 @@ export function TrashDashGame() {
   const [browserExperience, setBrowserExperience] = useState(INITIAL_BROWSER_EXPERIENCE);
   const [hud, setHud] = useState({ trash: 0, score: 0, lives: 3, time: 0, glider: 0 });
   const [best, setBest] = useState({ score: 0, time: 0 });
+  const [victoryRecord, setVictoryRecord] = useState({ score: false, time: false });
   const [powerupNotice, setPowerupNotice] = useState<PowerupNotice | null>(null);
 
   const changeScreen = useCallback((next: Screen) => {
@@ -662,6 +664,7 @@ export function TrashDashGame() {
 
   const startGame = useCallback(() => {
     dismissPowerupNotice();
+    setVictoryRecord({ score: false, time: false });
     if (!audioRef.current) {
       audioRef.current = new AudioContext();
     }
@@ -671,8 +674,10 @@ export function TrashDashGame() {
     musicRef.current = createGameMusic(assetUrl("assets/audio/raccoon-rush-loop.m4a"));
     void playGameMusic(musicRef.current, { muted: mutedRef.current, restart: true });
     const nextWorld = makeWorld();
-    const bossTest = import.meta.env.DEV ? new URLSearchParams(window.location.search).get("bossTest") : null;
-    const powerupTest = import.meta.env.DEV ? new URLSearchParams(window.location.search).get("powerupTest") : null;
+    const devParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
+    const bossTest = devParams?.get("bossTest") ?? null;
+    const powerupTest = devParams?.get("powerupTest") ?? null;
+    const victoryTest = devParams?.get("victoryTest") ?? null;
     if (bossTest) {
       nextWorld.player.x = bossTest === "arena" ? 5690 : 5590;
       nextWorld.player.y = GROUND_Y - 58;
@@ -688,6 +693,20 @@ export function TrashDashGame() {
       nextWorld.player.x = powerupTest === "taco" ? 920 : 3580;
       nextWorld.player.y = powerupTest === "taco" ? 370 : 215;
       nextWorld.cameraX = powerupTest === "taco" ? 560 : 3320;
+    } else if (victoryTest === "1") {
+      nextWorld.player.x = 6350;
+      nextWorld.player.y = GROUND_Y - 58;
+      nextWorld.player.w = 38;
+      nextWorld.player.h = 58;
+      nextWorld.player.large = true;
+      nextWorld.player.endSequence = "won";
+      nextWorld.player.endTimer = 0.02;
+      nextWorld.bossDefeated = true;
+      nextWorld.trash = 12;
+      nextWorld.score = 4720;
+      nextWorld.elapsed = 63;
+      nextWorld.cameraX = 5640;
+      setVictoryRecord({ score: true, time: true });
     }
     worldRef.current = nextWorld;
     lastFrameRef.current = performance.now();
@@ -1381,6 +1400,12 @@ export function TrashDashGame() {
         const oldTime = Number(window.localStorage.getItem("trash-dash-best-time") ?? 0);
         const nextScore = Math.max(oldScore, world.score);
         const nextTime = oldTime === 0 ? world.elapsed : Math.min(oldTime, world.elapsed);
+        setVictoryRecord(evaluateVictoryRecord({
+          score: world.score,
+          time: world.elapsed,
+          bestScore: oldScore,
+          bestTime: oldTime,
+        }));
         window.localStorage.setItem("trash-dash-high-score", String(nextScore));
         window.localStorage.setItem("trash-dash-best-time", String(nextTime));
         setBest({ score: nextScore, time: nextTime });
@@ -1857,12 +1882,25 @@ export function TrashDashGame() {
     }
     if (screen === "won") {
       return (
-        <div className="screen-overlay compact">
-          <div className="screen-copy">
-            <h2>Alley acres cleared!</h2>
-            <p>{hud.trash} scraps recycled · {hud.score.toLocaleString()} points · {formatTime(hud.time)}</p>
-            <p>Best: {best.score.toLocaleString()} points{best.time ? ` · ${formatTime(best.time)}` : ""}</p>
-            <button className="primary-button" type="button" onClick={startGame}>Run it again</button>
+        <div className="screen-overlay victory-overlay">
+          <div className="victory-confetti" aria-hidden="true">
+            {Array.from({ length: 18 }, (_, index) => <i className={`confetti-piece confetti-${index + 1}`} key={index} />)}
+          </div>
+          <div className="victory-copy">
+            <span className="victory-kicker">ALLEY ACRES CLEARED</span>
+            <h2>YOU WIN!</h2>
+            <p className="victory-subtitle">The trash heap tyrant is recycled.</p>
+            <div className="victory-results">
+              <div><span>Scraps</span><strong>{hud.trash}</strong></div>
+              <div><span>Score</span><strong>{hud.score.toLocaleString()}</strong></div>
+              <div><span>Time</span><strong>{formatTime(hud.time)}</strong></div>
+            </div>
+            <p className="victory-best">Best run: {best.score.toLocaleString()} points{best.time ? ` · ${formatTime(best.time)}` : ""}</p>
+            {(victoryRecord.score || victoryRecord.time) && <span className="new-record">NEW BEST!</span>}
+            <div className="button-row">
+              <button className="primary-button" type="button" onClick={startGame}>Run it again</button>
+              <button className="secondary-button" type="button" onClick={() => { clearHeldInput(); changeScreen("title"); }}>Back to title</button>
+            </div>
           </div>
         </div>
       );
