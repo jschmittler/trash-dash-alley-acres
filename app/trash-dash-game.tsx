@@ -15,6 +15,11 @@ import {
   setGameMusicMuted,
 } from "./music-controller.mjs";
 import { createEnemyPatrol } from "./enemy-surface.mjs";
+import {
+  bossAnimationState,
+  bossFrameIndex,
+  nextEnemyIntent,
+} from "./gameplay-animation-state.mjs";
 
 type Screen = "title" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
@@ -46,6 +51,8 @@ interface Pickup extends Rect {
 interface Enemy extends Rect {
   kind: EnemyKind;
   vx: number;
+  facing: 1 | -1;
+  animationState: "walking" | "hit";
   active: boolean;
   phase: number;
   hp: number;
@@ -353,13 +360,16 @@ const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y): Enemy => {
     patrolRadius,
     grounded: !flyingEnemies.has(kind),
   }, platforms);
+  const vx = kind === "fox" || kind === "boar" ? -78 : flyingEnemies.has(kind) ? -64 : -42;
   return {
     kind,
     x: patrol.spawnX,
     y: patrol.surfaceY - h,
     w,
     h,
-    vx: kind === "fox" || kind === "boar" ? -78 : flyingEnemies.has(kind) ? -64 : -42,
+    vx,
+    facing: vx < 0 ? -1 : 1,
+    animationState: "walking",
     active: true,
     phase: x / 100,
     hp: kind === "boss" ? 3 : 1,
@@ -831,6 +841,7 @@ export function TrashDashGame() {
       if (!enemy.active || enemy.hitCooldown > 0) return;
       enemy.hp -= 1;
       enemy.hitCooldown = 0.5;
+      if (enemy.kind === "boss") enemy.animationState = "hit";
       burst(world, enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, enemy.kind === "boss" ? "#ffd248" : "#c7f170", enemy.kind === "boss" ? 12 : 7);
       tone(enemy.kind === "boss" ? 170 : 260, 0.09, "square");
       if (enemy.hp <= 0) {
@@ -961,13 +972,24 @@ export function TrashDashGame() {
         if (!enemy.active) continue;
         enemy.phase += dt * Math.max(3.4, Math.abs(enemy.vx) / 26);
         enemy.hitCooldown = Math.max(0, enemy.hitCooldown - dt);
+        if (enemy.kind === "boss") {
+          enemy.animationState = bossAnimationState(enemy.hitCooldown);
+        }
+
+        const intent = nextEnemyIntent({
+          kind: enemy.kind,
+          enemyX: enemy.x,
+          originX: enemy.originX,
+          playerX: player.x,
+          vx: enemy.vx,
+          facing: enemy.facing,
+        });
+        enemy.vx = intent.vx;
+        enemy.facing = intent.facing;
 
         if (enemy.kind === "slime") {
           enemy.x += enemy.vx * 0.35 * dt;
         } else if (enemy.kind === "possum") {
-          const distance = player.x - enemy.x;
-          if (Math.abs(distance) < 250) enemy.vx = Math.sign(distance || 1) * 105;
-          else if (Math.abs(enemy.x - enemy.originX) > 72) enemy.vx = Math.sign(enemy.originX - enemy.x) * 55;
           enemy.x += enemy.vx * dt;
         } else {
           enemy.x += enemy.vx * dt;
@@ -978,9 +1000,11 @@ export function TrashDashGame() {
         if (enemy.x <= patrolMin) {
           enemy.x = patrolMin;
           enemy.vx = Math.abs(enemy.vx);
+          enemy.facing = 1;
         } else if (enemy.x >= patrolMax) {
           enemy.x = patrolMax;
           enemy.vx = -Math.abs(enemy.vx);
+          enemy.facing = -1;
         }
         enemy.y = enemy.surfaceY - enemy.h + (flyingEnemies.has(enemy.kind) ? Math.sin(enemy.phase * 0.82) * 11 : 0);
 
@@ -1306,7 +1330,7 @@ export function TrashDashGame() {
         const x = enemy.x - camera;
         if (x < -150 || x > WIDTH + 150) continue;
         const frameIndex = Math.floor(enemy.phase) % 4;
-        const flip = enemy.vx < 0;
+        const flip = enemy.facing < 0;
         const drawEnemy = (
           frame: Frame,
           drawW: number,
@@ -1336,13 +1360,14 @@ export function TrashDashGame() {
           drawEnemy(varietyFrames[frameIndex], drawW, drawH, 1, varietyEnemyMotionRef.current);
         }
         if (enemy.kind === "boss") {
-          const bossFrame = hazardMotion.boss[frameIndex];
+          const bossHit = enemy.animationState === "hit";
+          const bossFrame = bossHit ? sprites.boss[0] : hazardMotion.boss[bossFrameIndex(enemy.phase)];
           drawEnemy(
             bossFrame,
             150,
             150,
-            enemy.hitCooldown > 0 && Math.floor(enemy.hitCooldown * 20) % 2 ? 0.35 : 1,
-            hazardMotionRef.current,
+            1,
+            bossHit ? atlasRef.current : hazardMotionRef.current,
           );
           context.fillStyle = "#173e3b";
           context.fillRect(x + 4, enemy.y - 48, 88, 9);

@@ -71,7 +71,12 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /const drawBranchPlatform/);
   assert.match(game, /const drawMetalPlatform/);
   assert.match(game, /const frameIndex = Math\.floor\(enemy\.phase\) % 4/);
-  assert.match(game, /const flip = enemy\.vx < 0/);
+  assert.match(game, /nextEnemyIntent/);
+  assert.match(game, /animationState: "walking" \| "hit"/);
+  assert.match(game, /const flip = enemy\.facing < 0/);
+  assert.match(game, /bossFrameIndex\(enemy\.phase\)/);
+  assert.match(game, /sprites\.boss\[0\]/);
+  assert.doesNotMatch(game, /const flip = enemy\.vx < 0/);
   assert.match(game, /Math\.sin\(world\.elapsed \* 1\.65 \+ pickup\.phase\) \* 2/);
   assert.match(game, /flyingEnemies\.has\(enemy\.kind\).*Math\.sin/);
   assert.doesNotMatch(game, /Math\.floor\(pickup\.phase\).*sprites\.trashCan/);
