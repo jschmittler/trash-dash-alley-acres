@@ -110,6 +110,7 @@ const hazardMotion = {
 };
 
 const gliderMotion = assetRow(0, 6);
+const recycleCrates = assetRow(0, 2);
 
 const midgroundProps = {
   bush: [0, 0, ASSET_CELL, ASSET_CELL] as Frame,
@@ -248,8 +249,11 @@ const scenery = [
   { x: 2860, groundY: GROUND_Y, frame: midgroundProps.tree, size: 112 },
   { x: 3940, groundY: GROUND_Y, frame: midgroundProps.bin, size: 92 },
   { x: 4480, groundY: GROUND_Y, frame: midgroundProps.tires, size: 94 },
-  { x: 5100, groundY: GROUND_Y, frame: midgroundProps.crate, size: 92 },
-  { x: 6150, groundY: GROUND_Y, frame: midgroundProps.crate, size: 92 },
+];
+
+const recycleScenery = [
+  { x: 5100, groundY: GROUND_Y, frame: recycleCrates[0] },
+  { x: 6150, groundY: GROUND_Y, frame: recycleCrates[1] },
 ];
 
 const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y): Enemy => {
@@ -393,6 +397,7 @@ export function TrashDashGame() {
   const hazardMotionRef = useRef<HTMLImageElement | null>(null);
   const gliderMotionRef = useRef<HTMLImageElement | null>(null);
   const midgroundPropsRef = useRef<HTMLImageElement | null>(null);
+  const recycleCratesRef = useRef<HTMLImageElement | null>(null);
   const groundTileRef = useRef<HTMLImageElement | null>(null);
   const forestFarRef = useRef<HTMLImageElement | null>(null);
   const forestNearRef = useRef<HTMLImageElement | null>(null);
@@ -508,13 +513,14 @@ export function TrashDashGame() {
       loadImage("/assets/hazard-motion.png"),
       loadImage("/assets/glider-motion.png"),
       loadImage("/assets/midground-props.png"),
+      loadImage("/assets/recycle-crates-v2.png"),
       loadImage("/assets/ground-seamless.png"),
       loadImage("/assets/backgrounds/forest-far.png"),
       loadImage("/assets/backgrounds/forest-near.png"),
       loadImage("/assets/backgrounds/city-far.png"),
       loadImage("/assets/backgrounds/city-near.png"),
     ])
-      .then(([atlas, playerAtlas, enemyAtlas, hazardAtlas, gliderAtlas, propAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
+      .then(([atlas, playerAtlas, enemyAtlas, hazardAtlas, gliderAtlas, propAtlas, crateAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
         if (cancelled) return;
         atlasRef.current = atlas;
         playerMotionRef.current = playerAtlas;
@@ -522,6 +528,7 @@ export function TrashDashGame() {
         hazardMotionRef.current = hazardAtlas;
         gliderMotionRef.current = gliderAtlas;
         midgroundPropsRef.current = propAtlas;
+        recycleCratesRef.current = crateAtlas;
         groundTileRef.current = groundTile;
         forestFarRef.current = forestFar;
         forestNearRef.current = forestNear;
@@ -1012,6 +1019,21 @@ export function TrashDashGame() {
         );
       }
 
+      for (const item of recycleScenery) {
+        const x = item.x - camera;
+        if (x < -140 || x > WIDTH + 140) continue;
+        drawSprite(
+          item.frame,
+          x,
+          item.groundY - 112,
+          88,
+          112,
+          false,
+          1,
+          recycleCratesRef.current,
+        );
+      }
+
       for (const platform of platforms) {
         const x = platform.x - camera;
         if (x + platform.w < -80 || x > WIDTH + 80) continue;
@@ -1034,16 +1056,16 @@ export function TrashDashGame() {
         } else if (platform.kind === "metal") {
           drawMetalPlatform(x, platform.y, platform.w);
         } else {
-          const size = Math.max(platform.w, platform.h + 5);
+          const frame = recycleCrates[Math.round(platform.x / 60) % recycleCrates.length];
           drawSprite(
-            midgroundProps.crate,
-            x + platform.w / 2 - size / 2,
-            platform.y + platform.h - size,
-            size,
-            size,
+            frame,
+            x + platform.w / 2 - 34,
+            platform.y + platform.h - 78,
+            68,
+            80,
             false,
             1,
-            midgroundPropsRef.current,
+            recycleCratesRef.current,
           );
         }
       }

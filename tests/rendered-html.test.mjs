@@ -47,6 +47,7 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /hazard-motion\.png/);
   assert.match(game, /glider-motion\.png/);
   assert.match(game, /midground-props\.png/);
+  assert.match(game, /recycle-crates-v2\.png/);
   assert.match(game, /ground-seamless\.png/);
   assert.match(game, /const drawBranchPlatform/);
   assert.match(game, /const drawMetalPlatform/);
@@ -66,6 +67,7 @@ test("ships the playable assets and removes the starter preview", async () => {
   await access(new URL("../public/assets/hazard-motion.png", import.meta.url));
   await access(new URL("../public/assets/glider-motion.png", import.meta.url));
   await access(new URL("../public/assets/midground-props.png", import.meta.url));
+  await access(new URL("../public/assets/recycle-crates-v2.png", import.meta.url));
   await access(new URL("../public/assets/ground-seamless.png", import.meta.url));
   await access(new URL("../public/og.png", import.meta.url));
   await assert.rejects(access(new URL("../app/_sites-preview/SkeletonPreview.tsx", import.meta.url)));
