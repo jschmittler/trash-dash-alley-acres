@@ -21,8 +21,8 @@ Three-quarter side view of an old, dark-green steel dumpster with dents, chipped
 ## Workspace layout
 
 - `source/`: retained flat-key generation sheets for future revisions.
-- `sheets/`: cleaned, transparent component sheets (created in later tasks).
-- `dumpster-animation-atlas.png`: final 4×2 review atlas (created in later tasks).
+- `sheets/`: cleaned, transparent idle and stink component sheets.
+- `dumpster-animation-atlas.png`: final 4×2 review atlas assembled from both sheets.
 - `PROMPTS.md`: exact generation prompts and constraints.
 
 This is concept art only: no gameplay integration, collision, goal behavior, boss sequencing, victory logic, or runtime references belong in this workspace.
