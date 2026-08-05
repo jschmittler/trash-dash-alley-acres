@@ -7,6 +7,7 @@ from PIL import Image
 
 
 CELL = 192
+BASELINE_MARGIN = 8
 TEMP = Path("/tmp/trash-dash-sprites")
 OUTPUT = Path(__file__).resolve().parents[1] / "public" / "assets" / "generated"
 
@@ -18,7 +19,7 @@ def nearest(image: Image.Image, size: tuple[int, int]) -> Image.Image:
 def clean_key_fringe(image: Image.Image) -> Image.Image:
     """Remove saturated magenta remnants left by chroma-key conversion."""
     pixels = []
-    for red, green, blue, alpha in image.get_flattened_data():
+    for red, green, blue, alpha in image.getdata():
         is_key_magenta = (
             alpha
             and red > 45
@@ -36,11 +37,98 @@ def clean_key_fringe(image: Image.Image) -> Image.Image:
     return cleaned
 
 
+def connected_pose_bounds(row_image: Image.Image) -> list[tuple[int, int, int, int]]:
+    """Return the four large connected sprite components from one source row."""
+    alpha = row_image.getchannel("A")
+    width, height = alpha.size
+    pixels = alpha.load()
+    visited = bytearray(width * height)
+    components = []
+
+    for y in range(height):
+        for x in range(width):
+            start = y * width + x
+            if visited[start] or pixels[x, y] == 0:
+                continue
+            visited[start] = 1
+            stack = [start]
+            count = 0
+            left = right = x
+            top = bottom = y
+
+            while stack:
+                index = stack.pop()
+                point_y, point_x = divmod(index, width)
+                count += 1
+                left = min(left, point_x)
+                right = max(right, point_x)
+                top = min(top, point_y)
+                bottom = max(bottom, point_y)
+
+                if point_x > 0:
+                    neighbors = (index - 1,)
+                else:
+                    neighbors = ()
+                if point_x + 1 < width:
+                    neighbors += (index + 1,)
+                if point_y > 0:
+                    neighbors += (index - width,)
+                if point_y + 1 < height:
+                    neighbors += (index + width,)
+
+                for neighbor in neighbors:
+                    neighbor_y, neighbor_x = divmod(neighbor, width)
+                    if not visited[neighbor] and pixels[neighbor_x, neighbor_y] != 0:
+                        visited[neighbor] = 1
+                        stack.append(neighbor)
+
+            if count >= 64:
+                components.append((count, left, top, right + 1, bottom + 1))
+
+    poses = sorted(sorted(components, reverse=True)[:4], key=lambda component: component[1])
+    if len(poses) != 4:
+        raise ValueError(f"expected four connected poses, found {len(poses)}")
+    return [(left, top, right, bottom) for _, left, top, right, bottom in poses]
+
+
+def normalize_enemy_sheet(source: Image.Image, grounded_rows: tuple[int, ...]) -> Image.Image:
+    """Extract complete poses before fitting them to the shared cell baseline."""
+    sheet = nearest(source, (CELL * 4, CELL * 4))
+    source_scale = (CELL * 4) / source.width
+
+    for row in grounded_rows:
+        source_top = round(row * source.height / 4)
+        source_bottom = round((row + 1) * source.height / 4)
+        source_row = source.crop((0, source_top, source.width, source_bottom))
+        poses = connected_pose_bounds(source_row)
+        sheet.paste((0, 0, 0, 0), (0, row * CELL, CELL * 4, (row + 1) * CELL))
+
+        for column, bounds in enumerate(poses):
+            pose = source_row.crop(bounds)
+            scale = min(
+                source_scale,
+                (CELL - 2) / pose.width,
+                (CELL - BASELINE_MARGIN - 1) / pose.height,
+            )
+            size = (round(pose.width * scale), round(pose.height * scale))
+            frame = nearest(pose, size)
+            left = column * CELL + (CELL - size[0]) // 2
+            top = (row + 1) * CELL - BASELINE_MARGIN - size[1]
+            sheet.alpha_composite(frame, (left, top))
+
+    return sheet
+
+
 def build_enemy_atlas() -> None:
+    sheet_specs = (
+        ("enemies-flying-alpha.png", ()),
+        ("enemies-ground-alpha.png", (0, 1, 2, 3)),
+        ("enemies-woodland-alpha.png", (0, 2, 3)),
+    )
     rows = []
-    for name in ("enemies-flying-alpha.png", "enemies-ground-alpha.png", "enemies-woodland-alpha.png"):
+    for name, grounded_rows in sheet_specs:
         source = clean_key_fringe(Image.open(TEMP / name).convert("RGBA"))
-        rows.append(nearest(source, (CELL * 4, CELL * 4)))
+        rows.append(normalize_enemy_sheet(source, grounded_rows))
 
     atlas = Image.new("RGBA", (CELL * 4, CELL * 12), (0, 0, 0, 0))
     for index, sheet in enumerate(rows):
