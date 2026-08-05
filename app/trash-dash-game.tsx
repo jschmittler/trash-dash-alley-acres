@@ -42,6 +42,14 @@ import {
   clampArenaBossX,
   clampArenaPlayerX,
 } from "./boss-arena.mjs";
+import {
+  advanceBossTransition,
+  createBossTransition,
+} from "./boss-transition.mjs";
+import {
+  createPowerupNotice,
+  POWERUP_NOTICE_DURATION,
+} from "./powerup-announcement.mjs";
 
 type Screen = "title" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
@@ -52,6 +60,14 @@ type EnemyKind =
   | "bat" | "wasp" | "mosquito" | "moth"
   | "snake" | "spider" | "rat" | "hedgehog"
   | "fox" | "crow" | "boar" | "frog";
+type PowerupNoticeKind = "taco" | "cap";
+
+interface PowerupNotice {
+  kind: PowerupNoticeKind;
+  title: string;
+  detail: string;
+  accent: string;
+}
 
 interface Rect {
   x: number;
@@ -135,6 +151,7 @@ interface World {
   checkpointReached: boolean;
   bossDefeated: boolean;
   arenaActive: boolean;
+  bossTransition: { fromCameraX: number; elapsed: number } | null;
   trash: number;
   score: number;
   lives: number;
@@ -498,6 +515,7 @@ const makeWorld = (): World => ({
   checkpointReached: false,
   bossDefeated: false,
   arenaActive: false,
+  bossTransition: null,
   trash: 0,
   score: 0,
   lives: 3,
@@ -545,6 +563,8 @@ export function TrashDashGame() {
   const lastFrameRef = useRef(0);
   const hudTickRef = useRef(0);
   const fullscreenPendingRef = useRef(false);
+  const powerupNoticeTimerRef = useRef<number | null>(null);
+  const powerupNoticeRef = useRef<PowerupNotice | null>(null);
   const browserExperienceRef = useRef(INITIAL_BROWSER_EXPERIENCE);
   const [screen, setScreen] = useState<Screen>("title");
   const [loaded, setLoaded] = useState(false);
@@ -553,6 +573,7 @@ export function TrashDashGame() {
   const [browserExperience, setBrowserExperience] = useState(INITIAL_BROWSER_EXPERIENCE);
   const [hud, setHud] = useState({ trash: 0, score: 0, lives: 3, time: 0, glider: 0 });
   const [best, setBest] = useState({ score: 0, time: 0 });
+  const [powerupNotice, setPowerupNotice] = useState<PowerupNotice | null>(null);
 
   const changeScreen = useCallback((next: Screen) => {
     if (next !== "playing") pauseGameMusic(musicRef.current);
@@ -605,7 +626,27 @@ export function TrashDashGame() {
     world.messageTimer = time;
   }, []);
 
+  const dismissPowerupNotice = useCallback(() => {
+    if (powerupNoticeTimerRef.current !== null) {
+      window.clearTimeout(powerupNoticeTimerRef.current);
+      powerupNoticeTimerRef.current = null;
+    }
+    powerupNoticeRef.current = null;
+    setPowerupNotice(null);
+    lastFrameRef.current = performance.now();
+  }, []);
+
+  const showPowerupNotice = useCallback((kind: PowerupNoticeKind) => {
+    if (powerupNoticeTimerRef.current !== null) window.clearTimeout(powerupNoticeTimerRef.current);
+    const notice = createPowerupNotice(kind) as PowerupNotice;
+    powerupNoticeRef.current = notice;
+    setPowerupNotice(notice);
+    powerupNoticeTimerRef.current = window.setTimeout(dismissPowerupNotice, POWERUP_NOTICE_DURATION * 1000);
+    tone(kind === "taco" ? 760 : 980, 0.16, "triangle");
+  }, [dismissPowerupNotice, tone]);
+
   const startGame = useCallback(() => {
+    dismissPowerupNotice();
     if (!audioRef.current) {
       audioRef.current = new AudioContext();
     }
@@ -616,6 +657,7 @@ export function TrashDashGame() {
     void playGameMusic(musicRef.current, { muted: mutedRef.current, restart: true });
     const nextWorld = makeWorld();
     const bossTest = import.meta.env.DEV ? new URLSearchParams(window.location.search).get("bossTest") : null;
+    const powerupTest = import.meta.env.DEV ? new URLSearchParams(window.location.search).get("powerupTest") : null;
     if (bossTest) {
       nextWorld.player.x = bossTest === "arena" ? 5690 : 5590;
       nextWorld.player.y = GROUND_Y - 58;
@@ -627,13 +669,17 @@ export function TrashDashGame() {
       nextWorld.checkpoint = 5590;
       nextWorld.checkpointReached = true;
       nextWorld.cameraX = 5280;
+    } else if (powerupTest === "taco" || powerupTest === "cap") {
+      nextWorld.player.x = powerupTest === "taco" ? 920 : 3580;
+      nextWorld.player.y = powerupTest === "taco" ? 370 : 215;
+      nextWorld.cameraX = powerupTest === "taco" ? 560 : 3320;
     }
     worldRef.current = nextWorld;
     lastFrameRef.current = performance.now();
     changeScreen("playing");
     tone(520, 0.08);
     window.setTimeout(() => tone(720, 0.12), 80);
-  }, [changeScreen, tone]);
+  }, [changeScreen, dismissPowerupNotice, tone]);
 
   const togglePause = useCallback(() => {
     if (screenRef.current === "playing") changeScreen("paused");
@@ -732,6 +778,7 @@ export function TrashDashGame() {
 
   useEffect(() => {
     return () => {
+      if (powerupNoticeTimerRef.current !== null) window.clearTimeout(powerupNoticeTimerRef.current);
       disposeGameMusic(musicRef.current);
       musicRef.current = null;
     };
@@ -855,6 +902,7 @@ export function TrashDashGame() {
       player.endTimer = 0;
       player.hurtTimer = 0;
       player.pendingDamage = null;
+      world.bossTransition = null;
       world.cameraX = world.arenaActive ? bossArenaCameraX() : Math.max(0, world.checkpoint - 180);
       setMessage(world, "Back on your paws!", 1.7);
     };
@@ -936,9 +984,11 @@ export function TrashDashGame() {
     };
 
     const enterBossArena = (world: World) => {
+      const transition = createBossTransition(world.cameraX);
       const activated = activateBossArena(world.enemies);
       world.enemies = activated.enemies;
       world.arenaActive = activated.arenaActive;
+      world.bossTransition = transition;
       const boss = world.enemies.find((enemy) => enemy.kind === "boss");
       if (boss) {
         boss.active = true;
@@ -1205,18 +1255,15 @@ export function TrashDashGame() {
           tone(620 + (world.trash % 5) * 65, 0.07);
           if (world.trash % 5 === 0 && !player.large) {
             transformPlayer(player, true);
-            setMessage(world, "Five scraps — powered up!", 2.2);
-            tone(820, 0.16, "triangle");
+            showPowerupNotice("taco");
           }
         } else if (pickup.kind === "taco") {
           transformPlayer(player, true);
-          setMessage(world, "Taco power!", 2);
-          tone(760, 0.15, "triangle");
+          showPowerupNotice("taco");
         } else {
           player.glider = 14;
           transformPlayer(player, true);
-          setMessage(world, "Glider ready — hold jump, E to boost", 3);
-          tone(980, 0.16, "triangle");
+          showPowerupNotice("cap");
         }
         burst(world, pickup.x + pickup.w / 2, pickup.y + pickup.h / 2, pickup.kind === "cap" ? "#ffd248" : "#8bdc63", 8);
       }
@@ -1330,10 +1377,16 @@ export function TrashDashGame() {
         window.setTimeout(() => tone(800, 0.18), 120);
       }
 
-      const cameraTarget = world.arenaActive
-        ? bossArenaCameraX()
-        : Math.max(0, Math.min(WORLD_WIDTH - WIDTH, player.x - WIDTH * 0.36));
-      world.cameraX += (cameraTarget - world.cameraX) * Math.min(1, dt * (world.arenaActive ? 9 : 5.5));
+      if (world.arenaActive && world.bossTransition) {
+        const transition = advanceBossTransition(world.bossTransition, dt, bossArenaCameraX());
+        world.cameraX = transition.cameraX;
+        world.bossTransition = transition.complete ? null : transition.transition;
+      } else {
+        const cameraTarget = world.arenaActive
+          ? bossArenaCameraX()
+          : Math.max(0, Math.min(WORLD_WIDTH - WIDTH, player.x - WIDTH * 0.36));
+        world.cameraX += (cameraTarget - world.cameraX) * Math.min(1, dt * (world.arenaActive ? 9 : 5.5));
+      }
       pressedRef.current.clear();
     };
 
@@ -1724,7 +1777,7 @@ export function TrashDashGame() {
       const dt = Math.min(0.033, Math.max(0, elapsed));
       lastFrameRef.current = timestamp;
       const world = worldRef.current;
-      if (screenRef.current === "playing") update(world, dt);
+      if (screenRef.current === "playing" && powerupNoticeRef.current === null) update(world, dt);
       render(world);
 
       if (timestamp - hudTickRef.current > 100) {
@@ -1742,7 +1795,7 @@ export function TrashDashGame() {
 
     animationFrameId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [burst, changeScreen, setMessage, tone]);
+  }, [burst, changeScreen, setMessage, showPowerupNotice, tone]);
 
   const overlay = (() => {
     if (screen === "title") {
@@ -1869,6 +1922,18 @@ export function TrashDashGame() {
           />
           {!loaded && <div className="load-status" role="status">Loading raccoon sprites…</div>}
           {overlay}
+
+          {powerupNotice && screen === "playing" && (
+            <div className="powerup-overlay" role="dialog" aria-modal="true" aria-labelledby="powerup-title">
+              <div className={`powerup-card ${powerupNotice.kind}`}>
+                <span className="powerup-kicker">Special find</span>
+                <h2 id="powerup-title">{powerupNotice.title}</h2>
+                <p>{powerupNotice.detail}</p>
+                <button className="primary-button" type="button" onClick={dismissPowerupNotice}>Keep rummaging</button>
+                <span className="powerup-timer">Resuming automatically</span>
+              </div>
+            </div>
+          )}
 
           {showOrientationPrompt && (
             <div className="orientation-prompt" role="dialog" aria-labelledby="orientation-title">
