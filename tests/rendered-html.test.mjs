@@ -75,7 +75,7 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /animationState: "walking" \| "hit"/);
   assert.match(game, /const flip = enemy\.facing < 0/);
   assert.match(game, /bossFrameIndex\(enemy\.phase\)/);
-  assert.match(game, /sprites\.boss\[0\]/);
+  assert.match(game, /sprites\.bossHit/);
   assert.doesNotMatch(game, /const flip = enemy\.vx < 0/);
   assert.match(game, /beginPlayerHurt/);
   assert.match(game, /advanceHurtTimer/);

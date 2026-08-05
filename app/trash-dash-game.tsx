@@ -133,6 +133,7 @@ const playerMotion = {
   small: motionRow(0, 6),
   large: motionRow(1, 6),
 };
+const playerAttackFrame = [0, 0, 106, 83] as Frame;
 
 const enemyMotion = {
   pigeon: motionRow(0, 4),
@@ -223,7 +224,7 @@ const sprites = {
   ] as Frame[],
   smallJump: [622, 8, 78, 91] as Frame,
   smallFall: [785, 5, 82, 95] as Frame,
-  smallHurt: [1264, 104, 85, 84] as Frame,
+  smallHurt: [1307, 100, 105, 83] as Frame,
   smallRoll: [308, 105, 76, 75] as Frame,
   largeIdle: [18, 201, 83, 105] as Frame,
   largeWalk: [
@@ -236,13 +237,7 @@ const sprites = {
   ] as Frame[],
   largeJump: [707, 199, 84, 109] as Frame,
   largeFall: [798, 199, 86, 109] as Frame,
-  largeAttack: [
-    [529, 309, 101, 105],
-    [638, 309, 116, 105],
-    [754, 309, 116, 105],
-    [875, 309, 120, 105],
-  ] as Frame[],
-  largeHurt: [1338, 205, 94, 101] as Frame,
+  largeHurt: [1328, 225, 100, 83] as Frame,
   glider: [
     [34, 437, 112, 105],
     [147, 438, 112, 104],
@@ -286,6 +281,7 @@ const sprites = {
     [1245, 650, 127, 158],
     [1352, 650, 94, 158],
   ] as Frame[],
+  bossHit: [941, 646, 121, 132] as Frame,
   ground: [14, 812, 58, 65] as Frame,
   branch: [793, 888, 151, 49] as Frame,
   metal: [514, 882, 112, 59] as Frame,
@@ -512,6 +508,7 @@ export function TrashDashGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const atlasRef = useRef<HTMLImageElement | null>(null);
   const playerMotionRef = useRef<HTMLImageElement | null>(null);
+  const playerAttackRef = useRef<HTMLImageElement | null>(null);
   const enemyMotionRef = useRef<HTMLImageElement | null>(null);
   const varietyEnemyMotionRef = useRef<HTMLImageElement | null>(null);
   const trashPickupMotionRef = useRef<HTMLImageElement | null>(null);
@@ -666,6 +663,7 @@ export function TrashDashGame() {
     void Promise.all([
       loadImage(assetUrl("assets/raccoon-sprites.png")),
       loadImage(assetUrl("assets/player-motion.png")),
+      loadImage(assetUrl("assets/generated/player-attack.png")),
       loadImage(assetUrl("assets/enemy-motion.png")),
       loadImage(assetUrl("assets/generated/enemy-variety-motion.png")),
       loadImage(assetUrl("assets/generated/trash-pickups-motion.png")),
@@ -680,10 +678,11 @@ export function TrashDashGame() {
       loadImage(assetUrl("assets/backgrounds/city-far.png")),
       loadImage(assetUrl("assets/backgrounds/city-near.png")),
     ])
-      .then(([atlas, playerAtlas, enemyAtlas, varietyEnemyAtlas, trashPickupAtlas, tacoPowerAtlas, hazardAtlas, gliderAtlas, propAtlas, crateAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
+      .then(([atlas, playerAtlas, playerAttack, enemyAtlas, varietyEnemyAtlas, trashPickupAtlas, tacoPowerAtlas, hazardAtlas, gliderAtlas, propAtlas, crateAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
         if (cancelled) return;
         atlasRef.current = atlas;
         playerMotionRef.current = playerAtlas;
+        playerAttackRef.current = playerAttack;
         enemyMotionRef.current = enemyAtlas;
         varietyEnemyMotionRef.current = varietyEnemyAtlas;
         trashPickupMotionRef.current = trashPickupAtlas;
@@ -1425,11 +1424,11 @@ export function TrashDashGame() {
         }
         if (enemy.kind === "boss") {
           const bossHit = enemy.animationState === "hit";
-          const bossFrame = bossHit ? sprites.boss[0] : hazardMotion.boss[bossFrameIndex(enemy.phase)];
+          const bossFrame = bossHit ? sprites.bossHit : hazardMotion.boss[bossFrameIndex(enemy.phase)];
           drawEnemy(
             bossFrame,
-            150,
-            150,
+            bossHit ? 133 : 150,
+            bossHit ? 145 : 150,
             1,
             bossHit ? atlasRef.current : hazardMotionRef.current,
           );
@@ -1452,18 +1451,18 @@ export function TrashDashGame() {
       if (player.hurtTimer > 0) {
         source = atlasRef.current;
         frame = player.large ? sprites.largeHurt : sprites.smallHurt;
-        drawW = player.large ? 110 : 84;
-        drawH = drawW;
+        drawW = player.large ? 120 : 91;
+        drawH = player.large ? 100 : 84;
       } else if (player.glider > 0 && !player.grounded) {
         source = gliderMotionRef.current;
         frame = gliderMotion[Math.floor(player.anim * 6) % gliderMotion.length];
         drawW = 140;
         drawH = 140;
       } else if (player.attackTimer > 0 && player.large) {
-        source = atlasRef.current;
-        frame = sprites.largeAttack[1];
-        drawW = 96;
-        drawH = 88;
+        source = playerAttackRef.current;
+        frame = playerAttackFrame;
+        drawW = 118;
+        drawH = 92;
       } else if (!player.grounded) {
         frame = groundedFrames[player.vy < 0 ? 2 : 3];
       } else if (Math.abs(player.vx) > 22) {

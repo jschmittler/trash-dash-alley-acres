@@ -91,6 +91,57 @@ def connected_pose_bounds(row_image: Image.Image) -> list[tuple[int, int, int, i
     return [(left, top, right, bottom) for _, left, top, right, bottom in poses]
 
 
+def isolate_largest_pose(image: Image.Image) -> Image.Image:
+    """Keep only the largest connected sprite in a crowded atlas crop."""
+    alpha = image.getchannel("A")
+    width, height = alpha.size
+    pixels = alpha.load()
+    visited = bytearray(width * height)
+    components: list[list[int]] = []
+
+    for y in range(height):
+        for x in range(width):
+            start = y * width + x
+            if visited[start] or pixels[x, y] == 0:
+                continue
+            visited[start] = 1
+            stack = [start]
+            component = []
+            while stack:
+                index = stack.pop()
+                component.append(index)
+                point_y, point_x = divmod(index, width)
+                neighbors = []
+                if point_x > 0:
+                    neighbors.append(index - 1)
+                if point_x + 1 < width:
+                    neighbors.append(index + 1)
+                if point_y > 0:
+                    neighbors.append(index - width)
+                if point_y + 1 < height:
+                    neighbors.append(index + width)
+                for neighbor in neighbors:
+                    neighbor_y, neighbor_x = divmod(neighbor, width)
+                    if not visited[neighbor] and pixels[neighbor_x, neighbor_y] != 0:
+                        visited[neighbor] = 1
+                        stack.append(neighbor)
+            components.append(component)
+
+    if not components:
+        raise ValueError("attack crop contains no sprite")
+    pose_pixels = max(components, key=len)
+    isolated = Image.new("RGBA", image.size, (0, 0, 0, 0))
+    source_pixels = image.load()
+    output_pixels = isolated.load()
+    for index in pose_pixels:
+        y, x = divmod(index, width)
+        output_pixels[x, y] = source_pixels[x, y]
+    bounds = isolated.getchannel("A").getbbox()
+    if not bounds:
+        raise ValueError("isolated attack pose is empty")
+    return isolated.crop(bounds)
+
+
 def normalize_enemy_sheet(source: Image.Image, grounded_rows: tuple[int, ...]) -> Image.Image:
     """Extract complete poses before fitting them to the shared cell baseline."""
     sheet = nearest(source, (CELL * 4, CELL * 4))
@@ -168,8 +219,15 @@ def build_taco_strip() -> None:
     strip.save(OUTPUT / "taco-power-motion.png", optimize=True)
 
 
+def build_player_attack() -> None:
+    source = Image.open(OUTPUT.parent / "raccoon-sprites.png").convert("RGBA")
+    crowded_attack = source.crop((600, 310, 720, 410))
+    isolate_largest_pose(crowded_attack).save(OUTPUT / "player-attack.png", optimize=True)
+
+
 if __name__ == "__main__":
     OUTPUT.mkdir(parents=True, exist_ok=True)
     build_enemy_atlas()
     build_pickup_atlas()
     build_taco_strip()
+    build_player_attack()
