@@ -54,6 +54,12 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /const flyingEnemies = new Set<EnemyKind>/);
   assert.match(game, /\| "snake" \| "spider" \| "rat" \| "hedgehog"/);
   assert.match(game, /makeEnemy\("spider", 2440\)/);
+  assert.match(game, /createEnemyPatrol/);
+  assert.match(game, /patrolMinX: patrol\.minX/);
+  assert.match(game, /makeEnemy\("rat", 4040\)/);
+  assert.match(game, /makeEnemy\("rat", 5030\)/);
+  assert.doesNotMatch(game, /makeEnemy\("bottle"/);
+  assert.doesNotMatch(game, /enemy\.kind === "bottle"/);
   assert.doesNotMatch(game, /\bcrab\b/);
   assert.match(game, /player-motion\.png/);
   assert.match(game, /enemy-motion\.png/);
