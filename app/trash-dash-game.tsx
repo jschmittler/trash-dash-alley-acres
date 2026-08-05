@@ -109,6 +109,8 @@ const hazardMotion = {
   boss: assetRow(1, 4),
 };
 
+const gliderMotion = assetRow(0, 6);
+
 const midgroundProps = {
   bush: [0, 0, ASSET_CELL, ASSET_CELL] as Frame,
   tree: [ASSET_CELL, 0, ASSET_CELL, ASSET_CELL] as Frame,
@@ -389,6 +391,7 @@ export function TrashDashGame() {
   const playerMotionRef = useRef<HTMLImageElement | null>(null);
   const enemyMotionRef = useRef<HTMLImageElement | null>(null);
   const hazardMotionRef = useRef<HTMLImageElement | null>(null);
+  const gliderMotionRef = useRef<HTMLImageElement | null>(null);
   const midgroundPropsRef = useRef<HTMLImageElement | null>(null);
   const groundTileRef = useRef<HTMLImageElement | null>(null);
   const forestFarRef = useRef<HTMLImageElement | null>(null);
@@ -503,6 +506,7 @@ export function TrashDashGame() {
       loadImage("/assets/player-motion.png"),
       loadImage("/assets/enemy-motion.png"),
       loadImage("/assets/hazard-motion.png"),
+      loadImage("/assets/glider-motion.png"),
       loadImage("/assets/midground-props.png"),
       loadImage("/assets/ground-seamless.png"),
       loadImage("/assets/backgrounds/forest-far.png"),
@@ -510,12 +514,13 @@ export function TrashDashGame() {
       loadImage("/assets/backgrounds/city-far.png"),
       loadImage("/assets/backgrounds/city-near.png"),
     ])
-      .then(([atlas, playerAtlas, enemyAtlas, hazardAtlas, propAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
+      .then(([atlas, playerAtlas, enemyAtlas, hazardAtlas, gliderAtlas, propAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
         if (cancelled) return;
         atlasRef.current = atlas;
         playerMotionRef.current = playerAtlas;
         enemyMotionRef.current = enemyAtlas;
         hazardMotionRef.current = hazardAtlas;
+        gliderMotionRef.current = gliderAtlas;
         midgroundPropsRef.current = propAtlas;
         groundTileRef.current = groundTile;
         forestFarRef.current = forestFar;
@@ -992,9 +997,6 @@ export function TrashDashGame() {
       drawTiledLayer(cityFarRef.current, camera, 0.045, 18, 1540, 514, cityMix * 0.72);
       drawTiledLayer(cityNearRef.current, camera, 0.11, 34, 1540, 514, cityMix * 0.9);
 
-      context.fillStyle = cityMix > 0.5 ? "#6f8065" : "#84c969";
-      context.fillRect(0, 405, WIDTH, GROUND_Y - 405);
-
       for (const item of scenery) {
         const x = item.x - camera;
         if (x < -160 || x > WIDTH + 160) continue;
@@ -1095,7 +1097,7 @@ export function TrashDashGame() {
         const x = enemy.x - camera;
         if (x < -150 || x > WIDTH + 150) continue;
         const frameIndex = Math.floor(enemy.phase) % 4;
-        const flip = enemy.vx > 0;
+        const flip = enemy.vx < 0;
         const drawEnemy = (
           frame: Frame,
           drawW: number,
@@ -1145,10 +1147,10 @@ export function TrashDashGame() {
       let drawH = drawW;
 
       if (player.glider > 0 && !player.grounded) {
-        source = atlasRef.current;
-        frame = sprites.glider[0];
-        drawW = 108;
-        drawH = 76;
+        source = gliderMotionRef.current;
+        frame = gliderMotion[Math.floor(player.anim * 6) % gliderMotion.length];
+        drawW = 140;
+        drawH = 140;
       } else if (player.attackTimer > 0 && player.large) {
         source = atlasRef.current;
         frame = sprites.largeAttack[1];
