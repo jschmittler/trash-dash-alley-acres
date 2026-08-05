@@ -16,7 +16,7 @@ Final frame indices are 0–3 for idle and 4–7 for stink. Suggested playback i
 
 ## Visual target
 
-Three-quarter side view of an old, dark-green steel dumpster with dents, chipped paint, rust, grime, crooked caster wheels, a partly open lid, overflowing trash, and non-legible graffiti marks. Use the established dark navy contour, clustered three-to-four-value pixel shading, crisp edges, and no gradients or anti-aliasing. Trash and graffiti may add color, but the dumpster body remains visually dominant.
+Compact side view of an old, dark-green steel dumpster with chunky cartoon proportions, dents, chipped paint, rust, grime, crooked caster wheels, a partly open lid, overflowing trash, and non-legible graffiti marks. Match the hero and enemy sprites with a dark navy contour, chunky 16-bit pixel clusters, three-tone cel shading, crisp edges, and no gradients or anti-aliasing. Trash and graffiti may add color, but the dumpster body remains visually dominant.
 
 ## Workspace layout
 
