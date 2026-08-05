@@ -84,6 +84,7 @@ const HEIGHT = 540;
 const GROUND_Y = 468;
 const WORLD_WIDTH = 6600;
 const MOTION_CELL = 192;
+const ASSET_CELL = 256;
 
 const motionRow = (row: number, count: number): Frame[] =>
   Array.from({ length: count }, (_, index) => [index * MOTION_CELL, row * MOTION_CELL, MOTION_CELL, MOTION_CELL] as Frame);
@@ -98,6 +99,23 @@ const enemyMotion = {
   slime: motionRow(1, 4),
   beetle: motionRow(2, 4),
   possum: motionRow(3, 4),
+};
+
+const assetRow = (row: number, count: number): Frame[] =>
+  Array.from({ length: count }, (_, index) => [index * ASSET_CELL, row * ASSET_CELL, ASSET_CELL, ASSET_CELL] as Frame);
+
+const hazardMotion = {
+  bottle: assetRow(0, 4),
+  boss: assetRow(1, 4),
+};
+
+const midgroundProps = {
+  bush: [0, 0, ASSET_CELL, ASSET_CELL] as Frame,
+  tree: [ASSET_CELL, 0, ASSET_CELL, ASSET_CELL] as Frame,
+  bin: [ASSET_CELL * 2, 0, ASSET_CELL, ASSET_CELL] as Frame,
+  crate: [0, ASSET_CELL, ASSET_CELL, ASSET_CELL] as Frame,
+  checkpoint: [ASSET_CELL, ASSET_CELL, ASSET_CELL, ASSET_CELL] as Frame,
+  tires: [ASSET_CELL * 2, ASSET_CELL, ASSET_CELL, ASSET_CELL] as Frame,
 };
 
 const sprites = {
@@ -222,14 +240,14 @@ const platforms: Platform[] = [
 ];
 
 const scenery = [
-  { x: 360, y: 392, frame: sprites.bush, w: 125, h: 74 },
-  { x: 1260, y: 370, frame: sprites.tree, w: 82, h: 98 },
-  { x: 2050, y: 390, frame: sprites.bush, w: 126, h: 76 },
-  { x: 2860, y: 370, frame: sprites.tree, w: 82, h: 98 },
-  { x: 3940, y: 388, frame: sprites.bin, w: 62, h: 72 },
-  { x: 4480, y: 386, frame: sprites.bin, w: 62, h: 72 },
-  { x: 5100, y: 390, frame: sprites.crate, w: 72, h: 66 },
-  { x: 6150, y: 390, frame: sprites.crate, w: 72, h: 66 },
+  { x: 360, groundY: GROUND_Y, frame: midgroundProps.bush, size: 98 },
+  { x: 1260, groundY: GROUND_Y, frame: midgroundProps.tree, size: 112 },
+  { x: 2050, groundY: GROUND_Y, frame: midgroundProps.bush, size: 100 },
+  { x: 2860, groundY: GROUND_Y, frame: midgroundProps.tree, size: 112 },
+  { x: 3940, groundY: GROUND_Y, frame: midgroundProps.bin, size: 92 },
+  { x: 4480, groundY: GROUND_Y, frame: midgroundProps.tires, size: 94 },
+  { x: 5100, groundY: GROUND_Y, frame: midgroundProps.crate, size: 92 },
+  { x: 6150, groundY: GROUND_Y, frame: midgroundProps.crate, size: 92 },
 ];
 
 const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y): Enemy => {
@@ -370,6 +388,8 @@ export function TrashDashGame() {
   const atlasRef = useRef<HTMLImageElement | null>(null);
   const playerMotionRef = useRef<HTMLImageElement | null>(null);
   const enemyMotionRef = useRef<HTMLImageElement | null>(null);
+  const hazardMotionRef = useRef<HTMLImageElement | null>(null);
+  const midgroundPropsRef = useRef<HTMLImageElement | null>(null);
   const groundTileRef = useRef<HTMLImageElement | null>(null);
   const forestFarRef = useRef<HTMLImageElement | null>(null);
   const forestNearRef = useRef<HTMLImageElement | null>(null);
@@ -482,17 +502,21 @@ export function TrashDashGame() {
       loadImage("/assets/raccoon-sprites.png"),
       loadImage("/assets/player-motion.png"),
       loadImage("/assets/enemy-motion.png"),
+      loadImage("/assets/hazard-motion.png"),
+      loadImage("/assets/midground-props.png"),
       loadImage("/assets/ground-seamless.png"),
       loadImage("/assets/backgrounds/forest-far.png"),
       loadImage("/assets/backgrounds/forest-near.png"),
       loadImage("/assets/backgrounds/city-far.png"),
       loadImage("/assets/backgrounds/city-near.png"),
     ])
-      .then(([atlas, playerAtlas, enemyAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
+      .then(([atlas, playerAtlas, enemyAtlas, hazardAtlas, propAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
         if (cancelled) return;
         atlasRef.current = atlas;
         playerMotionRef.current = playerAtlas;
         enemyMotionRef.current = enemyAtlas;
+        hazardMotionRef.current = hazardAtlas;
+        midgroundPropsRef.current = propAtlas;
         groundTileRef.current = groundTile;
         forestFarRef.current = forestFar;
         forestNearRef.current = forestNear;
@@ -873,6 +897,67 @@ export function TrashDashGame() {
       context.restore();
     };
 
+    const drawBranchPlatform = (x: number, y: number, width: number) => {
+      const left = Math.round(x);
+      const top = Math.round(y - 4);
+      const drawWidth = Math.ceil(width);
+      context.save();
+      context.beginPath();
+      context.rect(left, top, drawWidth, 32);
+      context.clip();
+      context.fillStyle = "#332117";
+      context.fillRect(left, top + 4, drawWidth, 24);
+      context.fillStyle = "#754522";
+      context.fillRect(left + 4, top + 2, Math.max(0, drawWidth - 8), 20);
+      context.fillStyle = "#a96c35";
+      context.fillRect(left + 5, top + 3, Math.max(0, drawWidth - 10), 4);
+      context.fillStyle = "#533019";
+      for (let detailX = left + 28; detailX < left + drawWidth - 18; detailX += 46) {
+        context.fillRect(detailX, top + 9, 13, 4);
+        context.fillRect(detailX + 5, top + 13, 5, 6);
+      }
+      context.fillStyle = "#2d7d3e";
+      for (let leafX = left + 24; leafX < left + drawWidth - 16; leafX += 72) {
+        context.fillRect(leafX, top, 8, 4);
+        context.fillRect(leafX + 4, top - 3, 8, 4);
+      }
+      context.fillStyle = "#24170f";
+      context.fillRect(left, top + 6, 5, 18);
+      context.fillRect(left + drawWidth - 5, top + 6, 5, 18);
+      context.restore();
+    };
+
+    const drawMetalPlatform = (x: number, y: number, width: number) => {
+      const left = Math.round(x);
+      const top = Math.round(y - 4);
+      const drawWidth = Math.ceil(width);
+      context.save();
+      context.beginPath();
+      context.rect(left, top, drawWidth, 38);
+      context.clip();
+      context.fillStyle = "#26343b";
+      context.fillRect(left, top + 3, drawWidth, 33);
+      context.fillStyle = "#758594";
+      context.fillRect(left + 4, top, Math.max(0, drawWidth - 8), 29);
+      context.fillStyle = "#aebac2";
+      context.fillRect(left + 5, top + 1, Math.max(0, drawWidth - 10), 4);
+      context.fillStyle = "#586875";
+      context.fillRect(left + 5, top + 23, Math.max(0, drawWidth - 10), 5);
+      for (let seamX = left + 54; seamX < left + drawWidth - 18; seamX += 54) {
+        context.fillStyle = "#3f4d57";
+        context.fillRect(seamX, top + 5, 3, 18);
+        context.fillStyle = "#8f9da8";
+        context.fillRect(seamX + 3, top + 5, 2, 18);
+      }
+      context.fillStyle = "#26343b";
+      context.fillRect(left, top, 5, 31);
+      context.fillRect(left + drawWidth - 5, top, 5, 31);
+      context.fillStyle = "#c2cbd0";
+      context.fillRect(left + 9, top + 8, 4, 4);
+      context.fillRect(left + drawWidth - 13, top + 8, 4, 4);
+      context.restore();
+    };
+
     const render = (world: World) => {
       const camera = Math.round(world.cameraX);
       const cityMix = Math.max(0, Math.min(1, (camera - 2140) / 1050));
@@ -913,7 +998,16 @@ export function TrashDashGame() {
       for (const item of scenery) {
         const x = item.x - camera;
         if (x < -160 || x > WIDTH + 160) continue;
-        drawSprite(item.frame, x, item.y, item.w, item.h);
+        drawSprite(
+          item.frame,
+          x,
+          item.groundY - item.size,
+          item.size,
+          item.size,
+          false,
+          1,
+          midgroundPropsRef.current,
+        );
       }
 
       for (const platform of platforms) {
@@ -934,20 +1028,44 @@ export function TrashDashGame() {
           }
           context.restore();
         } else if (platform.kind === "branch") {
-          for (let tileX = 0; tileX < platform.w; tileX += 145) {
-            drawSprite(sprites.branch, x + tileX, platform.y - 11, Math.min(151, platform.w - tileX + 6), 48);
-          }
+          drawBranchPlatform(x, platform.y, platform.w);
         } else if (platform.kind === "metal") {
-          for (let tileX = 0; tileX < platform.w; tileX += 105) {
-            drawSprite(sprites.metal, x + tileX, platform.y - 16, Math.min(112, platform.w - tileX + 7), 57);
-          }
+          drawMetalPlatform(x, platform.y, platform.w);
         } else {
-          drawSprite(platform.x < 940 ? sprites.crate : sprites.box, x, platform.y - 4, platform.w, platform.h + 5);
+          const size = Math.max(platform.w, platform.h + 5);
+          drawSprite(
+            midgroundProps.crate,
+            x + platform.w / 2 - size / 2,
+            platform.y + platform.h - size,
+            size,
+            size,
+            false,
+            1,
+            midgroundPropsRef.current,
+          );
         }
       }
 
-      drawSprite(sprites.checkpoint, 3000 - camera, 386, 62, 76, false, world.checkpointReached ? 1 : 0.62);
-      drawSprite(sprites.checkpoint, 6300 - camera, 381, 67, 81, false, world.bossDefeated ? 1 : 0.5);
+      drawSprite(
+        midgroundProps.checkpoint,
+        2988 - camera,
+        GROUND_Y - 104,
+        104,
+        104,
+        false,
+        world.checkpointReached ? 1 : 0.62,
+        midgroundPropsRef.current,
+      );
+      drawSprite(
+        midgroundProps.checkpoint,
+        6288 - camera,
+        GROUND_Y - 108,
+        108,
+        108,
+        false,
+        world.bossDefeated ? 1 : 0.5,
+        midgroundPropsRef.current,
+      );
 
       context.save();
       context.font = "900 15px var(--font-body), sans-serif";
@@ -1000,14 +1118,20 @@ export function TrashDashGame() {
         if (enemy.kind === "slime") drawEnemy(enemyMotion.slime[frameIndex], 62, 62, 1, enemyMotionRef.current);
         if (enemy.kind === "beetle") drawEnemy(enemyMotion.beetle[frameIndex], 68, 68, 1, enemyMotionRef.current);
         if (enemy.kind === "possum") drawEnemy(enemyMotion.possum[frameIndex], 78, 78, 1, enemyMotionRef.current);
-        if (enemy.kind === "bottle") drawEnemy(sprites.bottle[Math.floor(enemy.phase) % sprites.bottle.length], 56, 50);
+        if (enemy.kind === "bottle") drawEnemy(hazardMotion.bottle[frameIndex], 68, 68, 1, hazardMotionRef.current);
         if (enemy.kind === "boss") {
-          const bossFrame = sprites.boss[0];
-          drawEnemy(bossFrame, 122, 132, enemy.hitCooldown > 0 && Math.floor(enemy.hitCooldown * 20) % 2 ? 0.35 : 1);
+          const bossFrame = hazardMotion.boss[frameIndex];
+          drawEnemy(
+            bossFrame,
+            150,
+            150,
+            enemy.hitCooldown > 0 && Math.floor(enemy.hitCooldown * 20) % 2 ? 0.35 : 1,
+            hazardMotionRef.current,
+          );
           context.fillStyle = "#173e3b";
-          context.fillRect(x + 4, enemy.y - 45, 88, 9);
+          context.fillRect(x + 4, enemy.y - 48, 88, 9);
           context.fillStyle = "#ffb13b";
-          context.fillRect(x + 7, enemy.y - 42, 82 * (enemy.hp / 3), 3);
+          context.fillRect(x + 7, enemy.y - 45, 82 * (enemy.hp / 3), 3);
         }
       }
 
