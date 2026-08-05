@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-05T13:26:00Z",
+  "title": "Design System: Trash Dash: Alley Acres",
+  "extensions": {
+    "colorMeta": {
+      "sky": { "role": "secondary", "displayName": "Open Sky", "canonical": "#73d8f4", "tonalRamp": ["#082b35", "#0d4f62", "#13748f", "#249abd", "#4bbddc", "#73d8f4", "#b0e9f8", "#eefbfe"] },
+      "orange": { "role": "primary", "displayName": "Momentum Orange", "canonical": "#f28b2d", "tonalRamp": ["#321506", "#612c0c", "#914515", "#bd621f", "#df7826", "#f28b2d", "#ffc17e", "#fff1df"] },
+      "teal": { "role": "primary", "displayName": "Recycling Teal", "canonical": "#087c86", "tonalRamp": ["#041f22", "#053d42", "#075b62", "#087c86", "#17a1ac", "#54c5cc", "#a1e5e8", "#eefcfc"] },
+      "leaf": { "role": "secondary", "displayName": "Canopy Green", "canonical": "#2d8b43", "tonalRamp": ["#0b2813", "#124523", "#1c6531", "#2d8b43", "#56ad68", "#86ce91", "#bee8c5", "#f0faf2"] },
+      "cream": { "role": "neutral", "displayName": "Snack Cream", "canonical": "#fff4ce", "tonalRamp": ["#332d18", "#5f5531", "#8d7e4a", "#bba867", "#dfcd91", "#fff4ce", "#fff9e7", "#fffdf7"] },
+      "panel": { "role": "neutral", "displayName": "Cabinet Panel", "canonical": "#163c3c", "tonalRamp": ["#071515", "#0d2929", "#163c3c", "#245656", "#477575", "#779999", "#b6cccc", "#eef5f5"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Cartridge Display", "purpose": "Game title and decisive state headings." },
+      "body": { "displayName": "Friendly Interface", "purpose": "Instructions, overlays, and action copy." },
+      "label": { "displayName": "HUD Label", "purpose": "Uppercase status categories and compact controls." }
+    },
+    "shadows": [
+      { "name": "cabinet-lift", "value": "0 24px 60px rgb(0 8 8 / 45%)", "purpose": "Separates the playable stage from the deep teal field." },
+      { "name": "hud-lift", "value": "0 12px 28px rgb(1 13 14 / 32%)", "purpose": "Keeps live game status legible over the cabinet." },
+      { "name": "control-lift", "value": "0 5px 12px rgb(1 22 24 / 26%)", "purpose": "Makes compact actions tactile without hard offset styling." }
+    ],
+    "motion": [
+      { "name": "control-ease", "value": "140ms ease-out", "purpose": "Hover, press, and focus response on controls." },
+      { "name": "camera-follow", "value": "5.5x delta interpolation", "purpose": "Smooth horizontal tracking with the raccoon held left of center." }
+    ],
+    "breakpoints": [
+      { "name": "pocket", "value": "760px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The strongest state-changing action, rendered in Momentum Orange.",
+      "html": "<button class=\"ds-primary\">START RUMMAGING</button>",
+      "css": ".ds-primary { min-height: 48px; padding: 0 20px; border: 0; border-radius: 13px; background: #f28b2d; color: #172a2b; font: 1000 16px 'Nunito Sans', sans-serif; box-shadow: 0 5px 12px rgb(1 22 24 / 26%); transition: transform 140ms ease-out, background-color 140ms ease-out, box-shadow 140ms ease-out; } .ds-primary:hover { background: #ffab42; transform: translateY(-1px); box-shadow: 0 7px 16px rgb(1 22 24 / 32%); } .ds-primary:focus-visible { outline: 3px solid #ffe174; outline-offset: 3px; }"
+    },
+    {
+      "name": "HUD Utility",
+      "kind": "button",
+      "refersTo": "button-utility",
+      "description": "Short pause and sound controls that remain available during play.",
+      "html": "<button class=\"ds-utility\">PAUSE</button>",
+      "css": ".ds-utility { min-width: 42px; min-height: 38px; padding: 0 10px; border: 0; border-radius: 11px; background: #087c86; color: #fff4ce; font: 1000 12px 'Nunito Sans', sans-serif; box-shadow: 0 5px 12px rgb(1 22 24 / 26%); transition: transform 140ms ease-out, background-color 140ms ease-out; } .ds-utility:hover { background: #0a929d; transform: translateY(-1px); } .ds-utility:focus-visible { outline: 3px solid #ffe174; outline-offset: 3px; }"
+    },
+    {
+      "name": "HUD Status",
+      "kind": "custom",
+      "description": "A compact label/value pair for trash, score, time, paws, and glider state.",
+      "html": "<div class=\"ds-status\"><span>GLIDE</span><strong>12s</strong></div>",
+      "css": ".ds-status { display: grid; gap: 1px; color: #fff4ce; font-family: 'Nunito Sans', sans-serif; } .ds-status span { color: #b9ddcc; font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; } .ds-status strong { font-size: 16px; line-height: 1; }"
+    },
+    {
+      "name": "Pocket Jump",
+      "kind": "button",
+      "description": "The dominant right-thumb control in portrait play.",
+      "html": "<button class=\"ds-jump\">JUMP</button>",
+      "css": ".ds-jump { width: 54px; height: 54px; border: 0; border-radius: 12px; background: rgb(242 139 45 / 92%); color: #3c2919; font: 1000 12px 'Nunito Sans', sans-serif; box-shadow: 0 5px 12px rgb(1 22 24 / 26%); touch-action: none; } .ds-jump:active { transform: translateY(1px) scale(.98); } .ds-jump:focus-visible { outline: 3px solid #ffe174; outline-offset: 3px; }"
+    },
+    {
+      "name": "Game Stage",
+      "kind": "custom",
+      "refersTo": "game-stage",
+      "description": "The crisp 16:9 playable surface and visual authority for the product.",
+      "html": "<div class=\"ds-stage\"><span>PLAYABLE PIXEL WORLD</span></div>",
+      "css": ".ds-stage { display: grid; place-items: center; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 16px; background: #73d8f4; color: #163c3c; font: 900 12px 'Nunito Sans', sans-serif; box-shadow: 0 24px 60px rgb(0 8 8 / 45%); image-rendering: pixelated; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Pocket Cartridge",
+    "overview": "Trash Dash should feel like a complete late-16-bit game world held directly in the browser. The interface recedes behind the playable artifact: a compact equipment-like HUD and a large pixel stage, with the supplied raccoon artwork providing personality and visual authority.",
+    "keyCharacteristics": ["The playable pixel world owns the viewport.", "Teal utility surfaces frame sky, leaf, dirt, and orange action color.", "Controls are chunky, short-labeled, and thumb-friendly.", "Animation is purposeful and tied to gameplay state.", "Desktop uses a 16:9 cabinet; portrait play adds a dedicated pocket-control deck."],
+    "rules": [
+      { "name": "Orange Means Go", "body": "Reserve orange for titles, the strongest action, pickups, and celebratory state; it should not become general decoration.", "section": "colors" },
+      { "name": "Cartridge Voice", "body": "Use the display face for identity and decisive state changes, never for paragraphs or dense instruction.", "section": "typography" }
+    ],
+    "dos": ["Do let the supplied sprite artwork lead every playable screen.", "Do keep physics bodies slightly forgiving while anchoring visible sprites to a shared baseline.", "Do keep portrait controls outside the 16:9 playfield."],
+    "donts": ["Don't wrap the game in generic website navigation, marketing sections, or equal-sized cards.", "Don't stretch, smooth, or blur pixel assets.", "Don't obscure the stage with touch controls."]
+  }
+}
