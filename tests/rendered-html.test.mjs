@@ -2,8 +2,6 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
-const root = new URL("../", import.meta.url);
-
 async function render() {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
@@ -30,8 +28,10 @@ test("server-renders the finished game shell", async () => {
 });
 
 test("ships the playable assets and removes the starter preview", async () => {
-  const [game, styles, packageJson] = await Promise.all([
+  const [game, mobileExperience, musicController, styles, packageJson] = await Promise.all([
     readFile(new URL("../app/trash-dash-game.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/mobile-experience.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../app/music-controller.mjs", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
@@ -39,9 +39,22 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /requestAnimationFrame/);
   assert.match(game, /raccoon-sprites\.png/);
   assert.match(game, /touch-controls/);
+  assert.match(game, /Enter fullscreen/);
+  assert.match(game, /Rotate for the best view/);
+  assert.match(game, /onLostPointerCapture/);
+  assert.match(game, /raccoon-rush-loop\.m4a/);
+  assert.match(game, /playGameMusic/);
+  assert.match(game, /pauseGameMusic/);
   assert.match(game, /localStorage/);
   assert.match(game, /const camera = Math\.round\(world\.cameraX\)/);
-  assert.match(game, /else drawSprite\(sprites\.trashCan, x, y, 32, 34\)/);
+  assert.match(game, /trash-pickups-motion\.png/);
+  assert.match(game, /taco-power-motion\.png/);
+  assert.match(game, /enemy-variety-motion\.png/);
+  assert.match(game, /type PickupKind = "trash" \| "taco" \| "cap"/);
+  assert.match(game, /const flyingEnemies = new Set<EnemyKind>/);
+  assert.match(game, /\| "snake" \| "spider" \| "rat" \| "hedgehog"/);
+  assert.match(game, /makeEnemy\("spider", 2440\)/);
+  assert.doesNotMatch(game, /\bcrab\b/);
   assert.match(game, /player-motion\.png/);
   assert.match(game, /enemy-motion\.png/);
   assert.match(game, /hazard-motion\.png/);
@@ -54,16 +67,29 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /const frameIndex = Math\.floor\(enemy\.phase\) % 4/);
   assert.match(game, /const flip = enemy\.vx < 0/);
   assert.match(game, /Math\.sin\(world\.elapsed \* 1\.65 \+ pickup\.phase\) \* 2/);
-  assert.match(game, /enemy\.y = enemy\.surfaceY - enemy\.h/);
+  assert.match(game, /flyingEnemies\.has\(enemy\.kind\).*Math\.sin/);
   assert.doesNotMatch(game, /Math\.floor\(pickup\.phase\).*sprites\.trashCan/);
   assert.doesNotMatch(game, /drawSprite\(sprites\.(?:branch|metal)/);
   assert.doesNotMatch(game, /context\.fillRect\(0, 405, WIDTH/);
   assert.match(styles, /image-rendering:\s*pixelated/);
+  assert.match(styles, /safe-area-inset-top/);
+  assert.match(styles, /100dvh/);
+  assert.match(styles, /orientation:\s*landscape/);
   assert.match(styles, /prefers-reduced-motion/);
+  assert.match(mobileExperience, /fullscreenchange/);
+  assert.match(mobileExperience, /orientationchange/);
+  assert.match(mobileExperience, /clearInputState/);
+  assert.match(musicController, /music\.loop = true/);
+  assert.match(musicController, /MUSIC_VOLUME = 0\.32/);
+  assert.match(musicController, /catch/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   await access(new URL("../public/assets/raccoon-sprites.png", import.meta.url));
   await access(new URL("../public/assets/player-motion.png", import.meta.url));
   await access(new URL("../public/assets/enemy-motion.png", import.meta.url));
+  await access(new URL("../public/assets/audio/raccoon-rush-loop.m4a", import.meta.url));
+  await access(new URL("../public/assets/generated/enemy-variety-motion.png", import.meta.url));
+  await access(new URL("../public/assets/generated/trash-pickups-motion.png", import.meta.url));
+  await access(new URL("../public/assets/generated/taco-power-motion.png", import.meta.url));
   await access(new URL("../public/assets/hazard-motion.png", import.meta.url));
   await access(new URL("../public/assets/glider-motion.png", import.meta.url));
   await access(new URL("../public/assets/midground-props.png", import.meta.url));

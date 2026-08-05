@@ -26,6 +26,8 @@ The game turns scavenged trash into both the collectible economy and the raccoon
 
 The game is played directly in a browser, primarily with a keyboard on desktop and large touch controls on mobile. A complete run should take roughly three to five minutes.
 
+Desktop browser play is the current product priority. Mobile web is a parallel quality track: every desktop milestone should avoid new mobile regressions, while dedicated landscape, fullscreen, touch, performance, and real-device hardening follows once the desktop core loop and game feel are stable. See `docs/roadmap/mobile-experience.md`.
+
 ## Capabilities and Constraints
 
 - One original woodland-to-junkyard level with a checkpoint and finish state.
