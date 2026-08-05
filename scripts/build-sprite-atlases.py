@@ -7,6 +7,7 @@ from PIL import Image, ImageDraw
 
 
 CELL = 192
+BOSS_CELL = 256
 BASELINE_MARGIN = 8
 TEMP = Path("/tmp/trash-dash-sprites")
 OUTPUT = Path(__file__).resolve().parents[1] / "public" / "assets" / "generated"
@@ -243,6 +244,29 @@ def adjusted_pose(pose: Image.Image, width_scale: float = 1, height_scale: float
     return nearest(pose, (max(1, round(pose.width * width_scale)), max(1, round(pose.height * height_scale))))
 
 
+def alpha_pose(image: Image.Image) -> Image.Image:
+    box = image.getchannel("A").getbbox()
+    if not box:
+        raise ValueError("empty alpha pose")
+    return image.crop(box)
+
+
+def grid_pose(
+    sheet: Image.Image,
+    column: int,
+    row: int,
+    columns: int,
+    rows: int,
+    preserve_details: bool = False,
+) -> Image.Image:
+    left = round(column * sheet.width / columns)
+    top = round(row * sheet.height / rows)
+    right = round((column + 1) * sheet.width / columns)
+    bottom = round((row + 1) * sheet.height / rows)
+    cell = sheet.crop((left, top, right, bottom))
+    return alpha_pose(cell) if preserve_details else isolate_largest_pose(cell)
+
+
 def place_player_pose(
     atlas: Image.Image,
     pose: Image.Image,
@@ -336,6 +360,53 @@ def build_player_hero_atlas() -> None:
     contact.save(OUTPUT / "player-hero-contact-sheet.png", optimize=True)
 
 
+def place_boss_pose(atlas: Image.Image, pose: Image.Image, row: int, column: int, max_size: tuple[int, int]) -> None:
+    scale = min(max_size[0] / pose.width, max_size[1] / pose.height)
+    frame = nearest(pose, (max(1, round(pose.width * scale)), max(1, round(pose.height * scale))))
+    x = column * BOSS_CELL + (BOSS_CELL - frame.width) // 2
+    y = (row + 1) * BOSS_CELL - BASELINE_MARGIN - frame.height
+    atlas.alpha_composite(frame, (x, y))
+
+
+def build_boss_atlas() -> None:
+    hazard = Image.open(OUTPUT.parent / "hazard-motion.png").convert("RGBA")
+    character = Image.open(OUTPUT.parent / "raccoon-sprites.png").convert("RGBA")
+    actions = Image.open(OUTPUT / "boss-actions.png").convert("RGBA")
+    defeat = Image.open(OUTPUT / "boss-defeat.png").convert("RGBA")
+
+    walk = [cell_pose(hazard, BOSS_CELL, column, 1) for column in range(4)]
+    action_rows = [[grid_pose(actions, column, row, 4, 4) for column in range(4)] for row in range(4)]
+    defeat_frames = [grid_pose(defeat, column, 0, 6, 1, column >= 4) for column in range(6)]
+    hit = isolate_largest_pose(character.crop((926, 630, 1080, 800)))
+
+    recipes = {
+        0: ([walk[0], walk[1], walk[0], walk[3]], (190, 190)),
+        1: ([walk[0], walk[1], walk[2], walk[3], walk[2], walk[1]], (198, 194)),
+        2: (action_rows[0][:3], (206, 194)),
+        3: (action_rows[1], (220, 184)),
+        4: (action_rows[2][:3], (210, 194)),
+        5: ([hit, adjusted_pose(hit, .96, 1.02), hit, walk[0]], (206, 198)),
+        6: (action_rows[3], (214, 202)),
+        7: (defeat_frames, (224, 190)),
+    }
+
+    atlas = Image.new("RGBA", (BOSS_CELL * 6, BOSS_CELL * 8), (0, 0, 0, 0))
+    for row, (poses, max_size) in recipes.items():
+        for column, pose in enumerate(poses):
+            place_boss_pose(atlas, pose, row, column, max_size)
+    atlas.save(OUTPUT / "boss-motion.png", optimize=True)
+
+    label_width = 144
+    contact = Image.new("RGBA", (label_width + atlas.width, atlas.height), (15, 37, 36, 255))
+    contact.alpha_composite(atlas, (label_width, 0))
+    draw = ImageDraw.Draw(contact)
+    for row, name in enumerate(("idle", "walk", "windup", "charge", "recover", "hit", "rage", "defeat")):
+        draw.text((8, row * BOSS_CELL + 118), name, fill=(255, 177, 59, 255))
+        baseline = (row + 1) * BOSS_CELL - BASELINE_MARGIN
+        draw.line((label_width, baseline, contact.width, baseline), fill=(255, 177, 59, 100), width=1)
+    contact.save(OUTPUT / "boss-contact-sheet.png", optimize=True)
+
+
 if __name__ == "__main__":
     OUTPUT.mkdir(parents=True, exist_ok=True)
     build_enemy_atlas()
@@ -343,3 +414,4 @@ if __name__ == "__main__":
     build_taco_strip()
     build_player_attack()
     build_player_hero_atlas()
+    build_boss_atlas()
