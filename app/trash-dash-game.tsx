@@ -371,6 +371,10 @@ export function TrashDashGame() {
   const playerMotionRef = useRef<HTMLImageElement | null>(null);
   const enemyMotionRef = useRef<HTMLImageElement | null>(null);
   const groundTileRef = useRef<HTMLImageElement | null>(null);
+  const forestFarRef = useRef<HTMLImageElement | null>(null);
+  const forestNearRef = useRef<HTMLImageElement | null>(null);
+  const cityFarRef = useRef<HTMLImageElement | null>(null);
+  const cityNearRef = useRef<HTMLImageElement | null>(null);
   const worldRef = useRef<World>(makeWorld());
   const keysRef = useRef(new Set<string>());
   const pressedRef = useRef(new Set<string>());
@@ -479,13 +483,21 @@ export function TrashDashGame() {
       loadImage("/assets/player-motion.png"),
       loadImage("/assets/enemy-motion.png"),
       loadImage("/assets/ground-seamless.png"),
+      loadImage("/assets/backgrounds/forest-far.png"),
+      loadImage("/assets/backgrounds/forest-near.png"),
+      loadImage("/assets/backgrounds/city-far.png"),
+      loadImage("/assets/backgrounds/city-near.png"),
     ])
-      .then(([atlas, playerAtlas, enemyAtlas, groundTile]) => {
+      .then(([atlas, playerAtlas, enemyAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
         if (cancelled) return;
         atlasRef.current = atlas;
         playerMotionRef.current = playerAtlas;
         enemyMotionRef.current = enemyAtlas;
         groundTileRef.current = groundTile;
+        forestFarRef.current = forestFar;
+        forestNearRef.current = forestNear;
+        cityFarRef.current = cityFar;
+        cityNearRef.current = cityNear;
         setLoaded(true);
       })
       .catch(() => {
@@ -842,16 +854,36 @@ export function TrashDashGame() {
       context.fillRect(left + unit * 6, top + unit, unit * 3, unit * 2);
     };
 
+    const drawTiledLayer = (
+      image: HTMLImageElement | null,
+      camera: number,
+      speed: number,
+      y: number,
+      drawWidth: number,
+      drawHeight: number,
+      alpha: number,
+    ) => {
+      if (!image || alpha <= 0) return;
+      const offset = -Math.round((camera * speed) % drawWidth);
+      context.save();
+      context.globalAlpha = alpha;
+      for (let x = offset - drawWidth; x < WIDTH + drawWidth; x += drawWidth) {
+        context.drawImage(image, Math.round(x), y, drawWidth, drawHeight);
+      }
+      context.restore();
+    };
+
     const render = (world: World) => {
       const camera = Math.round(world.cameraX);
+      const cityMix = Math.max(0, Math.min(1, (camera - 2140) / 1050));
+      const forestMix = 1 - cityMix;
       context.clearRect(0, 0, WIDTH, HEIGHT);
-      context.fillStyle = "#73d8f4";
-      context.fillRect(0, 0, WIDTH, HEIGHT);
-
-      context.fillStyle = "#65c9e8";
-      context.fillRect(0, 0, WIDTH, 210);
-      context.fillStyle = "#6fd2ed";
-      context.fillRect(0, 210, WIDTH, 195);
+      const sky = context.createLinearGradient(0, 0, 0, GROUND_Y);
+      sky.addColorStop(0, cityMix > 0.5 ? "#7085ad" : "#64c7e6");
+      sky.addColorStop(0.58, cityMix > 0.5 ? "#a28ba3" : "#83d8e4");
+      sky.addColorStop(1, cityMix > 0.5 ? "#d4a27f" : "#badbaf");
+      context.fillStyle = sky;
+      context.fillRect(0, 0, WIDTH, GROUND_Y);
 
       const cloudLayout = [
         { x: 80, y: 55, scale: 1.05, speed: 0.035 },
@@ -862,40 +894,20 @@ export function TrashDashGame() {
       ];
       for (const cloud of cloudLayout) {
         const cloudX = ((cloud.x - camera * cloud.speed + 180) % 1180 + 1180) % 1180 - 180;
-        drawCloud(cloudX, cloud.y, cloud.scale);
-      }
-
-      const hillOffset = -Math.round((camera * 0.04) % 150);
-      context.fillStyle = "#4c9d68";
-      for (let index = -1; index < 9; index += 1) {
-        const hillX = hillOffset + index * 150;
-        context.beginPath();
-        context.arc(hillX + 75, 405, 92, Math.PI, 0);
-        context.fill();
-      }
-      context.fillStyle = "#347d5b";
-      for (let index = -1; index < 11; index += 1) {
-        const hillX = hillOffset * 1.35 + index * 115;
-        context.beginPath();
-        context.arc(hillX + 58, 414, 68, Math.PI, 0);
-        context.fill();
-      }
-
-      const junkyardMix = Math.max(0, Math.min(1, (camera - 2380) / 900));
-      if (junkyardMix > 0) {
         context.save();
-        context.globalAlpha = junkyardMix;
-        context.fillStyle = "#285f6d";
-        const cityOffset = -Math.round((camera * 0.07) % 120);
-        for (let index = -1; index < 11; index += 1) {
-          const buildingX = cityOffset + index * 120;
-          const buildingHeight = 55 + (index % 4) * 18;
-          context.fillRect(buildingX, 405 - buildingHeight, 72, buildingHeight);
-          context.fillRect(buildingX + 18, 405 - buildingHeight - 18, 10, 18);
-        }
+        context.globalAlpha = 0.72 * forestMix;
+        drawCloud(cloudX, cloud.y, cloud.scale);
         context.restore();
       }
-      context.fillStyle = "#84c969";
+
+      // Each environment has two independently tiled strips. Their different
+      // camera speeds create depth while the oversized art keeps repetition subtle.
+      drawTiledLayer(forestFarRef.current, camera, 0.055, 34, 1540, 514, forestMix * 0.92);
+      drawTiledLayer(forestNearRef.current, camera, 0.13, -8, 1540, 514, forestMix * 0.82);
+      drawTiledLayer(cityFarRef.current, camera, 0.045, 18, 1540, 514, cityMix * 0.72);
+      drawTiledLayer(cityNearRef.current, camera, 0.11, 34, 1540, 514, cityMix * 0.9);
+
+      context.fillStyle = cityMix > 0.5 ? "#6f8065" : "#84c969";
       context.fillRect(0, 405, WIDTH, GROUND_Y - 405);
 
       for (const item of scenery) {
