@@ -43,6 +43,8 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /Enter fullscreen/);
   assert.match(game, /Rotate for the best view/);
   assert.match(game, /onLostPointerCapture/);
+  assert.match(game, /aria-label="Sprint"/);
+  assert.match(game, /visibilityState === "hidden"/);
   assert.match(game, /raccoon-rush-loop\.m4a/);
   assert.match(game, /playGameMusic/);
   assert.match(game, /pauseGameMusic/);
@@ -126,6 +128,10 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(styles, /image-rendering:\s*pixelated/);
   assert.match(styles, /safe-area-inset-top/);
   assert.match(styles, /100dvh/);
+  assert.match(styles, /100svh/);
+  assert.match(styles, /:-webkit-full-screen/);
+  assert.match(styles, /transform: translateY\(-50%\)/);
+  assert.match(styles, /touch-action: none/);
   assert.match(styles, /orientation:\s*landscape/);
   assert.match(styles, /prefers-reduced-motion/);
   assert.match(styles, /powerup-text/);

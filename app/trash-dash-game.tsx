@@ -1924,6 +1924,11 @@ export function TrashDashGame() {
       event.currentTarget.classList.remove("is-pressed");
       setTouchKey(code, false);
     },
+    onPointerLeave: (event: React.PointerEvent<HTMLButtonElement>) => {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) return;
+      event.currentTarget.classList.remove("is-pressed");
+      setTouchKey(code, false);
+    },
     onLostPointerCapture: (event: React.PointerEvent<HTMLButtonElement>) => {
       event.currentTarget.classList.remove("is-pressed");
       setTouchKey(code, false);
@@ -2014,6 +2019,7 @@ export function TrashDashGame() {
                   <button className="touch-button" type="button" aria-label="Move right" {...touchProps("ArrowRight")}>Right</button>
                 </div>
                 <div className="touch-cluster">
+                  <button className="touch-button sprint" type="button" aria-label="Sprint" {...touchProps("ShiftLeft")}>Dash</button>
                   <button className="touch-button action" type="button" aria-label="Run or use action" {...touchProps("KeyE")}>Action</button>
                   <button className="touch-button jump" type="button" aria-label="Jump" {...touchProps("Space")}>Jump</button>
                 </div>

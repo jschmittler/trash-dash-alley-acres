@@ -21,6 +21,7 @@ export function subscribeBrowserExperience(browserWindow, browserDocument, onCha
   portraitQuery.addEventListener("change", onChange);
   browserWindow.addEventListener("resize", onChange);
   browserWindow.addEventListener("orientationchange", onChange);
+  browserWindow.addEventListener("visibilitychange", onChange);
   visualViewport?.addEventListener("resize", onChange);
   browserDocument.addEventListener("fullscreenchange", onChange);
 
@@ -28,7 +29,8 @@ export function subscribeBrowserExperience(browserWindow, browserDocument, onCha
     touchQuery.removeEventListener("change", onChange);
     portraitQuery.removeEventListener("change", onChange);
     browserWindow.removeEventListener("resize", onChange);
-    browserWindow.removeEventListener("orientationchange", onChange);
+  browserWindow.removeEventListener("orientationchange", onChange);
+  browserWindow.removeEventListener("visibilitychange", onChange);
     visualViewport?.removeEventListener("resize", onChange);
     browserDocument.removeEventListener("fullscreenchange", onChange);
   };

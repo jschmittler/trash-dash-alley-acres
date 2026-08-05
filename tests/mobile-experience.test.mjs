@@ -51,7 +51,7 @@ test("subscribes to and removes every viewport signal", () => {
 
   const unsubscribe = subscribeBrowserExperience(browserWindow, browserDocument, onChange);
 
-  assert.deepEqual([...browserWindow.listeners.keys()].sort(), ["orientationchange", "resize"]);
+  assert.deepEqual([...browserWindow.listeners.keys()].sort(), ["orientationchange", "resize", "visibilitychange"]);
   assert.deepEqual([...browserWindow.visualViewport.listeners.keys()], ["resize"]);
   assert.deepEqual([...browserDocument.listeners.keys()], ["fullscreenchange"]);
   assert.deepEqual([...touchQuery.listeners.keys()], ["change"]);

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Bungee, Nunito_Sans } from "next/font/google";
 import "./globals.css";
@@ -41,6 +41,14 @@ export async function generateMetadata(): Promise<Metadata> {
     },
   };
 }
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  userScalable: false,
+  themeColor: "#0d2929",
+};
 
 const designContract = `
 THESIS: The playable pixel world owns the viewport; refuse a game trapped inside generic website chrome.
