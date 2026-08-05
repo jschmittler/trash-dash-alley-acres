@@ -35,6 +35,7 @@ test("ships the playable assets and removes the starter preview", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
+  const enemySource = game.slice(game.indexOf("const initialEnemies"), game.indexOf("const initialPickups"));
 
   assert.match(game, /requestAnimationFrame/);
   assert.match(game, /raccoon-sprites\.png/);
@@ -53,13 +54,16 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /type PickupKind = "trash" \| "taco" \| "cap"/);
   assert.match(game, /const flyingEnemies = new Set<EnemyKind>/);
   assert.match(game, /\| "snake" \| "spider" \| "rat" \| "hedgehog"/);
-  assert.match(game, /makeEnemy\("spider", 2440\)/);
+  assert.match(enemySource, /makeEnemy\("pigeon", 520\)/);
+  assert.match(enemySource, /makeEnemy\("wasp", 1450/);
+  assert.match(enemySource, /makeEnemy\("mosquito", 1525/);
+  assert.match(enemySource, /makeEnemy\("possum", 1280\)/);
+  assert.match(enemySource, /makeEnemy\("spider", 2440\)/);
+  assert.match(enemySource, /makeEnemy\("fox", 4320\)/);
+  assert.doesNotMatch(enemySource, /makeEnemy\("(?:slime|bat|beetle|moth|rat|hedgehog|crow|boar|frog)"/);
   assert.match(game, /createEnemyPatrol/);
   assert.match(game, /patrolMinX: patrol\.minX/);
-  assert.match(game, /makeEnemy\("rat", 4040\)/);
-  assert.match(game, /makeEnemy\("rat", 5030\)/);
-  assert.match(game, /makeEnemy\("beetle", 5100\)/);
-  assert.match(game, /makeEnemy\("boar", 5180\)/);
+  assert.match(enemySource, /makeEnemy\("snake", 5030\)/);
   assert.match(game, /makeEnemy\("boss", 6120\)/);
   assert.doesNotMatch(game, /makeEnemy\("(?:rat|beetle|boar|possum|slime|pigeon|snake|spider|hedgehog)", (?:5[2-9]\d{2}|6\d{3})\)/);
   assert.doesNotMatch(game, /makeEnemy\("bottle"/);
