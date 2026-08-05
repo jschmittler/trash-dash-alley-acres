@@ -30,8 +30,9 @@ test("server-renders the finished game shell", async () => {
 });
 
 test("ships the playable assets and removes the starter preview", async () => {
-  const [game, styles, packageJson] = await Promise.all([
+  const [game, mobileExperience, styles, packageJson] = await Promise.all([
     readFile(new URL("../app/trash-dash-game.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/mobile-experience.mjs", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
@@ -39,6 +40,9 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /requestAnimationFrame/);
   assert.match(game, /raccoon-sprites\.png/);
   assert.match(game, /touch-controls/);
+  assert.match(game, /Enter fullscreen/);
+  assert.match(game, /Rotate for the best view/);
+  assert.match(game, /onLostPointerCapture/);
   assert.match(game, /localStorage/);
   assert.match(game, /const camera = Math\.round\(world\.cameraX\)/);
   assert.match(game, /else drawSprite\(sprites\.trashCan, x, y, 32, 34\)/);
@@ -59,7 +63,13 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.doesNotMatch(game, /drawSprite\(sprites\.(?:branch|metal)/);
   assert.doesNotMatch(game, /context\.fillRect\(0, 405, WIDTH/);
   assert.match(styles, /image-rendering:\s*pixelated/);
+  assert.match(styles, /safe-area-inset-top/);
+  assert.match(styles, /100dvh/);
+  assert.match(styles, /orientation:\s*landscape/);
   assert.match(styles, /prefers-reduced-motion/);
+  assert.match(mobileExperience, /fullscreenchange/);
+  assert.match(mobileExperience, /orientationchange/);
+  assert.match(mobileExperience, /clearInputState/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   await access(new URL("../public/assets/raccoon-sprites.png", import.meta.url));
   await access(new URL("../public/assets/player-motion.png", import.meta.url));

@@ -1,6 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  clearInputState,
+  readBrowserExperience,
+  subscribeBrowserExperience,
+  toggleGameFullscreen,
+} from "./mobile-experience.mjs";
 
 type Screen = "title" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
@@ -85,6 +91,12 @@ const GROUND_Y = 468;
 const WORLD_WIDTH = 6600;
 const MOTION_CELL = 192;
 const ASSET_CELL = 256;
+const INITIAL_BROWSER_EXPERIENCE = {
+  touchFirst: false,
+  portrait: false,
+  fullscreen: false,
+  fullscreenSupported: false,
+};
 
 const assetUrl = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\/+/, "")}`;
 
@@ -392,6 +404,7 @@ const formatTime = (seconds: number) => {
 };
 
 export function TrashDashGame() {
+  const cabinetRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const atlasRef = useRef<HTMLImageElement | null>(null);
   const playerMotionRef = useRef<HTMLImageElement | null>(null);
@@ -413,9 +426,13 @@ export function TrashDashGame() {
   const mutedRef = useRef(false);
   const lastFrameRef = useRef(0);
   const hudTickRef = useRef(0);
+  const fullscreenPendingRef = useRef(false);
+  const browserExperienceRef = useRef(INITIAL_BROWSER_EXPERIENCE);
   const [screen, setScreen] = useState<Screen>("title");
   const [loaded, setLoaded] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [portraitDismissed, setPortraitDismissed] = useState(false);
+  const [browserExperience, setBrowserExperience] = useState(INITIAL_BROWSER_EXPERIENCE);
   const [hud, setHud] = useState({ trash: 0, score: 0, lives: 3, time: 0, glider: 0 });
   const [best, setBest] = useState({ score: 0, time: 0 });
 
@@ -423,6 +440,15 @@ export function TrashDashGame() {
     screenRef.current = next;
     setScreen(next);
   }, []);
+
+  const clearHeldInput = useCallback(() => {
+    clearInputState(keysRef.current, pressedRef.current);
+  }, []);
+
+  const interruptGame = useCallback(() => {
+    clearHeldInput();
+    if (screenRef.current === "playing") changeScreen("paused");
+  }, [changeScreen, clearHeldInput]);
 
   const tone = useCallback((frequency: number, duration = 0.08, type: OscillatorType = "square") => {
     if (mutedRef.current) return;
@@ -494,6 +520,16 @@ export function TrashDashGame() {
     }
   }, []);
 
+  const handleFullscreen = useCallback(async () => {
+    if (fullscreenPendingRef.current) return;
+    fullscreenPendingRef.current = true;
+    await toggleGameFullscreen(cabinetRef.current, document, window.screen.orientation);
+    fullscreenPendingRef.current = false;
+    const next = readBrowserExperience(window, document);
+    browserExperienceRef.current = next;
+    setBrowserExperience(next);
+  }, []);
+
   useEffect(() => {
     const storedScore = Number(window.localStorage.getItem("trash-dash-high-score") ?? 0);
     const storedTime = Number(window.localStorage.getItem("trash-dash-best-time") ?? 0);
@@ -548,6 +584,32 @@ export function TrashDashGame() {
   }, []);
 
   useEffect(() => {
+    let initialized = false;
+    let cancelled = false;
+
+    const syncBrowserExperience = () => {
+      if (cancelled) return;
+      const previous = browserExperienceRef.current;
+      const next = readBrowserExperience(window, document);
+      browserExperienceRef.current = next;
+      setBrowserExperience(next);
+
+      if (initialized && (previous.portrait !== next.portrait || (previous.fullscreen && !next.fullscreen))) {
+        interruptGame();
+      }
+      initialized = true;
+    };
+
+    const unsubscribe = subscribeBrowserExperience(window, document, syncBrowserExperience);
+    window.queueMicrotask(syncBrowserExperience);
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [interruptGame]);
+
+  useEffect(() => {
     const handled = new Set([
       "ArrowLeft",
       "ArrowRight",
@@ -578,20 +640,23 @@ export function TrashDashGame() {
       if (event.code === "KeyM") toggleMute();
     };
     const onKeyUp = (event: KeyboardEvent) => keysRef.current.delete(event.code);
-    const onBlur = () => {
-      keysRef.current.clear();
-      if (screenRef.current === "playing") changeScreen("paused");
+    const onBlur = () => interruptGame();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") interruptGame();
     };
 
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
     window.addEventListener("blur", onBlur);
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      clearHeldInput();
     };
-  }, [changeScreen, startGame, toggleMute, togglePause]);
+  }, [clearHeldInput, interruptGame, startGame, toggleMute, togglePause]);
 
   useEffect(() => {
     let animationFrame = 0;
@@ -1320,11 +1385,22 @@ export function TrashDashGame() {
       event.currentTarget.classList.remove("is-pressed");
       setTouchKey(code, false);
     },
+    onLostPointerCapture: (event: React.PointerEvent<HTMLButtonElement>) => {
+      event.currentTarget.classList.remove("is-pressed");
+      setTouchKey(code, false);
+    },
+    onContextMenu: (event: React.MouseEvent<HTMLButtonElement>) => event.preventDefault(),
   });
+
+  const showOrientationPrompt =
+    browserExperience.touchFirst &&
+    browserExperience.portrait &&
+    !portraitDismissed &&
+    (screen === "title" || screen === "playing");
 
   return (
     <main className="game-page">
-      <section className="game-cabinet" aria-label="Trash Dash: Alley Acres browser game">
+      <section ref={cabinetRef} className="game-cabinet" aria-label="Trash Dash: Alley Acres browser game">
         <div className="hud">
           <div className="brand-lockup">
             <strong>Trash Dash</strong>
@@ -1338,6 +1414,16 @@ export function TrashDashGame() {
           <div className="hud-actions">
             <button className="icon-button" type="button" onClick={togglePause} aria-label={screen === "paused" ? "Resume game" : "Pause game"}>Pause</button>
             <button className="icon-button" type="button" onClick={toggleMute} aria-label={muted ? "Unmute sound" : "Mute sound"}>{muted ? "Sound" : "Mute"}</button>
+            {browserExperience.fullscreenSupported && (
+              <button
+                className="icon-button fullscreen-button"
+                type="button"
+                onClick={handleFullscreen}
+                aria-label={browserExperience.fullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+              >
+                {browserExperience.fullscreen ? "Exit" : "Full"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -1351,6 +1437,25 @@ export function TrashDashGame() {
           />
           {!loaded && <div className="load-status" role="status">Loading raccoon sprites…</div>}
           {overlay}
+
+          {showOrientationPrompt && (
+            <div className="orientation-prompt" role="dialog" aria-labelledby="orientation-title">
+              <div className="orientation-copy">
+                <strong id="orientation-title">Rotate for the best view</strong>
+                <span>Trash Dash plays best with your phone held sideways.</span>
+              </div>
+              <div className="button-row">
+                {browserExperience.fullscreenSupported && (
+                  <button className="primary-button" type="button" onClick={handleFullscreen}>
+                    Try landscape fullscreen
+                  </button>
+                )}
+                <button className="secondary-button" type="button" onClick={() => setPortraitDismissed(true)}>
+                  Play in portrait
+                </button>
+              </div>
+            </div>
+          )}
 
           {screen === "playing" && (
             <>
