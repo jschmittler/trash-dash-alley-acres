@@ -8,6 +8,7 @@ import {
   pauseGameMusic,
   playGameMusic,
   setGameMusicMuted,
+  switchGameMusic,
 } from "../app/music-controller.mjs";
 
 class FakeAudio {
@@ -78,4 +79,21 @@ test("pauses and disposes a music element", () => {
   assert.equal(music.pauseCount, 2);
   assert.deepEqual(music.removed, ["src"]);
   assert.equal(music.loadCount, 1);
+});
+
+test("switches music sources while preserving mute and disposing the old track", async () => {
+  const current = new FakeAudio("/level.m4a");
+  current.volume = MUSIC_VOLUME;
+  const next = await switchGameMusic(current, "/boss.m4a", {
+    muted: true,
+    AudioConstructor: FakeAudio,
+    fadeMs: 0,
+  });
+
+  assert.equal(next.source, "/boss.m4a");
+  assert.equal(next.muted, true);
+  assert.equal(next.volume, MUSIC_VOLUME);
+  assert.equal(next.playCount, 1);
+  assert.equal(current.pauseCount, 1);
+  assert.deepEqual(current.removed, ["src"]);
 });

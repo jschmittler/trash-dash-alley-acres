@@ -36,3 +36,38 @@ export function disposeGameMusic(music) {
   music.removeAttribute("src");
   music.load();
 }
+
+export async function switchGameMusic(
+  current,
+  source,
+  {
+    muted = false,
+    AudioConstructor = globalThis.Audio,
+    fadeMs = 360,
+  } = {},
+) {
+  if (current?.source === source || current?.src === source) return current;
+  const next = createGameMusic(source, AudioConstructor);
+  if (!next) return current;
+  next.muted = muted;
+  next.volume = fadeMs > 0 ? 0 : MUSIC_VOLUME;
+  if (!await playGameMusic(next, { muted, restart: true })) {
+    disposeGameMusic(next);
+    return current;
+  }
+
+  if (fadeMs > 0) {
+    const steps = 12;
+    const delay = fadeMs / steps;
+    for (let step = 1; step <= steps; step += 1) {
+      const progress = step / steps;
+      next.volume = MUSIC_VOLUME * progress;
+      if (current) current.volume = MUSIC_VOLUME * (1 - progress);
+      await new Promise((resolve) => globalThis.setTimeout(resolve, delay));
+    }
+  }
+
+  disposeGameMusic(current);
+  next.volume = MUSIC_VOLUME;
+  return next;
+}
