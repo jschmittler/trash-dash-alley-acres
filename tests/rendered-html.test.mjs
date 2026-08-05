@@ -53,6 +53,9 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /trash-pickups-motion\.png/);
   assert.match(game, /taco-power-motion\.png/);
   assert.match(game, /dumpster-animation-atlas\.png/);
+  assert.match(game, /DUMPSTER_GOAL_WORLD_X/);
+  assert.match(game, /world\.bossDefeated \? 1 : 0\.45/);
+  assert.doesNotMatch(game, /midgroundProps\.checkpoint,[\s\S]{0,160}6288 - camera/);
   assert.match(game, /enemy-variety-motion\.png/);
   assert.match(game, /type PickupKind = "trash" \| "taco" \| "cap"/);
   assert.match(game, /const flyingEnemies = new Set<EnemyKind>/);

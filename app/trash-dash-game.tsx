@@ -36,6 +36,7 @@ import {
   selectBossAnimation,
 } from "./boss-animation.mjs";
 import {
+  BOSS_ARENA_CAMERA_X,
   BOSS_ARENA_TRIGGER_X,
   activateBossArena,
   bossArenaCameraX,
@@ -166,6 +167,9 @@ const WIDTH = 960;
 const HEIGHT = 540;
 const GROUND_Y = 468;
 const WORLD_WIDTH = 6600;
+const DUMPSTER_DRAW_SIZE = 180;
+const DUMPSTER_RIGHT_MARGIN = 30;
+const DUMPSTER_GOAL_WORLD_X = BOSS_ARENA_CAMERA_X + WIDTH - DUMPSTER_RIGHT_MARGIN - DUMPSTER_DRAW_SIZE;
 const MOTION_CELL = 192;
 const ASSET_CELL = 256;
 const INITIAL_BROWSER_EXPERIENCE = {
@@ -1675,32 +1679,20 @@ export function TrashDashGame() {
         world.checkpointReached ? 1 : 0.62,
         midgroundPropsRef.current,
       );
+      const dumpsterFrameIndex = Math.floor(world.elapsed * 5) % 4;
+      const dumpsterFrame = world.bossDefeated
+        ? dumpsterMotion.stink[dumpsterFrameIndex]
+        : dumpsterMotion.idle[dumpsterFrameIndex];
       drawSprite(
-        midgroundProps.checkpoint,
-        6288 - camera,
-        GROUND_Y - 108,
-        108,
-        108,
+        dumpsterFrame,
+        DUMPSTER_GOAL_WORLD_X - camera,
+        GROUND_Y - 150,
+        DUMPSTER_DRAW_SIZE,
+        DUMPSTER_DRAW_SIZE,
         false,
-        world.bossDefeated ? 1 : 0.5,
-        midgroundPropsRef.current,
+        world.bossDefeated ? 1 : 0.45,
+        dumpsterMotionRef.current,
       );
-      if (world.bossDefeated) {
-        const dumpsterFrameIndex = Math.floor(world.elapsed * 5) % 4;
-        const dumpsterFrame = world.elapsed > 0.8
-          ? dumpsterMotion.stink[dumpsterFrameIndex]
-          : dumpsterMotion.idle[dumpsterFrameIndex];
-        drawSprite(
-          dumpsterFrame,
-          6160 - camera,
-          GROUND_Y - 150,
-          180,
-          180,
-          false,
-          1,
-          dumpsterMotionRef.current,
-        );
-      }
 
       context.save();
       context.font = "900 15px var(--font-body), sans-serif";
