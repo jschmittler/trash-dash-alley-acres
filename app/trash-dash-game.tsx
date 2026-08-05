@@ -33,6 +33,7 @@ interface Enemy extends Rect {
   hp: number;
   hitCooldown: number;
   originX: number;
+  surfaceY: number;
 }
 
 interface Particle {
@@ -82,6 +83,22 @@ const WIDTH = 960;
 const HEIGHT = 540;
 const GROUND_Y = 468;
 const WORLD_WIDTH = 6600;
+const MOTION_CELL = 192;
+
+const motionRow = (row: number, count: number): Frame[] =>
+  Array.from({ length: count }, (_, index) => [index * MOTION_CELL, row * MOTION_CELL, MOTION_CELL, MOTION_CELL] as Frame);
+
+const playerMotion = {
+  small: motionRow(0, 6),
+  large: motionRow(1, 6),
+};
+
+const enemyMotion = {
+  pigeon: motionRow(0, 4),
+  slime: motionRow(1, 4),
+  beetle: motionRow(2, 4),
+  possum: motionRow(3, 4),
+};
 
 const sprites = {
   smallIdle: [18, 10, 76, 84] as Frame,
@@ -237,6 +254,7 @@ const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y): Enemy => {
     hp: kind === "boss" ? 3 : 1,
     hitCooldown: 0,
     originX: x,
+    surfaceY: y,
   };
 };
 
@@ -350,6 +368,9 @@ const formatTime = (seconds: number) => {
 export function TrashDashGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const atlasRef = useRef<HTMLImageElement | null>(null);
+  const playerMotionRef = useRef<HTMLImageElement | null>(null);
+  const enemyMotionRef = useRef<HTMLImageElement | null>(null);
+  const groundTileRef = useRef<HTMLImageElement | null>(null);
   const worldRef = useRef<World>(makeWorld());
   const keysRef = useRef(new Set<string>());
   const pressedRef = useRef(new Set<string>());
@@ -444,13 +465,36 @@ export function TrashDashGame() {
     const storedTime = Number(window.localStorage.getItem("trash-dash-best-time") ?? 0);
     setBest({ score: storedScore, time: storedTime });
 
-    const atlas = new Image();
-    atlas.src = "/assets/raccoon-sprites.png";
-    atlas.onload = () => {
-      atlasRef.current = atlas;
-      setLoaded(true);
+    let cancelled = false;
+    const loadImage = (source: string) =>
+      new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = source;
+      });
+
+    void Promise.all([
+      loadImage("/assets/raccoon-sprites.png"),
+      loadImage("/assets/player-motion.png"),
+      loadImage("/assets/enemy-motion.png"),
+      loadImage("/assets/ground-seamless.png"),
+    ])
+      .then(([atlas, playerAtlas, enemyAtlas, groundTile]) => {
+        if (cancelled) return;
+        atlasRef.current = atlas;
+        playerMotionRef.current = playerAtlas;
+        enemyMotionRef.current = enemyAtlas;
+        groundTileRef.current = groundTile;
+        setLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled) setLoaded(false);
+      });
+
+    return () => {
+      cancelled = true;
     };
-    atlas.onerror = () => setLoaded(false);
   }, []);
 
   useEffect(() => {
@@ -685,25 +729,31 @@ export function TrashDashGame() {
 
       for (const enemy of world.enemies) {
         if (!enemy.active) continue;
-        enemy.phase += dt * 4;
+        enemy.phase += dt * Math.max(3.4, Math.abs(enemy.vx) / 26);
         enemy.hitCooldown = Math.max(0, enemy.hitCooldown - dt);
 
+        const patrolRadius = enemy.kind === "boss" ? 245 : enemy.kind === "slime" ? 85 : 105;
         if (enemy.kind === "slime") {
-          enemy.y = GROUND_Y - enemy.h - Math.max(0, Math.sin(enemy.phase)) * 34;
           enemy.x += enemy.vx * 0.35 * dt;
-          if (Math.abs(enemy.x - enemy.originX) > 85) enemy.vx *= -1;
         } else if (enemy.kind === "possum") {
           const distance = player.x - enemy.x;
-          if (Math.abs(distance) < 250) enemy.vx = Math.sign(distance || 1) * 125;
-          else if (Math.abs(enemy.x - enemy.originX) > 105) enemy.vx = Math.sign(enemy.originX - enemy.x) * 55;
-          enemy.x += enemy.vx * dt;
-        } else if (enemy.kind === "boss") {
-          if (enemy.x < 5570 || enemy.x > 6060) enemy.vx *= -1;
+          if (Math.abs(distance) < 250) enemy.vx = Math.sign(distance || 1) * 105;
+          else if (Math.abs(enemy.x - enemy.originX) > 72) enemy.vx = Math.sign(enemy.originX - enemy.x) * 55;
           enemy.x += enemy.vx * dt;
         } else {
           enemy.x += enemy.vx * dt;
-          if (Math.abs(enemy.x - enemy.originX) > 105) enemy.vx *= -1;
         }
+
+        const patrolMin = enemy.originX - patrolRadius;
+        const patrolMax = enemy.originX + patrolRadius;
+        if (enemy.x <= patrolMin) {
+          enemy.x = patrolMin;
+          enemy.vx = Math.abs(enemy.vx);
+        } else if (enemy.x >= patrolMax) {
+          enemy.x = patrolMax;
+          enemy.vx = -Math.abs(enemy.vx);
+        }
+        enemy.y = enemy.surfaceY - enemy.h;
 
         if (player.attackTimer > 0.08 && player.large) {
           const attackRect: Rect = {
@@ -760,8 +810,9 @@ export function TrashDashGame() {
       h: number,
       flip = false,
       alpha = 1,
+      source: HTMLImageElement | null = atlasRef.current,
     ) => {
-      const atlas = atlasRef.current;
+      const atlas = source;
       if (!atlas) return;
       const drawX = Math.round(x);
       const drawY = Math.round(y);
@@ -857,11 +908,19 @@ export function TrashDashGame() {
         const x = platform.x - camera;
         if (x + platform.w < -80 || x > WIDTH + 80) continue;
         if (platform.kind === "ground") {
-          for (let tileX = 0; tileX < platform.w; tileX += 56) {
-            drawSprite(sprites.ground, x + tileX, platform.y - 2, Math.min(58, platform.w - tileX + 2), 66);
+          context.save();
+          context.beginPath();
+          context.rect(Math.round(x), platform.y - 2, Math.ceil(platform.w), platform.h + 2);
+          context.clip();
+          context.fillStyle = "#6f3d25";
+          context.fillRect(Math.round(x), platform.y, Math.ceil(platform.w), platform.h);
+          const groundTile = groundTileRef.current;
+          if (groundTile) {
+            for (let tileX = 0; tileX < platform.w + 64; tileX += 64) {
+              context.drawImage(groundTile, Math.round(x + tileX), platform.y - 2, 65, 66);
+            }
           }
-          context.fillStyle = "#563524";
-          context.fillRect(x, platform.y + 58, platform.w, 60);
+          context.restore();
         } else if (platform.kind === "branch") {
           for (let tileX = 0; tileX < platform.w; tileX += 145) {
             drawSprite(sprites.branch, x + tileX, platform.y - 11, Math.min(151, platform.w - tileX + 6), 48);
@@ -895,7 +954,7 @@ export function TrashDashGame() {
         if (!pickup.active) continue;
         const x = pickup.x - camera;
         if (x < -80 || x > WIDTH + 80) continue;
-        const y = pickup.y;
+        const y = pickup.y + Math.sin(world.elapsed * 1.65 + pickup.phase) * 2;
         if (pickup.kind === "bag") drawSprite(sprites.bag, x - 6, y - 7, 45, 49);
         else if (pickup.kind === "cap") drawSprite(sprites.cap, x - 9, y - 7, 50, 42);
         else drawSprite(sprites.trashCan, x, y, 32, 34);
@@ -905,9 +964,15 @@ export function TrashDashGame() {
         if (!enemy.active) continue;
         const x = enemy.x - camera;
         if (x < -150 || x > WIDTH + 150) continue;
-        const frameIndex = 0;
+        const frameIndex = Math.floor(enemy.phase) % 4;
         const flip = enemy.vx > 0;
-        const drawEnemy = (frame: Frame, drawW: number, drawH: number, alpha = 1) => {
+        const drawEnemy = (
+          frame: Frame,
+          drawW: number,
+          drawH: number,
+          alpha = 1,
+          source: HTMLImageElement | null = atlasRef.current,
+        ) => {
           drawSprite(
             frame,
             x + enemy.w / 2 - drawW / 2,
@@ -916,13 +981,14 @@ export function TrashDashGame() {
             drawH,
             flip,
             alpha,
+            source,
           );
         };
-        if (enemy.kind === "pigeon") drawEnemy(sprites.pigeon[frameIndex], 58, 54);
-        if (enemy.kind === "slime") drawEnemy(sprites.slime[frameIndex], 57, 52);
-        if (enemy.kind === "beetle") drawEnemy(sprites.beetle[frameIndex], 60, 49);
-        if (enemy.kind === "possum") drawEnemy(sprites.possum[frameIndex], 70, 53);
-        if (enemy.kind === "bottle") drawEnemy(sprites.bottle[frameIndex], 56, 50);
+        if (enemy.kind === "pigeon") drawEnemy(enemyMotion.pigeon[frameIndex], 66, 66, 1, enemyMotionRef.current);
+        if (enemy.kind === "slime") drawEnemy(enemyMotion.slime[frameIndex], 62, 62, 1, enemyMotionRef.current);
+        if (enemy.kind === "beetle") drawEnemy(enemyMotion.beetle[frameIndex], 68, 68, 1, enemyMotionRef.current);
+        if (enemy.kind === "possum") drawEnemy(enemyMotion.possum[frameIndex], 78, 78, 1, enemyMotionRef.current);
+        if (enemy.kind === "bottle") drawEnemy(sprites.bottle[Math.floor(enemy.phase) % sprites.bottle.length], 56, 50);
         if (enemy.kind === "boss") {
           const bossFrame = sprites.boss[0];
           drawEnemy(bossFrame, 122, 132, enemy.hitCooldown > 0 && Math.floor(enemy.hitCooldown * 20) % 2 ? 0.35 : 1);
@@ -936,29 +1002,27 @@ export function TrashDashGame() {
       const player = world.player;
       const playerX = player.x - camera;
       const running = Math.abs(player.vx) > 250;
-      let frame = player.large ? sprites.largeIdle : sprites.smallIdle;
-      let drawW = player.large ? 72 : 63;
-      let drawH = player.large ? 88 : 72;
+      const groundedFrames = player.large ? playerMotion.large : playerMotion.small;
+      let source = playerMotionRef.current;
+      let frame = groundedFrames[0];
+      let drawW = player.large ? 110 : 84;
+      let drawH = drawW;
 
       if (player.glider > 0 && !player.grounded) {
+        source = atlasRef.current;
         frame = sprites.glider[0];
         drawW = 108;
         drawH = 76;
       } else if (player.attackTimer > 0 && player.large) {
+        source = atlasRef.current;
         frame = sprites.largeAttack[1];
         drawW = 96;
         drawH = 88;
       } else if (!player.grounded) {
-        frame = player.large
-          ? player.vy < 0
-            ? sprites.largeJump
-            : sprites.largeFall
-          : player.vy < 0
-            ? sprites.smallJump
-            : sprites.smallFall;
+        frame = groundedFrames[player.vy < 0 ? 2 : 3];
       } else if (Math.abs(player.vx) > 22) {
-        const frames = player.large ? sprites.largeWalk : running ? sprites.smallRun : sprites.smallWalk;
-        frame = frames[0];
+        const cadence = running ? 11 : Math.max(6, Math.abs(player.vx) / 30);
+        frame = groundedFrames[Math.floor(player.anim * cadence) % groundedFrames.length];
       }
 
       drawSprite(
@@ -969,6 +1033,7 @@ export function TrashDashGame() {
         drawH,
         player.facing < 0,
         player.invulnerable > 0 && Math.floor(player.invulnerable * 18) % 2 ? 0.45 : 1,
+        source,
       );
 
       for (const particle of world.particles) {
