@@ -77,6 +77,12 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /bossFrameIndex\(enemy\.phase\)/);
   assert.match(game, /sprites\.boss\[0\]/);
   assert.doesNotMatch(game, /const flip = enemy\.vx < 0/);
+  assert.match(game, /beginPlayerHurt/);
+  assert.match(game, /advanceHurtTimer/);
+  assert.match(game, /resolvePitFall/);
+  assert.match(game, /pendingDamage: "shrink" \| "respawn" \| "gameover" \| null/);
+  assert.match(game, /player\.large \? sprites\.largeHurt : sprites\.smallHurt/);
+  assert.doesNotMatch(game, /player\.y > HEIGHT \+ 120\) \{\s*hurtPlayer\(world, 0\)/);
   assert.match(game, /Math\.sin\(world\.elapsed \* 1\.65 \+ pickup\.phase\) \* 2/);
   assert.match(game, /flyingEnemies\.has\(enemy\.kind\).*Math\.sin/);
   assert.doesNotMatch(game, /Math\.floor\(pickup\.phase\).*sprites\.trashCan/);

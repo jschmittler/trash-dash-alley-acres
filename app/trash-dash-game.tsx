@@ -16,9 +16,12 @@ import {
 } from "./music-controller.mjs";
 import { createEnemyPatrol } from "./enemy-surface.mjs";
 import {
+  advanceHurtTimer,
+  beginPlayerHurt,
   bossAnimationState,
   bossFrameIndex,
   nextEnemyIntent,
+  resolvePitFall,
 } from "./gameplay-animation-state.mjs";
 
 type Screen = "title" | "playing" | "paused" | "gameover" | "won";
@@ -87,6 +90,8 @@ interface Player extends Rect {
   attackId: number;
   boostCooldown: number;
   anim: number;
+  hurtTimer: number;
+  pendingDamage: "shrink" | "respawn" | "gameover" | null;
 }
 
 interface World {
@@ -473,6 +478,8 @@ const makeWorld = (): World => ({
     attackId: 0,
     boostCooldown: 0,
     anim: 0,
+    hurtTimer: 0,
+    pendingDamage: null,
   },
   enemies: initialEnemies(),
   pickups: initialPickups(),
@@ -810,31 +817,74 @@ export function TrashDashGame() {
       player.y = GROUND_Y - player.h;
       player.vx = 0;
       player.vy = 0;
+      player.grounded = true;
       player.invulnerable = 1.8;
       player.glider = 0;
+      player.attackTimer = 0;
+      player.boostCooldown = 0;
+      player.jumpBuffer = 0;
+      player.hurtTimer = 0;
+      player.pendingDamage = null;
       world.cameraX = Math.max(0, world.checkpoint - 180);
       setMessage(world, "Back on your paws!", 1.7);
     };
 
     const hurtPlayer = (world: World, direction: number) => {
       const player = world.player;
-      if (player.invulnerable > 0) return;
+      const hurt = beginPlayerHurt({
+        large: player.large,
+        lives: world.lives,
+        invulnerable: player.invulnerable,
+        hurtTimer: player.hurtTimer,
+        direction,
+      });
+      if (!hurt) return;
+
       tone(130, 0.18, "sawtooth");
-      if (player.large) {
+      burst(world, player.x + player.w / 2, player.y + player.h / 2, "#f6d477", 11);
+      player.hurtTimer = hurt.timer;
+      player.pendingDamage = hurt.outcome;
+      player.vx = hurt.vx;
+      player.vy = hurt.vy;
+      player.grounded = false;
+      player.glider = 0;
+      player.attackTimer = 0;
+    };
+
+    const finishPlayerHurt = (world: World) => {
+      const player = world.player;
+      const outcome = player.pendingDamage;
+      player.pendingDamage = null;
+
+      if (outcome === "shrink") {
         transformPlayer(player, false);
         player.invulnerable = 1.8;
-        player.vx = direction * 190;
-        player.vy = -280;
         setMessage(world, "Oof — back to small!", 1.6);
-      } else {
+      } else if (outcome === "respawn") {
         world.lives -= 1;
-        burst(world, player.x + player.w / 2, player.y + player.h / 2, "#f6d477", 11);
-        if (world.lives <= 0) {
-          changeScreen("gameover");
-          return;
-        }
+        transformPlayer(player, false);
         respawn(world);
+      } else if (outcome === "gameover") {
+        world.lives = Math.max(0, world.lives - 1);
+        changeScreen("gameover");
       }
+      return outcome;
+    };
+
+    const handlePitFall = (world: World) => {
+      const player = world.player;
+      const pit = resolvePitFall(world.lives);
+      world.lives = pit.lives;
+      transformPlayer(player, false);
+      player.hurtTimer = 0;
+      player.pendingDamage = null;
+      player.attackTimer = 0;
+      player.glider = 0;
+      burst(world, player.x + player.w / 2, HEIGHT - 8, "#f6d477", 11);
+      tone(100, 0.2, "sawtooth");
+
+      if (pit.outcome === "respawn") respawn(world);
+      else changeScreen("gameover");
     };
 
     const damageEnemy = (world: World, enemy: Enemy, stomp = false) => {
@@ -872,12 +922,24 @@ export function TrashDashGame() {
       player.jumpBuffer = Math.max(0, player.jumpBuffer - dt);
       world.messageTimer = Math.max(0, world.messageTimer - dt);
 
-      const left = keyHeld("ArrowLeft", "KeyA");
-      const right = keyHeld("ArrowRight", "KeyD");
-      const running = keyHeld("ShiftLeft", "ShiftRight", "KeyX");
-      const jumpHeld = keyHeld("Space", "ArrowUp", "KeyW");
-      const jumpPressed = keyPressed("Space", "ArrowUp", "KeyW");
-      const actionPressed = keyPressed("KeyE", "KeyZ");
+      const hurtStep = advanceHurtTimer(player.hurtTimer, dt);
+      player.hurtTimer = hurtStep.timer;
+      if (hurtStep.complete) {
+        const outcome = finishPlayerHurt(world);
+        if (outcome === "respawn" || screenRef.current !== "playing") {
+          pressedRef.current.clear();
+          return;
+        }
+      }
+
+      const acceptsInput = player.hurtTimer <= 0;
+
+      const left = acceptsInput && keyHeld("ArrowLeft", "KeyA");
+      const right = acceptsInput && keyHeld("ArrowRight", "KeyD");
+      const running = acceptsInput && keyHeld("ShiftLeft", "ShiftRight", "KeyX");
+      const jumpHeld = acceptsInput && keyHeld("Space", "ArrowUp", "KeyW");
+      const jumpPressed = acceptsInput && keyPressed("Space", "ArrowUp", "KeyW");
+      const actionPressed = acceptsInput && keyPressed("KeyE", "KeyZ");
 
       if (jumpPressed) player.jumpBuffer = 0.13;
       player.coyote = player.grounded ? 0.12 : Math.max(0, player.coyote - dt);
@@ -931,7 +993,9 @@ export function TrashDashGame() {
       }
 
       if (player.y > HEIGHT + 120) {
-        hurtPlayer(world, 0);
+        handlePitFall(world);
+        pressedRef.current.clear();
+        return;
       }
 
       if (!world.checkpointReached && player.x > 3050) {
@@ -1385,7 +1449,12 @@ export function TrashDashGame() {
       let drawW = player.large ? 110 : 84;
       let drawH = drawW;
 
-      if (player.glider > 0 && !player.grounded) {
+      if (player.hurtTimer > 0) {
+        source = atlasRef.current;
+        frame = player.large ? sprites.largeHurt : sprites.smallHurt;
+        drawW = player.large ? 110 : 84;
+        drawH = drawW;
+      } else if (player.glider > 0 && !player.grounded) {
         source = gliderMotionRef.current;
         frame = gliderMotion[Math.floor(player.anim * 6) % gliderMotion.length];
         drawW = 140;
@@ -1409,7 +1478,7 @@ export function TrashDashGame() {
         drawW,
         drawH,
         player.facing < 0,
-        player.invulnerable > 0 && Math.floor(player.invulnerable * 18) % 2 ? 0.45 : 1,
+        player.hurtTimer <= 0 && player.invulnerable > 0 && Math.floor(player.invulnerable * 18) % 2 ? 0.45 : 1,
         source,
       );
 

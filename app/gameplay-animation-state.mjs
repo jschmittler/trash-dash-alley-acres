@@ -1,6 +1,7 @@
 export const POSSUM_CHASE_RADIUS = 250;
 export const POSSUM_FACING_DEAD_ZONE = 18;
 export const BOSS_WALK_FRAMES = [0, 1, 2, 3, 2, 1];
+export const PLAYER_HURT_DURATION = 0.48;
 
 const facingFromVelocity = (vx, fallback) => (
   Math.abs(vx) >= 1 ? (vx < 0 ? -1 : 1) : fallback
@@ -36,4 +37,37 @@ export function bossFrameIndex(phase) {
 
 export function bossAnimationState(hitCooldown) {
   return hitCooldown > 0 ? "hit" : "walking";
+}
+
+export function beginPlayerHurt({
+  large,
+  lives,
+  invulnerable,
+  hurtTimer,
+  direction,
+}) {
+  if (lives <= 0 || invulnerable > 0 || hurtTimer > 0) return null;
+
+  return {
+    timer: PLAYER_HURT_DURATION,
+    outcome: large ? "shrink" : lives > 1 ? "respawn" : "gameover",
+    vx: direction * 190,
+    vy: -280,
+  };
+}
+
+export function advanceHurtTimer(timer, dt) {
+  const nextTimer = Math.max(0, timer - dt);
+  return {
+    timer: nextTimer,
+    complete: timer > 0 && nextTimer === 0,
+  };
+}
+
+export function resolvePitFall(lives) {
+  const nextLives = Math.max(0, lives - 1);
+  return {
+    lives: nextLives,
+    outcome: nextLives > 0 ? "respawn" : "gameover",
+  };
 }
