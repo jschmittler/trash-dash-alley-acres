@@ -23,6 +23,12 @@ import {
   nextEnemyIntent,
   resolvePitFall,
 } from "./gameplay-animation-state.mjs";
+import {
+  PLAYER_ANIMATIONS,
+  animationFrame,
+  isTailSwipeActive,
+  selectPlayerAnimation,
+} from "./player-animation.mjs";
 
 type Screen = "title" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
@@ -90,6 +96,14 @@ interface Player extends Rect {
   attackId: number;
   boostCooldown: number;
   anim: number;
+  animationName: keyof typeof PLAYER_ANIMATIONS;
+  animationElapsed: number;
+  landingTimer: number;
+  airtime: number;
+  skidTimer: number;
+  shrinkTimer: number;
+  endSequence: "won" | "gameover" | null;
+  endTimer: number;
   hurtTimer: number;
   pendingDamage: "shrink" | "respawn" | "gameover" | null;
 }
@@ -128,12 +142,6 @@ const assetUrl = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^
 
 const motionRow = (row: number, count: number): Frame[] =>
   Array.from({ length: count }, (_, index) => [index * MOTION_CELL, row * MOTION_CELL, MOTION_CELL, MOTION_CELL] as Frame);
-
-const playerMotion = {
-  small: motionRow(0, 6),
-  large: motionRow(1, 6),
-};
-const playerAttackFrame = [0, 0, 106, 83] as Frame;
 
 const enemyMotion = {
   pigeon: motionRow(0, 4),
@@ -195,7 +203,6 @@ const hazardMotion = {
   boss: assetRow(1, 4),
 };
 
-const gliderMotion = assetRow(0, 6);
 const recycleCrates = assetRow(0, 2);
 
 const midgroundProps = {
@@ -474,6 +481,14 @@ const makeWorld = (): World => ({
     attackId: 0,
     boostCooldown: 0,
     anim: 0,
+    animationName: "small_idle",
+    animationElapsed: 0,
+    landingTimer: 0,
+    airtime: 0,
+    skidTimer: 0,
+    shrinkTimer: 0,
+    endSequence: null,
+    endTimer: 0,
     hurtTimer: 0,
     pendingDamage: null,
   },
@@ -507,14 +522,12 @@ export function TrashDashGame() {
   const cabinetRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const atlasRef = useRef<HTMLImageElement | null>(null);
-  const playerMotionRef = useRef<HTMLImageElement | null>(null);
-  const playerAttackRef = useRef<HTMLImageElement | null>(null);
+  const playerHeroMotionRef = useRef<HTMLImageElement | null>(null);
   const enemyMotionRef = useRef<HTMLImageElement | null>(null);
   const varietyEnemyMotionRef = useRef<HTMLImageElement | null>(null);
   const trashPickupMotionRef = useRef<HTMLImageElement | null>(null);
   const tacoPowerMotionRef = useRef<HTMLImageElement | null>(null);
   const hazardMotionRef = useRef<HTMLImageElement | null>(null);
-  const gliderMotionRef = useRef<HTMLImageElement | null>(null);
   const midgroundPropsRef = useRef<HTMLImageElement | null>(null);
   const recycleCratesRef = useRef<HTMLImageElement | null>(null);
   const groundTileRef = useRef<HTMLImageElement | null>(null);
@@ -662,14 +675,12 @@ export function TrashDashGame() {
 
     void Promise.all([
       loadImage(assetUrl("assets/raccoon-sprites.png")),
-      loadImage(assetUrl("assets/player-motion.png")),
-      loadImage(assetUrl("assets/generated/player-attack.png")),
+      loadImage(assetUrl("assets/generated/player-hero-motion.png")),
       loadImage(assetUrl("assets/enemy-motion.png")),
       loadImage(assetUrl("assets/generated/enemy-variety-motion.png")),
       loadImage(assetUrl("assets/generated/trash-pickups-motion.png")),
       loadImage(assetUrl("assets/generated/taco-power-motion.png")),
       loadImage(assetUrl("assets/hazard-motion.png")),
-      loadImage(assetUrl("assets/glider-motion.png")),
       loadImage(assetUrl("assets/midground-props.png")),
       loadImage(assetUrl("assets/recycle-crates-v2.png")),
       loadImage(assetUrl("assets/ground-seamless.png")),
@@ -678,17 +689,15 @@ export function TrashDashGame() {
       loadImage(assetUrl("assets/backgrounds/city-far.png")),
       loadImage(assetUrl("assets/backgrounds/city-near.png")),
     ])
-      .then(([atlas, playerAtlas, playerAttack, enemyAtlas, varietyEnemyAtlas, trashPickupAtlas, tacoPowerAtlas, hazardAtlas, gliderAtlas, propAtlas, crateAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
+      .then(([atlas, playerHeroAtlas, enemyAtlas, varietyEnemyAtlas, trashPickupAtlas, tacoPowerAtlas, hazardAtlas, propAtlas, crateAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
         if (cancelled) return;
         atlasRef.current = atlas;
-        playerMotionRef.current = playerAtlas;
-        playerAttackRef.current = playerAttack;
+        playerHeroMotionRef.current = playerHeroAtlas;
         enemyMotionRef.current = enemyAtlas;
         varietyEnemyMotionRef.current = varietyEnemyAtlas;
         trashPickupMotionRef.current = trashPickupAtlas;
         tacoPowerMotionRef.current = tacoPowerAtlas;
         hazardMotionRef.current = hazardAtlas;
-        gliderMotionRef.current = gliderAtlas;
         midgroundPropsRef.current = propAtlas;
         recycleCratesRef.current = crateAtlas;
         groundTileRef.current = groundTile;
@@ -790,7 +799,7 @@ export function TrashDashGame() {
   }, [clearHeldInput, interruptGame, startGame, toggleMute, togglePause]);
 
   useEffect(() => {
-    let animationFrame = 0;
+    let animationFrameId = 0;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const context = canvas.getContext("2d");
@@ -822,6 +831,14 @@ export function TrashDashGame() {
       player.attackTimer = 0;
       player.boostCooldown = 0;
       player.jumpBuffer = 0;
+      player.animationName = player.large ? "large_idle" : "small_idle";
+      player.animationElapsed = 0;
+      player.landingTimer = 0;
+      player.airtime = 0;
+      player.skidTimer = 0;
+      player.shrinkTimer = 0;
+      player.endSequence = null;
+      player.endTimer = 0;
       player.hurtTimer = 0;
       player.pendingDamage = null;
       world.cameraX = Math.max(0, world.checkpoint - 180);
@@ -848,6 +865,9 @@ export function TrashDashGame() {
       player.grounded = false;
       player.glider = 0;
       player.attackTimer = 0;
+      player.shrinkTimer = 0;
+      player.animationName = player.large ? "large_hurt" : "small_hurt";
+      player.animationElapsed = 0;
     };
 
     const finishPlayerHurt = (world: World) => {
@@ -856,7 +876,7 @@ export function TrashDashGame() {
       player.pendingDamage = null;
 
       if (outcome === "shrink") {
-        transformPlayer(player, false);
+        player.shrinkTimer = 0.4;
         player.invulnerable = 1.8;
         setMessage(world, "Oof — back to small!", 1.6);
       } else if (outcome === "respawn") {
@@ -865,7 +885,9 @@ export function TrashDashGame() {
         respawn(world);
       } else if (outcome === "gameover") {
         world.lives = Math.max(0, world.lives - 1);
-        changeScreen("gameover");
+        player.endSequence = "gameover";
+        player.endTimer = 0.66;
+        player.vx = 0;
       }
       return outcome;
     };
@@ -879,6 +901,9 @@ export function TrashDashGame() {
       player.pendingDamage = null;
       player.attackTimer = 0;
       player.glider = 0;
+      player.shrinkTimer = 0;
+      player.endSequence = null;
+      player.endTimer = 0;
       burst(world, player.x + player.w / 2, HEIGHT - 8, "#f6d477", 11);
       tone(100, 0.2, "sawtooth");
 
@@ -910,16 +935,37 @@ export function TrashDashGame() {
 
     const update = (world: World, dt: number) => {
       const player = world.player;
+      const wasGrounded = player.grounded;
       const previousY = player.y;
       const previousBottom = previousY + player.h;
       world.elapsed += dt;
       player.anim += dt;
+      player.animationElapsed += dt;
       player.invulnerable = Math.max(0, player.invulnerable - dt);
       player.attackTimer = Math.max(0, player.attackTimer - dt);
       player.boostCooldown = Math.max(0, player.boostCooldown - dt);
       player.glider = Math.max(0, player.glider - dt);
       player.jumpBuffer = Math.max(0, player.jumpBuffer - dt);
+      player.landingTimer = Math.max(0, player.landingTimer - dt);
+      player.skidTimer = Math.max(0, player.skidTimer - dt);
+      if (!wasGrounded) player.airtime += dt;
       world.messageTimer = Math.max(0, world.messageTimer - dt);
+
+      if (player.endSequence) {
+        player.endTimer = Math.max(0, player.endTimer - dt);
+        if (player.endTimer <= 0) {
+          const completedScreen = player.endSequence;
+          player.endSequence = null;
+          changeScreen(completedScreen);
+          pressedRef.current.clear();
+          return;
+        }
+      }
+
+      if (player.shrinkTimer > 0) {
+        player.shrinkTimer = Math.max(0, player.shrinkTimer - dt);
+        if (player.shrinkTimer <= 0) transformPlayer(player, false);
+      }
 
       const hurtStep = advanceHurtTimer(player.hurtTimer, dt);
       player.hurtTimer = hurtStep.timer;
@@ -931,7 +977,7 @@ export function TrashDashGame() {
         }
       }
 
-      const acceptsInput = player.hurtTimer <= 0;
+      const acceptsInput = player.hurtTimer <= 0 && player.shrinkTimer <= 0 && player.endSequence === null;
 
       const left = acceptsInput && keyHeld("ArrowLeft", "KeyA");
       const right = acceptsInput && keyHeld("ArrowRight", "KeyD");
@@ -944,6 +990,9 @@ export function TrashDashGame() {
       player.coyote = player.grounded ? 0.12 : Math.max(0, player.coyote - dt);
 
       const direction = (right ? 1 : 0) - (left ? 1 : 0);
+      if (direction && Math.sign(player.vx) === -direction && Math.abs(player.vx) > 120) {
+        player.skidTimer = 0.16;
+      }
       const targetSpeed = direction * (running ? 330 : 225);
       const acceleration = player.grounded ? 1900 : 1050;
       const speedDelta = targetSpeed - player.vx;
@@ -991,6 +1040,11 @@ export function TrashDashGame() {
         }
       }
 
+      if (player.grounded) {
+        if (!wasGrounded && player.airtime > 0.08) player.landingTimer = 0.12;
+        player.airtime = 0;
+      }
+
       if (player.y > HEIGHT + 120) {
         handlePitFall(world);
         pressedRef.current.clear();
@@ -1029,6 +1083,25 @@ export function TrashDashGame() {
           tone(980, 0.16, "triangle");
         }
         burst(world, pickup.x + pickup.w / 2, pickup.y + pickup.h / 2, pickup.kind === "cap" ? "#ffd248" : "#8bdc63", 8);
+      }
+
+      const nextPlayerAnimation = selectPlayerAnimation({
+        form: player.large ? "large" : "small",
+        defeated: player.endSequence === "gameover",
+        hurt: player.hurtTimer > 0,
+        shrinking: player.shrinkTimer > 0,
+        victorious: player.endSequence === "won",
+        attacking: player.attackTimer > 0,
+        grounded: player.grounded,
+        gliding: player.glider > 0 && jumpHeld && player.vy > 10,
+        landing: player.landingTimer > 0,
+        skidding: player.skidTimer > 0,
+        vx: player.vx,
+        vy: player.vy,
+      }) as keyof typeof PLAYER_ANIMATIONS;
+      if (nextPlayerAnimation !== player.animationName) {
+        player.animationName = nextPlayerAnimation;
+        player.animationElapsed = 0;
       }
 
       for (const enemy of world.enemies) {
@@ -1071,7 +1144,9 @@ export function TrashDashGame() {
         }
         enemy.y = enemy.surfaceY - enemy.h + (flyingEnemies.has(enemy.kind) ? Math.sin(enemy.phase * 0.82) * 11 : 0);
 
-        if (player.attackTimer > 0.08 && player.large) {
+        const playerAnimation = PLAYER_ANIMATIONS[player.animationName];
+        const playerFrameIndex = animationFrame(playerAnimation, player.animationElapsed);
+        if (player.large && player.animationName === "large_tail_swipe" && isTailSwipeActive(playerFrameIndex)) {
           const attackRect: Rect = {
             x: player.facing > 0 ? player.x + player.w - 4 : player.x - 58,
             y: player.y + 8,
@@ -1099,7 +1174,7 @@ export function TrashDashGame() {
       }
       world.particles = world.particles.filter((particle) => particle.life > 0);
 
-      if (world.bossDefeated && player.x > 6300 && screenRef.current === "playing") {
+      if (world.bossDefeated && player.x > 6300 && screenRef.current === "playing" && !player.endSequence) {
         world.score += Math.max(0, Math.floor(4000 - world.elapsed * 12));
         const oldScore = Number(window.localStorage.getItem("trash-dash-high-score") ?? 0);
         const oldTime = Number(window.localStorage.getItem("trash-dash-best-time") ?? 0);
@@ -1108,7 +1183,11 @@ export function TrashDashGame() {
         window.localStorage.setItem("trash-dash-high-score", String(nextScore));
         window.localStorage.setItem("trash-dash-best-time", String(nextTime));
         setBest({ score: nextScore, time: nextTime });
-        changeScreen("won");
+        player.endSequence = "won";
+        player.endTimer = 0.58;
+        player.vx = 0;
+        player.animationName = player.large ? "large_victory" : "small_victory";
+        player.animationElapsed = 0;
         tone(640, 0.15);
         window.setTimeout(() => tone(800, 0.18), 120);
       }
@@ -1441,44 +1520,26 @@ export function TrashDashGame() {
 
       const player = world.player;
       const playerX = player.x - camera;
-      const running = Math.abs(player.vx) > 250;
-      const groundedFrames = player.large ? playerMotion.large : playerMotion.small;
-      let source = playerMotionRef.current;
-      let frame = groundedFrames[0];
-      let drawW = player.large ? 110 : 84;
-      let drawH = drawW;
-
-      if (player.hurtTimer > 0) {
-        source = atlasRef.current;
-        frame = player.large ? sprites.largeHurt : sprites.smallHurt;
-        drawW = player.large ? 120 : 91;
-        drawH = player.large ? 100 : 84;
-      } else if (player.glider > 0 && !player.grounded) {
-        source = gliderMotionRef.current;
-        frame = gliderMotion[Math.floor(player.anim * 6) % gliderMotion.length];
-        drawW = 140;
-        drawH = 140;
-      } else if (player.attackTimer > 0 && player.large) {
-        source = playerAttackRef.current;
-        frame = playerAttackFrame;
-        drawW = 118;
-        drawH = 92;
-      } else if (!player.grounded) {
-        frame = groundedFrames[player.vy < 0 ? 2 : 3];
-      } else if (Math.abs(player.vx) > 22) {
-        const cadence = running ? 11 : Math.max(6, Math.abs(player.vx) / 30);
-        frame = groundedFrames[Math.floor(player.anim * cadence) % groundedFrames.length];
-      }
+      const playerAnimation = PLAYER_ANIMATIONS[player.animationName];
+      const playerFrameIndex = animationFrame(playerAnimation, player.animationElapsed);
+      const frame = [
+        playerFrameIndex * MOTION_CELL,
+        playerAnimation.row * MOTION_CELL,
+        MOTION_CELL,
+        MOTION_CELL,
+      ] as Frame;
+      const drawW = playerAnimation.drawWidth;
+      const drawH = playerAnimation.drawHeight;
 
       drawSprite(
         frame,
         playerX + player.w / 2 - drawW / 2,
-        player.y + player.h - drawH,
+        player.y + player.h - drawH + playerAnimation.offsetY,
         drawW,
         drawH,
         player.facing < 0,
         player.hurtTimer <= 0 && player.invulnerable > 0 && Math.floor(player.invulnerable * 18) % 2 ? 0.45 : 1,
-        source,
+        playerHeroMotionRef.current,
       );
 
       for (const particle of world.particles) {
@@ -1523,11 +1584,11 @@ export function TrashDashGame() {
           glider: world.player.glider,
         });
       }
-      animationFrame = requestAnimationFrame(loop);
+      animationFrameId = requestAnimationFrame(loop);
     };
 
-    animationFrame = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(animationFrame);
+    animationFrameId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animationFrameId);
   }, [burst, changeScreen, setMessage, tone]);
 
   const overlay = (() => {

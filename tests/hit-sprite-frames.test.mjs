@@ -79,16 +79,23 @@ test("hit reaction frames contain one complete sprite without clipped borders", 
   }
 });
 
-test("the active attack uses one isolated sprite instead of a cross-atlas crop", async () => {
+test("the active tail swipe uses isolated canonical atlas cells", async () => {
   assert.doesNotMatch(gameSource, /sprites\.largeAttack\[1\]/);
-  assert.match(gameSource, /player-attack\.png/);
+  assert.match(gameSource, /player-hero-motion\.png/);
+  assert.match(gameSource, /isTailSwipeActive\(playerFrameIndex\)/);
 
   const { data, info } = await sharp(
-    fileURLToPath(new URL("../public/assets/generated/player-attack.png", import.meta.url)),
+    fileURLToPath(new URL("../public/assets/generated/player-hero-motion.png", import.meta.url)),
   ).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  const alpha = new Uint8Array(info.width * info.height);
-  for (let pixel = 0; pixel < alpha.length; pixel += 1) alpha[pixel] = data[pixel * 4 + 3];
-
-  assert.equal(countLargeComponents(alpha, info.width, info.height), 1);
-  assert.ok(info.width > info.height, "attack pose keeps its extended-arm silhouette");
+  const cell = 192;
+  const row = 16;
+  for (let frame = 0; frame < 5; frame += 1) {
+    let opaque = 0;
+    for (let y = row * cell; y < (row + 1) * cell; y += 1) {
+      for (let x = frame * cell; x < (frame + 1) * cell; x += 1) {
+        if (data[(y * info.width + x) * 4 + 3] > 0) opaque += 1;
+      }
+    }
+    assert.ok(opaque > 500, `tail swipe frame ${frame} is populated`);
+  }
 });

@@ -29,12 +29,12 @@ test("builds a complete GitHub Pages artifact under the repository base path", a
   const javascript = (await Promise.all(scripts.map((file) => readFile(file, "utf8")))).join("\n");
 
   assert.match(javascript, /\/trash-dash-alley-acres\//);
-  assert.match(javascript, /assets\/player-motion\.png/);
+  assert.match(javascript, /assets\/generated\/player-hero-motion\.png/);
   assert.match(javascript, /assets\/recycle-crates-v2\.png/);
-  assert.doesNotMatch(javascript, /["']\/assets\/player-motion\.png/);
+  assert.doesNotMatch(javascript, /["']\/assets\/generated\/player-hero-motion\.png/);
 
   await access(new URL(".nojekyll", pagesRoot));
-  await access(new URL("assets/player-motion.png", pagesRoot));
+  await access(new URL("assets/generated/player-hero-motion.png", pagesRoot));
   await access(new URL("assets/recycle-crates-v2.png", pagesRoot));
   await access(new URL("assets/audio/raccoon-rush-loop.m4a", pagesRoot));
   await access(new URL("og.png", pagesRoot));
