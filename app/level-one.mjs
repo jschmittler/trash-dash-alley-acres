@@ -5,6 +5,8 @@
  * consumed by the Canvas runtime and validated in Node tests.
  */
 
+import { campaignLightingAt, campaignZoneAt } from "./campaign-level.mjs";
+
 const freezeDeep = (value) => {
   if (value && typeof value === "object" && !Object.isFrozen(value)) {
     Object.values(value).forEach(freezeDeep);
@@ -176,28 +178,65 @@ const boss = {
   checkpointId: "boss-runway-checkpoint",
 };
 
+// Mirrors the runtime collision platforms so subsequent campaign levels can
+// provide their geometry without the browser game component as an authority.
+const surfaces = [
+  { x: 0, y: 468, w: 1380, h: 90, kind: "ground" },
+  { x: 1490, y: 468, w: 980, h: 90, kind: "ground" },
+  { x: 2590, y: 468, w: 1020, h: 90, kind: "ground" },
+  { x: 3730, y: 468, w: 1010, h: 90, kind: "ground" },
+  { x: 4870, y: 468, w: 1730, h: 90, kind: "ground" },
+  { x: 620, y: 366, w: 220, h: 22, kind: "branch" },
+  { x: 1160, y: 396, w: 160, h: 72, kind: "ground" },
+  { x: 1510, y: 352, w: 270, h: 22, kind: "branch" },
+  { x: 1810, y: 300, w: 190, h: 22, kind: "branch" },
+  { x: 2070, y: 260, w: 175, h: 22, kind: "branch" },
+  { x: 2220, y: 360, w: 190, h: 22, kind: "branch" },
+  { x: 2660, y: 385, w: 240, h: 22, kind: "branch" },
+  { x: 3000, y: 330, w: 180, h: 22, kind: "branch" },
+  { x: 3300, y: 372, w: 180, h: 22, kind: "branch" },
+  { x: 3520, y: 312, w: 150, h: 22, kind: "branch" },
+  { x: 3800, y: 392, w: 190, h: 22, kind: "metal" },
+  { x: 4030, y: 350, w: 230, h: 22, kind: "metal" },
+  { x: 4300, y: 320, w: 210, h: 22, kind: "metal" },
+  { x: 4560, y: 380, w: 180, h: 22, kind: "metal" },
+  { x: 5000, y: 382, w: 180, h: 22, kind: "metal" },
+  { x: 5230, y: 330, w: 170, h: 22, kind: "metal" },
+  { x: 878, y: 383, w: 112, h: 85, kind: "box" },
+  { x: 938, y: 383, w: 112, h: 85, kind: "box" },
+  { x: 5100, y: 383, w: 112, h: 85, kind: "box" },
+  { x: 6150, y: 383, w: 112, h: 85, kind: "box" },
+];
+
+const backgroundSets = [
+  { zoneId: "deep-woodland", stage: "woodland" },
+  { zoneId: "creek-and-ruined-mill", stage: "creek" },
+  { zoneId: "forest-edge-highway", stage: "highway" },
+  { zoneId: "industrial-city-fringe", stage: "industrial" },
+  { zoneId: "urban-park-transition", stage: "park" },
+];
+
 export const LEVEL_ONE = freezeDeep({
   id: "level-1",
+  title: "Woodlands to City Limits",
+  worldWidth: 6600,
   zones,
+  surfaces,
+  backgroundSets,
   encounters,
   rewards,
   checkpoints,
   routeChoices,
   boss,
+  exit: { nextLevelId: "level-2", x: 6520 },
 });
 
 export function levelOneZoneAt(x) {
-  const coordinate = Number.isFinite(x) ? x : 0;
-  return LEVEL_ONE.zones.find((zone) => coordinate >= zone.startX && coordinate < zone.endX)
-    ?? (coordinate < LEVEL_ONE.zones[0].startX ? LEVEL_ONE.zones[0] : LEVEL_ONE.zones.at(-1));
+  return campaignZoneAt(LEVEL_ONE, x);
 }
 
 export function levelOneLightingAt(x) {
-  const coordinate = Number.isFinite(x) ? x : 0;
-  const zone = levelOneZoneAt(coordinate);
-  const span = Math.max(1, zone.endX - zone.startX);
-  const progress = Math.max(0, Math.min(1, (coordinate - zone.startX) / span));
-  return { lighting: zone.lighting, progress };
+  return campaignLightingAt(LEVEL_ONE, x);
 }
 
 export function levelOneEncounterData() {
