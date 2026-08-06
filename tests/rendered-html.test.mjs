@@ -44,6 +44,11 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /Enter fullscreen/);
   assert.match(game, /Rotate for the best view/);
   assert.match(game, /onLostPointerCapture/);
+  assert.match(game, /character-selection/);
+  assert.match(game, /confirm-character/);
+  assert.match(game, /Choose your raccoon/);
+  assert.match(game, /createCharacterSelectionState/);
+  assert.match(styles, /character-cards/);
   assert.match(game, /aria-label="Sprint"/);
   assert.match(game, /visibilityState === "hidden"/);
   assert.match(game, /raccoon-rush-loop\.m4a/);

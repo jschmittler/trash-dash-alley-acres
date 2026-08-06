@@ -539,6 +539,110 @@ button {
   line-height: 1.45;
 }
 
+.character-select-overlay {
+  align-items: center;
+  justify-items: center;
+  padding: clamp(16px, 4vw, 52px);
+  background: radial-gradient(circle at 50% 42%, rgb(33 113 84 / 76%), rgb(9 49 48 / 94%) 78%);
+}
+
+.character-select-copy {
+  width: min(760px, 96%);
+  display: grid;
+  justify-items: center;
+  gap: 9px;
+  text-align: center;
+}
+
+.selection-kicker {
+  color: #a9e1b3;
+  font-size: .72rem;
+  font-weight: 1000;
+  letter-spacing: .18em;
+}
+
+.character-select-copy h2 {
+  margin: 0;
+  color: #ffb13b;
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(1.8rem, 5vw, 3.2rem);
+  line-height: 1;
+}
+
+.character-select-copy p {
+  margin: 0 0 4px;
+  color: #e3f0d0;
+  font-size: clamp(.78rem, 1.5vw, .98rem);
+  font-weight: 750;
+}
+
+.character-cards {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(10px, 2vw, 18px);
+  margin: 5px 0;
+}
+
+.character-card {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: clamp(8px, 1.8vw, 16px);
+  border: 3px solid rgb(196 231 211 / 24%);
+  border-radius: 16px;
+  color: var(--cream);
+  background: rgb(15 67 65 / 78%);
+  cursor: pointer;
+  transition: transform 150ms ease-out, border-color 150ms ease-out, background-color 150ms ease-out;
+}
+
+.character-card:hover,
+.character-card.is-selected {
+  border-color: #ffbd32;
+  background: rgb(31 105 78 / 94%);
+  transform: translateY(-3px);
+}
+
+.character-card:focus-visible {
+  outline: 3px solid #ffe174;
+  outline-offset: 3px;
+}
+
+.character-preview {
+  width: clamp(68px, 13vw, 112px);
+  height: clamp(68px, 13vw, 112px);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 12px;
+  background: rgb(115 216 244 / 18%);
+}
+
+.character-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.character-card strong {
+  color: #fff4ce;
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(1rem, 2.6vw, 1.35rem);
+}
+
+.character-card > span:last-child {
+  color: #c4e7d3;
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.selection-actions {
+  justify-content: center;
+}
+
 .button-row {
   display: flex;
   flex-wrap: wrap;

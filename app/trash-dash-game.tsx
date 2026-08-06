@@ -27,7 +27,12 @@ import {
   animationFrame,
   isTailSwipeActive,
 } from "./player-animation.mjs";
-import { getPlayableCharacter, selectCharacterAnimation } from "./playable-character.mjs";
+import { getPlayableCharacter, PLAYABLE_CHARACTERS, selectCharacterAnimation } from "./playable-character.mjs";
+import {
+  createCharacterSelectionState,
+  moveCharacterSelection,
+  confirmCharacterSelection,
+} from "./character-selection.mjs";
 import {
   BOSS_ANIMATIONS,
   BOSS_SEQUENCE_DURATIONS,
@@ -54,7 +59,7 @@ import {
 } from "./powerup-announcement.mjs";
 import { evaluateVictoryRecord } from "./victory-phase.mjs";
 
-type Screen = "title" | "playing" | "paused" | "gameover" | "won";
+type Screen = "title" | "characterSelect" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
 type PlatformKind = "ground" | "branch" | "metal" | "box";
 type PickupKind = "trash" | "taco" | "cap";
@@ -572,6 +577,7 @@ export function TrashDashGame() {
   const keysRef = useRef(new Set<string>());
   const pressedRef = useRef(new Set<string>());
   const screenRef = useRef<Screen>("title");
+  const selectedCharacterRef = useRef("raccoon");
   const audioRef = useRef<AudioContext | null>(null);
   const musicRef = useRef<HTMLAudioElement | null>(null);
   const musicSwitchIdRef = useRef(0);
@@ -585,6 +591,7 @@ export function TrashDashGame() {
   const powerupNoticeRef = useRef<PowerupNotice | null>(null);
   const browserExperienceRef = useRef(INITIAL_BROWSER_EXPERIENCE);
   const [screen, setScreen] = useState<Screen>("title");
+  const [characterSelection, setCharacterSelection] = useState(() => createCharacterSelectionState(Object.keys(PLAYABLE_CHARACTERS)));
   const [loaded, setLoaded] = useState(false);
   const [muted, setMuted] = useState(false);
   const [portraitDismissed, setPortraitDismissed] = useState(false);
@@ -676,7 +683,14 @@ export function TrashDashGame() {
     tone(kind === "taco" ? 760 : 980, 0.16, "triangle");
   }, [dismissPowerupNotice, tone]);
 
-  const startGame = useCallback(() => {
+  const openCharacterSelect = useCallback(() => {
+    clearHeldInput();
+    setCharacterSelection(createCharacterSelectionState(Object.keys(PLAYABLE_CHARACTERS)));
+    changeScreen("characterSelect");
+  }, [changeScreen, clearHeldInput]);
+
+  const startGame = useCallback((characterId = selectedCharacterRef.current) => {
+    clearHeldInput();
     dismissPowerupNotice();
     setVictoryRecord({ score: false, time: false });
     if (!audioRef.current) {
@@ -687,6 +701,7 @@ export function TrashDashGame() {
     disposeGameMusic(musicRef.current);
     musicRef.current = createGameMusic(assetUrl("assets/audio/raccoon-rush-loop.m4a"));
     void playGameMusic(musicRef.current, { muted: mutedRef.current, restart: true });
+    selectedCharacterRef.current = getPlayableCharacter(characterId).id;
     const nextWorld = makeWorld();
     const devParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
     const bossTest = devParams?.get("bossTest") ?? null;
@@ -727,7 +742,17 @@ export function TrashDashGame() {
     changeScreen("playing");
     tone(520, 0.08);
     window.setTimeout(() => tone(720, 0.12), 80);
-  }, [changeScreen, dismissPowerupNotice, tone]);
+  }, [changeScreen, clearHeldInput, dismissPowerupNotice, tone]);
+
+  const confirmCharacter = useCallback(() => {
+    const selectedId = confirmCharacterSelection(characterSelection);
+    selectedCharacterRef.current = selectedId;
+    startGame(selectedId);
+  }, [characterSelection, startGame]);
+
+  const moveCharacter = useCallback((delta: number) => {
+    setCharacterSelection((state) => moveCharacterSelection(state, delta));
+  }, []);
 
   const togglePause = useCallback(() => {
     if (screenRef.current === "playing") changeScreen("paused");
@@ -885,10 +910,15 @@ export function TrashDashGame() {
       keysRef.current.add(event.code);
 
       if ((event.code === "Enter" || event.code === "Space") && screenRef.current === "title") {
-        startGame();
+        openCharacterSelect();
+      }
+      if (screenRef.current === "characterSelect") {
+        if (event.code === "ArrowLeft" || event.code === "KeyA") moveCharacter(-1);
+        if (event.code === "ArrowRight" || event.code === "KeyD") moveCharacter(1);
+        if (event.code === "Enter" || event.code === "Space") confirmCharacter();
       }
       if (event.code === "Escape" || event.code === "KeyP") togglePause();
-      if (event.code === "KeyR" && screenRef.current !== "title") startGame();
+      if (event.code === "KeyR" && screenRef.current !== "title" && screenRef.current !== "characterSelect") startGame();
       if (event.code === "KeyM") toggleMute();
     };
     const onKeyUp = (event: KeyboardEvent) => keysRef.current.delete(event.code);
@@ -908,7 +938,7 @@ export function TrashDashGame() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       clearHeldInput();
     };
-  }, [clearHeldInput, interruptGame, startGame, toggleMute, togglePause]);
+  }, [clearHeldInput, confirmCharacter, interruptGame, moveCharacter, openCharacterSelect, startGame, toggleMute, togglePause]);
 
   useEffect(() => {
     let animationFrameId = 0;
@@ -1867,10 +1897,49 @@ export function TrashDashGame() {
               Trash Dash <span>Alley Acres</span>
             </h1>
             <p>Turn five tasty scraps into big raccoon energy. Glide the gaps, clean up the alley, and reach the recycling depot.</p>
-            <button className="primary-button" type="button" onClick={startGame} disabled={!loaded}>
+            <button className="primary-button" type="button" onClick={openCharacterSelect} disabled={!loaded}>
               {loaded ? "Start rummaging" : "Loading the alley…"}
             </button>
             <span className="controls-line">Move A/D or arrows · Jump Space · Run Shift · Action E</span>
+          </div>
+        </div>
+      );
+    }
+    if (screen === "characterSelect") {
+      return (
+        <div className="screen-overlay character-select-overlay" data-testid="character-selection" role="dialog" aria-labelledby="character-selection-title">
+          <div className="character-select-copy">
+            <span className="selection-kicker">CHOOSE YOUR RACCOON</span>
+            <h2 id="character-selection-title">Pick a runner</h2>
+            <p>Every hero can clean up Alley Acres. Choose the style that feels right.</p>
+            <div className="character-cards" role="radiogroup" aria-label="Playable characters">
+              {characterSelection.ids.map((id) => {
+                const profile = getPlayableCharacter(id);
+                const selected = id === characterSelection.selectedId;
+                const preview = profile.atlasSrc;
+                return (
+                  <button
+                    className={`character-card ${selected ? "is-selected" : ""}`}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    aria-label={`Play as ${profile.displayName}`}
+                    data-character-id={id}
+                    key={id}
+                    onClick={() => setCharacterSelection((state) => ({ ...state, index: state.ids.indexOf(id), selectedId: id }))}
+                  >
+                    <span className="character-preview"><img src={assetUrl(preview)} alt="" /></span>
+                    <strong>{profile.displayName}</strong>
+                    <span>{id === "raccoon" ? "Trash-powered speedster" : "A clever alley climber"}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="button-row selection-actions">
+              <button className="primary-button" type="button" data-testid="confirm-character" onClick={confirmCharacter}>Start as {getPlayableCharacter(characterSelection.selectedId).displayName}</button>
+              <button className="secondary-button" type="button" onClick={() => changeScreen("title")}>Back</button>
+            </div>
+            <span className="controls-line">Arrow keys / A-D to choose · Enter or Space to confirm</span>
           </div>
         </div>
       );
@@ -1895,7 +1964,7 @@ export function TrashDashGame() {
           <div className="screen-copy">
             <h2>Out of paws</h2>
             <p>You scored {hud.score.toLocaleString()} points. The alley is ready for another run.</p>
-            <button className="primary-button" type="button" onClick={startGame}>Try again</button>
+              <button className="primary-button" type="button" onClick={openCharacterSelect}>Try again</button>
           </div>
         </div>
       );
@@ -1918,7 +1987,7 @@ export function TrashDashGame() {
             <p className="victory-best">Best run: {best.score.toLocaleString()} points{best.time ? ` · ${formatTime(best.time)}` : ""}</p>
             {(victoryRecord.score || victoryRecord.time) && <span className="new-record">NEW BEST!</span>}
             <div className="button-row">
-              <button className="primary-button" type="button" onClick={startGame}>Run it again</button>
+              <button className="primary-button" type="button" onClick={openCharacterSelect}>Run it again</button>
               <button className="secondary-button" type="button" onClick={() => { clearHeldInput(); changeScreen("title"); }}>Back to title</button>
             </div>
           </div>
