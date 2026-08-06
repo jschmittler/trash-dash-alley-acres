@@ -13,7 +13,7 @@ test("props preserve visible aspect ratio and share a baseline", () => {
   assert.equal(rects[0].x, 80);
   for (const rect of rects) assert.equal(rect.y + rect.height, 468);
   const crate = rects[3];
-  assert.ok(Math.abs(crate.width / crate.height - 214 / 188) < 0.01);
+  assert.ok(Math.abs(crate.width / crate.height - 224 / 169) < 0.01);
 });
 
 test("contact shadows stay near each prop's grounded bottom", () => {

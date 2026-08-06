@@ -1,11 +1,11 @@
 /** Canonical geometry for the side-on decorative atlas. */
 export const DECORATIVE_PROPS = Object.freeze({
-  bush: Object.freeze({ frame: Object.freeze({ row: 0, column: 0, width: 256, height: 256 }), sourceWidth: 228, sourceHeight: 150, baseline: 232, shadowOffset: 6 }),
-  tree: Object.freeze({ frame: Object.freeze({ row: 0, column: 1, width: 256, height: 256 }), sourceWidth: 194, sourceHeight: 220, baseline: 232, shadowOffset: 8 }),
-  bin: Object.freeze({ frame: Object.freeze({ row: 0, column: 2, width: 256, height: 256 }), sourceWidth: 180, sourceHeight: 206, baseline: 232, shadowOffset: 8 }),
-  crate: Object.freeze({ frame: Object.freeze({ row: 1, column: 0, width: 256, height: 256 }), sourceWidth: 214, sourceHeight: 188, baseline: 232, shadowOffset: 6 }),
-  checkpoint: Object.freeze({ frame: Object.freeze({ row: 1, column: 1, width: 256, height: 256 }), sourceWidth: 218, sourceHeight: 228, baseline: 232, shadowOffset: 7 }),
-  tires: Object.freeze({ frame: Object.freeze({ row: 1, column: 2, width: 256, height: 256 }), sourceWidth: 216, sourceHeight: 138, baseline: 232, shadowOffset: 6 }),
+  bush: Object.freeze({ frame: Object.freeze({ row: 0, column: 0, width: 256, height: 256 }), sourceWidth: 224, sourceHeight: 136, baseline: 232, shadowOffset: 6 }),
+  tree: Object.freeze({ frame: Object.freeze({ row: 0, column: 1, width: 256, height: 256 }), sourceWidth: 149, sourceHeight: 224, baseline: 232, shadowOffset: 8 }),
+  bin: Object.freeze({ frame: Object.freeze({ row: 0, column: 2, width: 256, height: 256 }), sourceWidth: 182, sourceHeight: 224, baseline: 232, shadowOffset: 8 }),
+  crate: Object.freeze({ frame: Object.freeze({ row: 1, column: 0, width: 256, height: 256 }), sourceWidth: 224, sourceHeight: 169, baseline: 232, shadowOffset: 6 }),
+  checkpoint: Object.freeze({ frame: Object.freeze({ row: 1, column: 1, width: 256, height: 256 }), sourceWidth: 224, sourceHeight: 176, baseline: 232, shadowOffset: 7 }),
+  tires: Object.freeze({ frame: Object.freeze({ row: 1, column: 2, width: 256, height: 256 }), sourceWidth: 224, sourceHeight: 115, baseline: 232, shadowOffset: 6 }),
 });
 
 export const platformStrips = Object.freeze({

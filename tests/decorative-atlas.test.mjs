@@ -42,6 +42,8 @@ test("every prop has explicit stable baseline and visible dimensions", async () 
     assert.ok(meta.baseline > 0 && meta.baseline < CELL, `${name} baseline`);
     const frame = bounds(data, info.width, meta.frame.row, meta.frame.column);
     assert.equal(frame.bottom + 1, meta.baseline, `${name} baseline mismatch`);
+    assert.equal(frame.right - frame.left + 1, meta.sourceWidth, `${name} visible width mismatch`);
+    assert.equal(frame.bottom - frame.top + 1, meta.sourceHeight, `${name} visible height mismatch`);
     assert.ok(meta.shadowOffset >= 0 && meta.shadowOffset < 32, `${name} shadow offset`);
   }
 });
