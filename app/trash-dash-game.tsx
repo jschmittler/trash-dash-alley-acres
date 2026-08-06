@@ -1962,7 +1962,7 @@ export function TrashDashGame() {
               {characterSelection.ids.map((id) => {
                 const profile = getPlayableCharacter(id);
                 const selected = id === characterSelection.selectedId;
-                const preview = profile.atlasSrc;
+                const preview = profile.selectionPortraitSrc;
                 return (
                   <button
                     className={`character-card ${selected ? "is-selected" : ""}`}

@@ -595,7 +595,7 @@ button {
   color: var(--cream);
   background: rgb(15 67 65 / 78%);
   cursor: pointer;
-  transition: transform 150ms ease-out, border-color 150ms ease-out, background-color 150ms ease-out;
+  transition: transform 150ms ease-out, border-color 150ms ease-out, background-color 150ms ease-out, box-shadow 150ms ease-out;
 }
 
 .character-card:hover,
@@ -603,6 +603,10 @@ button {
   border-color: #ffbd32;
   background: rgb(31 105 78 / 94%);
   transform: translateY(-3px);
+}
+
+.character-card.is-selected {
+  box-shadow: 0 0 0 2px #ffe174, 0 0 24px rgb(255 189 50 / 38%);
 }
 
 .character-card:focus-visible {
@@ -624,7 +628,19 @@ button {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  image-rendering: pixelated;
+  image-rendering: auto;
+  transition: filter 180ms ease-out, opacity 180ms ease-out, transform 180ms ease-out;
+}
+
+.character-card:not(.is-selected) .character-preview img {
+  filter: grayscale(1) saturate(.3) brightness(.72);
+  opacity: .62;
+}
+
+.character-card.is-selected .character-preview img {
+  filter: none;
+  opacity: 1;
+  transform: scale(1.03);
 }
 
 .character-card strong {

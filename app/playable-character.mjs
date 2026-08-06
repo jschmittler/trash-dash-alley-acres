@@ -7,6 +7,7 @@ const raccoon = {
   id: "raccoon",
   displayName: "Trashy",
   atlasSrc: atlas("assets/generated/player-hero-motion.png"),
+  selectionPortraitSrc: "assets/generated/trashy-selection-portrait.png",
   small: {
     width: 32,
     height: 46,
@@ -29,6 +30,7 @@ const jimothy = {
   id: "jimothy",
   displayName: "Jimothy",
   atlasSrc: atlas("assets/generated/jimothy-hero-motion.png"),
+  selectionPortraitSrc: "assets/generated/jimothy-selection-portrait.png",
   small: {
     width: 32,
     height: 46,
@@ -57,4 +59,3 @@ export function selectCharacterAnimation(character, input) {
   const profile = typeof character === "string" ? getPlayableCharacter(character) : character ?? PLAYABLE_CHARACTERS.raccoon;
   return selectPlayerAnimation(input, profile.animations);
 }
-

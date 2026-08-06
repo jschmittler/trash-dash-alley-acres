@@ -82,6 +82,8 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.doesNotMatch(game, /enemy\.kind === "bottle"/);
   assert.doesNotMatch(game, /\bcrab\b/);
   assert.match(characterProfiles, /player-hero-motion\.png/);
+  assert.match(characterProfiles, /trashy-selection-portrait\.png/);
+  assert.match(characterProfiles, /jimothy-selection-portrait\.png/);
   assert.match(game, /enemy-motion\.png/);
   assert.match(game, /midground-props\.png/);
   assert.match(game, /recycle-crates-v2\.png/);
@@ -166,6 +168,8 @@ test("ships the playable assets and removes the starter preview", async () => {
   await access(new URL("../public/assets/generated/dumpster-animation-atlas.png", import.meta.url));
   await access(new URL("../public/assets/generated/jimothy-hero-motion.png", import.meta.url));
   await access(new URL("../public/assets/generated/jimothy-selection.png", import.meta.url));
+  await access(new URL("../public/assets/generated/trashy-selection-portrait.png", import.meta.url));
+  await access(new URL("../public/assets/generated/jimothy-selection-portrait.png", import.meta.url));
   await access(new URL("../public/assets/glider-motion.png", import.meta.url));
   await access(new URL("../public/assets/midground-props.png", import.meta.url));
   await access(new URL("../public/assets/recycle-crates-v2.png", import.meta.url));

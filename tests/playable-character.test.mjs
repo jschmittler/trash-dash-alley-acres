@@ -25,6 +25,7 @@ test("registry exposes raccoon and Jimothy with complete profile metadata", () =
   assert.deepEqual(Object.keys(PLAYABLE_CHARACTERS).sort(), ["jimothy", "raccoon"]);
   for (const profile of Object.values(PLAYABLE_CHARACTERS)) {
     assert.ok(profile.atlasSrc.endsWith("-hero-motion.png"));
+    assert.ok(profile.selectionPortraitSrc.endsWith("-selection-portrait.png"));
     assert.ok(profile.small.width < profile.large.width);
     assert.ok(profile.small.height < profile.large.height);
     assert.ok(profile.small.hitbox.w > 0 && profile.large.hitbox.h > 0);
@@ -49,4 +50,3 @@ test("profile-aware routing covers movement, action, power and lifecycle states"
   assert.equal(selectCharacterAnimation("jimothy", { ...base, victorious: true }), "small_victory");
   assert.equal(selectCharacterAnimation("jimothy", { ...base, defeated: true }), "small_defeat");
 });
-
