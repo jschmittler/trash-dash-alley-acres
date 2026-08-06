@@ -34,10 +34,26 @@ async function cleanAndResize(inputPath, left, width) {
     }
   }
 
-  return sharp(data, {
+  const trimmed = await sharp(data, {
     raw: { width: info.width, height: info.height, channels: 4 },
   })
-    .resize(FRAME_SIZE, FRAME_SIZE, { fit: "fill", kernel: "nearest" })
+    .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .resize({ width: FRAME_SIZE - 16, height: FRAME_SIZE - 16, fit: "inside", kernel: "nearest" })
+    .png()
+    .toBuffer();
+
+  const metadata = await sharp(trimmed).metadata();
+  const leftOffset = Math.floor((FRAME_SIZE - metadata.width) / 2);
+  const topOffset = Math.max(0, 184 - metadata.height);
+  return sharp({
+    create: {
+      width: FRAME_SIZE,
+      height: FRAME_SIZE,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  })
+    .composite([{ input: trimmed, left: leftOffset, top: topOffset }])
     .png()
     .toBuffer();
 }

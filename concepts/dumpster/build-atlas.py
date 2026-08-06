@@ -15,8 +15,8 @@ SHEETS = ROOT / "sheets"
 OUTPUT = ROOT / "dumpster-animation-atlas.png"
 FRAME_SIZE = 192
 ROW_SIZE = FRAME_SIZE * 4
-STINK_SCALE_X = 0.94
-TARGET_CONTACT_Y = 142
+STINK_SCALE_X = 1.0
+TARGET_CONTACT_Y = 183
 
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
