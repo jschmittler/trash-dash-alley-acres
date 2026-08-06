@@ -32,12 +32,12 @@
 - Produces `LEVEL_ONE_ENEMY_KINDS`, the exact allowed standard-enemy list.
 - Produces `levelOneZoneAt(x)` and `levelOneEncounterData()` helpers.
 
-- [ ] Write tests asserting the five contiguous zone bands: `0–1150`, `1150–2350`, `2350–3550`, `3550–4800`, and `4800–5680`.
-- [ ] Write tests asserting the exact enemy roster and encounter order from the approved spec.
-- [ ] Write tests asserting taco, cap, checkpoint, and optional-route metadata.
-- [ ] Implement frozen data objects with no browser or React imports.
-- [ ] Add the new test file to the `npm test` command and run it.
-- [ ] Commit `feat: add level one world definition`.
+- [x] Write tests asserting the five contiguous zone bands: `0–1150`, `1150–2350`, `2350–3550`, `3550–4800`, and `4800–5680`.
+- [x] Write tests asserting the exact enemy roster and encounter order from the approved spec.
+- [x] Write tests asserting taco, cap, checkpoint, and optional-route metadata.
+- [x] Implement frozen data objects with no browser or React imports.
+- [x] Add the new test file to the `npm test` command and run it.
+- [x] Commit `feat: add level one world definition`.
 
 ### Task 2: Replace hard-coded enemy and pickup setup
 
@@ -51,12 +51,12 @@
 - Consumes `LEVEL_ONE.encounters` and `LEVEL_ONE.rewards` from Task 1.
 - Produces runtime `initialEnemies()` and `initialPickups()` from declarative data while retaining existing `makeEnemy`, `makeSurfacePickup`, and surface calculations.
 
-- [ ] Add a failing assertion that runtime setup is generated from `LEVEL_ONE` and does not contain an unlisted standard enemy.
-- [ ] Implement adapters that convert encounter entries to existing enemy objects and reward entries to existing pickup objects.
-- [ ] Preserve the current boss object and `BOSS_ARENA_TRIGGER_X` behavior while sourcing its position from the level definition.
-- [ ] Keep the current cap/taco/pickup art and baseline calculations unchanged.
-- [ ] Run focused level, enemy-surface, pickup-layout, and rendered-shell tests.
-- [ ] Commit `feat: source level one spawns from world data`.
+- [x] Add a failing assertion that runtime setup is generated from `LEVEL_ONE` and does not contain an unlisted standard enemy.
+- [x] Implement adapters that convert encounter entries to existing enemy objects and reward entries to existing pickup objects.
+- [x] Preserve the current boss object and `BOSS_ARENA_TRIGGER_X` behavior while sourcing its position from the level definition.
+- [x] Keep the current cap/taco/pickup art and baseline calculations unchanged.
+- [x] Run focused level, enemy-surface, pickup-layout, and rendered-shell tests.
+- [x] Commit `feat: source level one spawns from world data`.
 
 ### Task 3: Add zone-aware visual progression
 
@@ -70,12 +70,12 @@
 - Consumes `LEVEL_ONE.zones` and the existing forest/city background assets.
 - Produces `levelOneZoneAt(cameraX)` rendering metadata and a lightweight tint/lighting treatment for late-afternoon, sunset, dusk, night, and moonlit bands.
 
-- [ ] Add tests for the zone-to-lighting mapping at each boundary and for stable results outside the world range.
-- [ ] Implement a pure lookup in `level-one.mjs` and use it from the draw loop.
-- [ ] Render the existing forest/city parallax layers with gradual color overlays rather than swapping abruptly at zone boundaries.
-- [ ] Keep the sky filling the viewport and ensure the overlay never covers the ground contact line.
-- [ ] Run the browser shell test and inspect a local screenshot across the highway and industrial transition.
-- [ ] Commit `feat: add level one visual progression`.
+- [x] Add tests for the zone-to-lighting mapping at each boundary and for stable results outside the world range.
+- [x] Implement a pure lookup in `level-one.mjs` and use it from the draw loop.
+- [x] Render the existing forest/city parallax layers with gradual color overlays rather than swapping abruptly at zone boundaries.
+- [x] Keep the sky filling the viewport and ensure the overlay never covers the ground contact line.
+- [x] Run the browser shell test and inspect a local screenshot across the highway and industrial transition.
+- [x] Commit `feat: add level one visual progression`.
 
 ### Task 4: Implement route and checkpoint metadata
 
@@ -88,12 +88,12 @@
 - Consumes `routeChoices` and `checkpoints` from `LEVEL_ONE`.
 - Produces route-aware checkpoint placement and stable respawn positions without changing player physics.
 
-- [ ] Test that campsite, mill, highway culvert, and industrial container routes are optional and have valid reward or bypass metadata.
-- [ ] Test checkpoint order and respawn positions: creek, highway, park/boss runway.
-- [ ] Replace scattered checkpoint constants with the level definition values.
-- [ ] Add route landmark labels only where the existing HUD/tutorial callouts already support them; do not add new menu UI.
-- [ ] Run route, pit-fall, and gameplay-animation tests.
-- [ ] Commit `feat: add level one routes and checkpoints`.
+- [x] Test that campsite, mill, highway culvert, and industrial container routes are optional and have valid reward or bypass metadata.
+- [x] Test checkpoint order and respawn positions: creek, highway, park/boss runway.
+- [x] Replace scattered checkpoint constants with the level definition values.
+- [x] Add route landmark labels only where the existing HUD/tutorial callouts already support them; do not add new menu UI.
+- [x] Run route, pit-fall, and gameplay-animation tests.
+- [x] Commit `feat: add level one routes and checkpoints`.
 
 ### Task 5: Smooth the park-to-boss transition
 
@@ -108,12 +108,12 @@
 - Consumes the Level 1 boss trigger, runway checkpoint, and arena bounds.
 - Produces a monotonic camera ease, enemy cleanup, arena lock, and boss introduction with no ordinary enemies on screen.
 
-- [ ] Add tests for the full runway transition: no backward time, no ordinary enemies after activation, and bounded player/boss positions.
-- [ ] Tune transition duration and easing so the camera reaches the arena without a visible snap.
-- [ ] Ensure the player can’t reverse into the completed level once the runway lock begins.
-- [ ] Preserve boss music crossfade, sealed dumpster state, and victory transition behavior.
-- [ ] Run boss transition, arena, victory, and gameplay tests.
-- [ ] Commit `fix: smooth level one boss runway`.
+- [x] Add tests for the full runway transition: no backward time, no ordinary enemies after activation, and bounded player/boss positions.
+- [x] Tune transition duration and easing so the camera reaches the arena without a visible snap.
+- [x] Ensure the player can’t reverse into the completed level once the runway lock begins.
+- [x] Preserve boss music crossfade, sealed dumpster state, and victory transition behavior.
+- [x] Run boss transition, arena, victory, and gameplay tests.
+- [x] Commit `fix: smooth level one boss runway`.
 
 ### Task 6: Add focused local test fixtures and browser verification
 
@@ -122,11 +122,11 @@
 - Modify: `package.json`
 - Modify: `docs/superpowers/specs/2026-08-06-level-one-design.md`
 
-- [ ] Add a fixture test that validates the complete level definition: five zones, eight standard encounter groups, four optional routes, three checkpoints, and one boss.
-- [ ] Add deterministic local verification hooks `?levelTest=creek`, `?levelTest=highway`, and `?bossTest=1` so each progression beat can be opened directly in the browser.
-- [ ] Run `npm test`, `npm run lint`, `npm run build:pages`, `npm run test:pages`, and `git diff --check`.
-- [ ] Start the local preview and verify the opening woodland, creek route, highway spike, industrial release, and boss runway visually.
-- [ ] Record any visual adjustments in the Level 1 spec and commit `test: verify level one progression`.
+- [x] Add a fixture test that validates the complete level definition: five zones, eight standard encounter groups, four optional routes, three checkpoints, and one boss.
+- [x] Add deterministic local verification hooks `?levelTest=creek`, `?levelTest=highway`, and `?bossTest=1` so each progression beat can be opened directly in the browser.
+- [x] Run `npm test`, `npm run lint`, `npm run build:pages`, `npm run test:pages`, and `git diff --check`.
+- [x] Start the local preview and verify the opening woodland, creek route, highway spike, industrial release, and boss runway visually.
+- [x] Record any visual adjustments in the Level 1 spec and commit `test: verify level one progression`.
 
 ### Task 7: Publish the first level-data pass
 
