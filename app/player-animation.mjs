@@ -38,20 +38,23 @@ export const PLAYER_ANIMATIONS = {
   large_victory: entry(21, 4, 7, true, 116, 114),
 };
 
-export function selectPlayerAnimation(input) {
+export function selectPlayerAnimation(input, animations = PLAYER_ANIMATIONS) {
   const form = input.form === "large" ? "large" : "small";
-  if (input.defeated) return "small_defeat";
-  if (input.hurt) return `${form}_hurt`;
-  if (input.shrinking && form === "large") return "large_shrink";
-  if (input.victorious) return `${form}_victory`;
-  if (input.attacking && form === "large") return "large_tail_swipe";
-  if (!input.grounded && input.gliding && form === "large") return "large_glide";
-  if (!input.grounded) return `${form}_${input.vy < 0 ? "jump" : "fall"}`;
-  if (input.landing) return `${form}_land`;
-  if (input.skidding) return `${form}_skid`;
-  if (Math.abs(input.vx) >= 250) return `${form}_run`;
-  if (Math.abs(input.vx) >= 22) return `${form}_walk`;
-  return `${form}_idle`;
+  const candidates = [
+    input.defeated ? "small_defeat" : null,
+    input.hurt ? `${form}_hurt` : null,
+    input.shrinking && form === "large" ? "large_shrink" : null,
+    input.victorious ? `${form}_victory` : null,
+    input.attacking && form === "large" ? "large_tail_swipe" : null,
+    !input.grounded && input.gliding && form === "large" ? "large_glide" : null,
+    !input.grounded ? `${form}_${input.vy < 0 ? "jump" : "fall"}` : null,
+    input.landing ? `${form}_land` : null,
+    input.skidding ? `${form}_skid` : null,
+    Math.abs(input.vx) >= 250 ? `${form}_run` : null,
+    Math.abs(input.vx) >= 22 ? `${form}_walk` : null,
+    `${form}_idle`,
+  ];
+  return candidates.find((name) => name && animations[name]) ?? "small_idle";
 }
 
 export function animationFrame(animation, elapsed) {

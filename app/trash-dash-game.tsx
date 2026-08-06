@@ -26,8 +26,8 @@ import {
   PLAYER_ANIMATIONS,
   animationFrame,
   isTailSwipeActive,
-  selectPlayerAnimation,
 } from "./player-animation.mjs";
+import { getPlayableCharacter, selectCharacterAnimation } from "./playable-character.mjs";
 import {
   BOSS_ANIMATIONS,
   BOSS_SEQUENCE_DURATIONS,
@@ -178,6 +178,11 @@ const INITIAL_BROWSER_EXPERIENCE = {
   fullscreen: false,
   fullscreenSupported: false,
 };
+
+// The selector will provide the active profile in the next gameplay pass. Keep
+// the existing raccoon run on the profile registry so rendering and animation
+// routing already share the same character contract.
+const RACCOON_PROFILE = getPlayableCharacter("raccoon");
 
 const assetUrl = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\/+/, "")}`;
 
@@ -778,7 +783,7 @@ export function TrashDashGame() {
 
     void Promise.all([
       loadImage(assetUrl("assets/raccoon-sprites.png")),
-      loadImage(assetUrl("assets/generated/player-hero-motion.png")),
+      loadImage(assetUrl(RACCOON_PROFILE.atlasSrc)),
       loadImage(assetUrl("assets/generated/boss-motion.png")),
       loadImage(assetUrl("assets/enemy-motion.png")),
       loadImage(assetUrl("assets/generated/enemy-variety-motion.png")),
@@ -1314,7 +1319,7 @@ export function TrashDashGame() {
         burst(world, pickup.x + pickup.w / 2, pickup.y + pickup.h / 2, pickup.kind === "cap" ? "#ffd248" : "#8bdc63", 8);
       }
 
-      const nextPlayerAnimation = selectPlayerAnimation({
+      const nextPlayerAnimation = selectCharacterAnimation(RACCOON_PROFILE, {
         form: player.large ? "large" : "small",
         defeated: player.endSequence === "gameover",
         hurt: player.hurtTimer > 0,
