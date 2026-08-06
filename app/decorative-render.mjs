@@ -27,10 +27,16 @@ export function platformStripSegments(kind, x, y, width) {
   const total = Math.max(0, Math.round(width));
   const edge = Math.min(64, Math.floor(total / 2));
   const middle = Math.max(0, total - edge * 2);
+  // The generated strip reserves transparent key space above/below the art.
+  // Crop that padding so the visible top edge sits exactly on the collision
+  // surface and the strip remains a compact 32px platform in world space.
+  const sourceHeight = 48;
+  const sourceY = 40;
+  const source = (segment) => ({ ...segment, y: sourceY, height: sourceHeight });
   return [
-    { source: strip.left, dest: { x: Math.round(x), y: Math.round(y), width: edge, height: strip.height / 2 } },
-    { source: strip.middle, dest: { x: Math.round(x + edge), y: Math.round(y), width: middle, height: strip.height / 2 } },
-    { source: strip.right, dest: { x: Math.round(x + edge + middle), y: Math.round(y), width: total - edge - middle, height: strip.height / 2 } },
+    { source: source(strip.left), dest: { x: Math.round(x), y: Math.round(y), width: edge, height: 32 } },
+    { source: source(strip.middle), dest: { x: Math.round(x + edge), y: Math.round(y), width: middle, height: 32 } },
+    { source: source(strip.right), dest: { x: Math.round(x + edge + middle), y: Math.round(y), width: total - edge - middle, height: 32 } },
   ];
 }
 
