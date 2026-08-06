@@ -1622,6 +1622,18 @@ export function TrashDashGame() {
         context.fillRect(0, 0, WIDTH, GROUND_Y);
       }
 
+      for (const item of scenery) {
+        const x = item.x - camera;
+        if (x < -160 || x > WIDTH + 160) continue;
+        drawDecorativeProp(item.prop, item.x, item.groundY, camera);
+      }
+
+      for (const item of recycleScenery) {
+        const x = item.x - camera;
+        if (x < -140 || x > WIDTH + 140) continue;
+        drawDecorativeProp(item.prop, item.x, item.groundY, camera);
+      }
+
       for (const platform of platforms) {
         const x = platform.x - camera;
         if (x + platform.w < -80 || x > WIDTH + 80) continue;
@@ -1646,20 +1658,6 @@ export function TrashDashGame() {
         } else {
           drawDecorativeProp("crate", platform.x + platform.w / 2 - 54, platform.y + platform.h, camera);
         }
-      }
-
-      // Draw decorative props after surfaces so their grounded contact edges
-      // and lower details remain visible instead of being occluded by terrain.
-      for (const item of scenery) {
-        const x = item.x - camera;
-        if (x < -160 || x > WIDTH + 160) continue;
-        drawDecorativeProp(item.prop, item.x, item.groundY, camera);
-      }
-
-      for (const item of recycleScenery) {
-        const x = item.x - camera;
-        if (x < -140 || x > WIDTH + 140) continue;
-        drawDecorativeProp(item.prop, item.x, item.groundY, camera);
       }
 
       drawDecorativeProp("checkpoint", 2988, GROUND_Y, camera, world.checkpointReached ? 1 : 0.62);
