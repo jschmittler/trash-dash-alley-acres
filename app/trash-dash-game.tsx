@@ -175,6 +175,7 @@ interface World {
   cameraX: number;
   checkpoint: number;
   checkpointReached: boolean;
+  checkpointIndex: number;
   bossDefeated: boolean;
   dumpsterRevealStartedAt: number | null;
   arenaActive: boolean;
@@ -515,6 +516,7 @@ const makeWorld = (selectedCharacterId = "raccoon"): World => ({
   cameraX: 0,
   checkpoint: 125,
   checkpointReached: false,
+  checkpointIndex: -1,
   bossDefeated: false,
   dumpsterRevealStartedAt: null,
   arenaActive: false,
@@ -703,6 +705,7 @@ export function TrashDashGame() {
       nextWorld.trash = 5;
       nextWorld.checkpoint = 5590;
       nextWorld.checkpointReached = true;
+      nextWorld.checkpointIndex = LEVEL_ONE.checkpoints.length - 1;
       nextWorld.cameraX = 5280;
     } else if (powerupTest === "taco" || powerupTest === "cap") {
       nextWorld.player.x = powerupTest === "taco" ? 920 : 3580;
@@ -1324,11 +1327,16 @@ export function TrashDashGame() {
       if (!world.arenaActive && player.x >= BOSS_ARENA_TRIGGER_X) enterBossArena(world);
       if (world.arenaActive) player.x = clampArenaPlayerX(player.x, player.w);
 
-      if (!world.checkpointReached && player.x > 3050) {
+      const nextCheckpointIndex = LEVEL_ONE.checkpoints.findIndex((checkpoint, index) =>
+        index > world.checkpointIndex && player.x >= checkpoint.x,
+      );
+      if (nextCheckpointIndex >= 0) {
+        const checkpoint = LEVEL_ONE.checkpoints[nextCheckpointIndex];
+        world.checkpointIndex = nextCheckpointIndex;
         world.checkpointReached = true;
-        world.checkpoint = 3060;
+        world.checkpoint = checkpoint.respawnX;
         world.score += 500;
-        setMessage(world, "Checkpoint recycled!", 2.4);
+        setMessage(world, `${checkpoint.label}!`, 2.4);
         tone(660, 0.12);
       }
 
@@ -1666,7 +1674,10 @@ export function TrashDashGame() {
         }
       }
 
-      drawDecorativeProp("checkpoint", 2988, GROUND_Y, camera, world.checkpointReached ? 1 : 0.62);
+      for (const [index, checkpoint] of LEVEL_ONE.checkpoints.entries()) {
+        const checkpointAlpha = index <= world.checkpointIndex ? 1 : 0.62;
+        drawDecorativeProp("checkpoint", checkpoint.x, GROUND_Y, camera, checkpointAlpha);
+      }
       const dumpsterRect = dumpsterDrawRect(DUMPSTER_GOAL_WORLD_X, camera, GROUND_Y);
       const dumpsterState = selectDumpsterState(world.bossDefeated);
       const revealElapsed = world.dumpsterRevealStartedAt === null
