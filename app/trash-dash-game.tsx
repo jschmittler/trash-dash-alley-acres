@@ -1161,6 +1161,17 @@ export function TrashDashGame() {
         return;
       }
 
+      // During the camera runway the boss is an introduction, not an active
+      // combatant. Hold it still and grounded until the arena is fully framed.
+      // This prevents attacks or walk cycles from starting behind the easing
+      // camera and gives the player a clean, readable reveal.
+      if (world.bossTransition) {
+        boss.vx = 0;
+        boss.animationState = "idle";
+        boss.y = boss.surfaceY - boss.h;
+        return;
+      }
+
       const state = boss.animationState;
       if (state === "defeat") {
         boss.vx = 0;

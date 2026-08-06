@@ -23,3 +23,20 @@ test("boss transition never advances backwards in time", () => {
   assert.equal(result.transition.elapsed, 0);
   assert.equal(result.cameraX, 5000);
 });
+
+test("boss camera is monotonic even when retargeted behind the runway", () => {
+  const start = createBossTransition(5000);
+  const first = advanceBossTransition(start, 0.6, 5640);
+  const second = advanceBossTransition(first.transition, 0.2, 4200);
+  const finish = advanceBossTransition(second.transition, 2, 4200);
+
+  assert.ok(second.cameraX >= first.cameraX);
+  assert.ok(finish.cameraX >= second.cameraX);
+  assert.equal(finish.cameraX, 5640);
+});
+
+test("transition completion always lands exactly on the forward destination", () => {
+  const result = advanceBossTransition(createBossTransition(5000), 99, 5640);
+  assert.equal(result.complete, true);
+  assert.equal(result.cameraX, 5640);
+});

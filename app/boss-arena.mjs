@@ -2,13 +2,17 @@ export const BOSS_ARENA_LEFT = 5640;
 export const BOSS_ARENA_RIGHT = 6600;
 export const BOSS_ARENA_TRIGGER_X = 5680;
 export const BOSS_ARENA_CAMERA_X = 5640;
+export const BOSS_INTRO_DURATION = 1.1;
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 
 export function activateBossArena(enemies) {
   return {
     arenaActive: true,
-    enemies: enemies.map((enemy) => enemy.kind === "boss" ? { ...enemy } : { ...enemy, active: false }),
+    // Ordinary encounters belong to the level, not the boss arena. Removing
+    // them entirely prevents stale draw/collision paths from resurrecting a
+    // deactivated enemy during the camera runway.
+    enemies: enemies.filter((enemy) => enemy.kind === "boss").map((enemy) => ({ ...enemy, active: true })),
   };
 }
 

@@ -6,6 +6,7 @@ import {
   BOSS_ARENA_LEFT,
   BOSS_ARENA_RIGHT,
   BOSS_ARENA_TRIGGER_X,
+  BOSS_INTRO_DURATION,
   activateBossArena,
   bossArenaCameraX,
   clampArenaBossX,
@@ -16,8 +17,13 @@ test("arena activation removes every ordinary enemy and preserves the boss", () 
   const enemies = [{ kind: "rat", active: true }, { kind: "boss", active: true }, { kind: "crow", active: false }];
   const activated = activateBossArena(enemies);
   assert.equal(activated.arenaActive, true);
-  assert.deepEqual(activated.enemies.map((enemy) => enemy.active), [false, true, false]);
+  assert.deepEqual(activated.enemies.map((enemy) => enemy.kind), ["boss"]);
+  assert.equal(activated.enemies[0].active, true);
   assert.notEqual(activated.enemies, enemies);
+});
+
+test("boss intro duration matches the camera runway", () => {
+  assert.equal(BOSS_INTRO_DURATION, 1.1);
 });
 
 test("arena constants create a runway and fixed viewport", () => {
