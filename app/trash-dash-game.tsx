@@ -1608,10 +1608,12 @@ export function TrashDashGame() {
 
       // Each environment has two independently tiled strips. Their different
       // camera speeds create depth while the oversized art keeps repetition subtle.
-      drawTiledLayer(forestFarRef.current, camera, 0.055, 34, 1540, 514, forestMix * 0.92);
-      drawTiledLayer(forestNearRef.current, camera, 0.13, -8, 1540, 514, forestMix * 0.82);
-      drawTiledLayer(cityFarRef.current, camera, 0.045, 18, 1540, 514, cityMix * 0.72);
-      drawTiledLayer(cityNearRef.current, camera, 0.11, 34, 1540, 514, cityMix * 0.9);
+      const backgroundDrawHeight = 514;
+      const backgroundDrawY = GROUND_Y - backgroundDrawHeight;
+      drawTiledLayer(forestFarRef.current, camera, 0.055, backgroundDrawY, 1540, backgroundDrawHeight, forestMix * 0.92);
+      drawTiledLayer(forestNearRef.current, camera, 0.13, backgroundDrawY, 1540, backgroundDrawHeight, forestMix * 0.82);
+      drawTiledLayer(cityFarRef.current, camera, 0.045, backgroundDrawY, 1540, backgroundDrawHeight, cityMix * 0.72);
+      drawTiledLayer(cityNearRef.current, camera, 0.11, backgroundDrawY, 1540, backgroundDrawHeight, cityMix * 0.9);
       if (world.arenaActive) {
         const arenaShade = context.createLinearGradient(0, 0, 0, GROUND_Y);
         arenaShade.addColorStop(0, "rgba(8, 9, 24, 0.46)");
