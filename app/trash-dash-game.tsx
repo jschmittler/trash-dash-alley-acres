@@ -41,12 +41,7 @@ import {
   selectBossAnimation,
 } from "./boss-animation.mjs";
 import {
-  BOSS_ARENA_CAMERA_X,
-  BOSS_ARENA_TRIGGER_X,
   activateBossArena,
-  bossArenaCameraX,
-  clampArenaBossX,
-  clampArenaPlayerX,
 } from "./boss-arena.mjs";
 import {
   advanceBossTransition,
@@ -74,7 +69,13 @@ import {
   platformStripSegments,
 } from "./decorative-render.mjs";
 import { pickupYAboveSurface } from "./pickup-layout.mjs";
-import { LEVEL_ONE, levelOneLightingAt, levelOneZoneAt } from "./level-one.mjs";
+import { CAMPAIGN_LEVELS } from "./campaign.mjs";
+import { campaignLevelById, campaignLightingAt, campaignZoneAt } from "./campaign-level.mjs";
+import {
+  applyCarriedProgress,
+  createLevelRuntime,
+  nextCampaignStart,
+} from "./level-runtime.mjs";
 import { levelBackgroundBlendAt, PARALLAX_SPEEDS } from "./level-background.mjs";
 
 type Screen = "title" | "characterSelect" | "playing" | "paused" | "gameover" | "won";
@@ -85,8 +86,31 @@ type EnemyKind =
   | "pigeon" | "slime" | "beetle" | "possum" | "boss"
   | "bat" | "wasp" | "mosquito" | "moth"
   | "snake" | "spider" | "rat" | "hedgehog"
-  | "fox" | "crow" | "boar" | "frog";
+  | "fox" | "crow" | "boar" | "frog"
+  | "squirrel" | "terrier" | "skunk";
 type PowerupNoticeKind = "taco" | "cap";
+
+interface CampaignLevelDefinition {
+  id: string;
+  title: string;
+  worldWidth: number;
+  zones: Array<{ id: string; startX: number; endX: number; lighting: string }>;
+  surfaces: Array<Platform & { id: string; hazard?: boolean }>;
+  encounters: Array<{ enemies: Array<{ kind: string; x: number; y?: number; flightY?: number; patrol?: readonly [number, number] }> }>;
+  rewards: Array<{ kind: string; x: number; surfaceY: number }>;
+  checkpoints: Array<{ id: string; x: number; respawnX: number; label: string }>;
+  boss: { kind: string; triggerX: number; arenaStartX: number; arenaEndX: number };
+  exit: { nextLevelId: string | null; x: number };
+}
+
+interface CarriedCampaignProgress {
+  selectedCharacterId: string;
+  large: boolean;
+  glider: number;
+  trash: number;
+  score: number;
+  lives: number;
+}
 
 interface PowerupNotice {
   kind: PowerupNoticeKind;
@@ -169,6 +193,13 @@ interface Player extends Rect {
 }
 
 interface World {
+  levelId: string;
+  level: CampaignLevelDefinition;
+  campaignProgress: CarriedCampaignProgress | null;
+  worldWidth: number;
+  checkpoints: CampaignLevelDefinition["checkpoints"];
+  surfaces: CampaignLevelDefinition["surfaces"];
+  hazards: CampaignLevelDefinition["surfaces"];
   selectedCharacterId: string;
   player: Player;
   enemies: Enemy[];
@@ -193,9 +224,7 @@ interface World {
 const WIDTH = 960;
 const HEIGHT = 540;
 const GROUND_Y = 468;
-const WORLD_WIDTH = 6600;
 const DUMPSTER_RIGHT_MARGIN = 30;
-const DUMPSTER_GOAL_WORLD_X = BOSS_ARENA_CAMERA_X + WIDTH - DUMPSTER_RIGHT_MARGIN - DUMPSTER_DRAW_WIDTH;
 const MOTION_CELL = 192;
 const ASSET_CELL = 256;
 const INITIAL_BROWSER_EXPERIENCE = {
@@ -209,6 +238,28 @@ const INITIAL_BROWSER_EXPERIENCE = {
 // the existing raccoon run on the profile registry so rendering and animation
 // routing already share the same character contract.
 const RACCOON_PROFILE = getPlayableCharacter("raccoon");
+
+const levelTwoTestStarts: Record<string, [number, number]> = {
+  backyard: [180, 0],
+  street: [1380, 1020],
+  obstacle: [2840, 2480],
+  drainage: [4350, 3990],
+  runway: [5400, 5040],
+  "main-street": [6660, 6240],
+};
+
+const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
+const bossArenaCameraX = (world: World) => world.level.boss.arenaStartX;
+const clampArenaPlayerX = (world: World, x: number, width: number) => (
+  clamp(x, world.level.boss.arenaStartX + 24, world.level.boss.arenaEndX - width - 24)
+);
+const clampArenaBossX = (world: World, x: number, width: number) => (
+  clamp(x, world.level.boss.arenaStartX + 100, world.level.boss.arenaEndX - width - 36)
+);
+const worldBossSpawnX = (level: CampaignLevelDefinition) => level.boss.arenaStartX + 480;
+const dumpsterGoalWorldX = (world: World) => (
+  bossArenaCameraX(world) + WIDTH - DUMPSTER_RIGHT_MARGIN - DUMPSTER_DRAW_WIDTH
+);
 
 const assetUrl = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\/+/, "")}`;
 
@@ -412,6 +463,9 @@ const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y, patrolBounds?: read
     crow: [52, 36],
     boar: [62, 42],
     frog: [48, 30],
+    squirrel: [50, 36],
+    terrier: [64, 42],
+    skunk: [58, 38],
   };
   const [w, h] = sizes[kind];
   const patrolRadius = kind === "boss" ? 360 : kind === "slime" ? 85 : 105;
@@ -470,22 +524,14 @@ const makeSurfacePickup = (
   gap = 18,
 ) => makePickup(kind, x, pickupYAboveSurface(kind, surfaceY, gap), phase);
 
-const initialEnemies = () => LEVEL_ONE.encounters.flatMap((encounter) => encounter.enemies.map((spawn) =>
-  makeEnemy(spawn.kind as EnemyKind, spawn.x, spawn.y ?? GROUND_Y, spawn.patrol),
-)).concat(makeEnemy("boss", LEVEL_ONE.boss.arenaStartX + 480));
-
-const initialPickups = () => LEVEL_ONE.rewards
-  .filter((reward) => reward.kind !== "checkpoint")
-  .map((reward, index) => makeSurfacePickup(
-    reward.kind as PickupKind,
-    reward.x,
-    reward.surfaceY === 0 ? GROUND_Y : reward.surfaceY,
-    index,
-  ));
-
-const makeWorld = (selectedCharacterId = "raccoon"): World => ({
-  selectedCharacterId: getPlayableCharacter(selectedCharacterId).id,
-  player: {
+const makeWorld = (
+  selectedCharacterId = "raccoon",
+  levelId = "level-1",
+  carried: CarriedCampaignProgress | null = null,
+): World => {
+  const level = campaignLevelById(levelId) as CampaignLevelDefinition;
+  const selectedProfile = getPlayableCharacter(carried?.selectedCharacterId ?? selectedCharacterId);
+  const player: Player = {
     x: 125,
     y: GROUND_Y - 46,
     w: 32,
@@ -513,25 +559,59 @@ const makeWorld = (selectedCharacterId = "raccoon"): World => ({
     endTimer: 0,
     hurtTimer: 0,
     pendingDamage: null,
-  },
-  enemies: initialEnemies(),
-  pickups: initialPickups(),
-  particles: [],
-  cameraX: 0,
-  checkpoint: 125,
-  checkpointReached: false,
-  checkpointIndex: -1,
-  bossDefeated: false,
-  dumpsterRevealStartedAt: null,
-  arenaActive: false,
-  bossTransition: null,
-  trash: 0,
-  score: 0,
-  lives: 3,
-  elapsed: 0,
-  message: "A / D to move • Space to jump",
-  messageTimer: 5,
-});
+  };
+  applyCarriedProgress(player, carried);
+  if (player.large) {
+    player.y = GROUND_Y - 58;
+    player.w = 38;
+    player.h = 58;
+    player.animationName = "large_idle";
+  }
+
+  const runtime = createLevelRuntime(level, {
+    makeEnemy: (spawn: CampaignLevelDefinition["encounters"][number]["enemies"][number]) => makeEnemy(
+      spawn.kind as EnemyKind,
+      spawn.x,
+      spawn.y ?? spawn.flightY ?? GROUND_Y,
+      spawn.patrol,
+    ),
+    makePickup: (reward: CampaignLevelDefinition["rewards"][number], index: number) => makeSurfacePickup(
+      reward.kind as PickupKind,
+      reward.x,
+      reward.surfaceY === 0 ? GROUND_Y : reward.surfaceY,
+      index,
+    ),
+  });
+
+  return {
+    levelId: level.id,
+    level,
+    campaignProgress: carried ? { ...carried } : null,
+    worldWidth: level.worldWidth,
+    checkpoints: runtime.checkpoints,
+    surfaces: runtime.surfaces,
+    hazards: runtime.hazards,
+    selectedCharacterId: selectedProfile.id,
+    player,
+    enemies: runtime.enemies.concat(makeEnemy("boss", worldBossSpawnX(level))),
+    pickups: runtime.pickups,
+    particles: [],
+    cameraX: 0,
+    checkpoint: 125,
+    checkpointReached: false,
+    checkpointIndex: -1,
+    bossDefeated: false,
+    dumpsterRevealStartedAt: null,
+    arenaActive: false,
+    bossTransition: null,
+    trash: carried?.trash ?? 0,
+    score: carried?.score ?? 0,
+    lives: carried?.lives ?? 3,
+    elapsed: 0,
+    message: "A / D to move • Space to jump",
+    messageTimer: 5,
+  };
+};
 
 const intersects = (a: Rect, b: Rect) =>
   a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
@@ -592,6 +672,7 @@ export function TrashDashGame() {
   const [best, setBest] = useState({ score: 0, time: 0 });
   const [victoryRecord, setVictoryRecord] = useState({ score: false, time: false });
   const [powerupNotice, setPowerupNotice] = useState<PowerupNotice | null>(null);
+  const [campaignContinuationAvailable, setCampaignContinuationAvailable] = useState(false);
 
   const changeScreen = useCallback((next: Screen) => {
     if (next !== "playing") pauseGameMusic(musicRef.current);
@@ -681,7 +762,11 @@ export function TrashDashGame() {
     changeScreen("characterSelect");
   }, [changeScreen, clearHeldInput]);
 
-  const startGame = useCallback((characterId = selectedCharacterRef.current) => {
+  const startGame = useCallback((
+    characterId = selectedCharacterRef.current,
+    levelIdOverride: string | null = null,
+    carried: CarriedCampaignProgress | null = null,
+  ) => {
     clearHeldInput();
     dismissPowerupNotice();
     setVictoryRecord({ score: false, time: false });
@@ -695,13 +780,27 @@ export function TrashDashGame() {
     void playGameMusic(musicRef.current, { muted: mutedRef.current, restart: true });
     const selectedProfile = getPlayableCharacter(characterId);
     selectedCharacterRef.current = selectedProfile.id;
-    const nextWorld = makeWorld(selectedProfile.id);
-    const devParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
+    const devParams = import.meta.env.DEV && !levelIdOverride ? new URLSearchParams(window.location.search) : null;
     const bossTest = devParams?.get("bossTest") ?? null;
     const levelTest = devParams?.get("levelTest") ?? null;
     const backgroundTest = devParams?.get("backgroundTest") ?? null;
     const powerupTest = devParams?.get("powerupTest") ?? null;
     const victoryTest = devParams?.get("victoryTest") ?? null;
+    const levelTwoRequested = devParams?.get("level") === "2"
+      || levelTest === "level2-start"
+      || (levelTest !== null && Object.hasOwn(levelTwoTestStarts, levelTest));
+    const levelId = levelIdOverride ?? (levelTwoRequested ? "level-2" : "level-1");
+    const testCarry = levelTest === "level2-start"
+      ? {
+          selectedCharacterId: selectedProfile.id,
+          large: true,
+          glider: 14,
+          trash: 5,
+          score: 0,
+          lives: 3,
+        }
+      : null;
+    const nextWorld = makeWorld(selectedProfile.id, levelId, carried ?? testCarry);
     if (bossTest) {
       nextWorld.player.x = bossTest === "arena" ? 5690 : 5590;
       nextWorld.player.y = GROUND_Y - 58;
@@ -712,7 +811,7 @@ export function TrashDashGame() {
       nextWorld.trash = 5;
       nextWorld.checkpoint = 5590;
       nextWorld.checkpointReached = true;
-      nextWorld.checkpointIndex = LEVEL_ONE.checkpoints.length - 1;
+      nextWorld.checkpointIndex = nextWorld.checkpoints.length - 1;
       nextWorld.cameraX = 5280;
     } else if (backgroundTest) {
       const backgroundStarts: Record<string, [number, number]> = {
@@ -753,11 +852,23 @@ export function TrashDashGame() {
       setVictoryRecord({ score: true, time: true });
     }
     worldRef.current = nextWorld;
+    setCampaignContinuationAvailable(Boolean(
+      nextWorld.level.exit?.nextLevelId && CAMPAIGN_LEVELS.has(nextWorld.level.exit.nextLevelId),
+    ));
     lastFrameRef.current = performance.now();
     changeScreen("playing");
     tone(520, 0.08);
     window.setTimeout(() => tone(720, 0.12), 80);
   }, [changeScreen, clearHeldInput, dismissPowerupNotice, tone]);
+
+  const continueCampaign = useCallback(() => {
+    const transition = nextCampaignStart(worldRef.current) as {
+      levelId: string;
+      carried: CarriedCampaignProgress;
+    } | null;
+    if (!transition || !CAMPAIGN_LEVELS.has(transition.levelId)) return;
+    startGame(transition.carried.selectedCharacterId, transition.levelId, transition.carried);
+  }, [startGame]);
 
   const confirmCharacter = useCallback(() => {
     const selectedId = confirmCharacterSelection(characterSelection);
@@ -994,7 +1105,9 @@ export function TrashDashGame() {
 
     const respawn = (world: World) => {
       const player = world.player;
-      player.x = world.arenaActive ? clampArenaPlayerX(BOSS_ARENA_TRIGGER_X, player.w) : world.checkpoint;
+      player.x = world.arenaActive
+        ? clampArenaPlayerX(world, world.level.boss.triggerX, player.w)
+        : world.checkpoint;
       player.y = GROUND_Y - player.h;
       player.vx = 0;
       player.vy = 0;
@@ -1015,7 +1128,7 @@ export function TrashDashGame() {
       player.hurtTimer = 0;
       player.pendingDamage = null;
       world.bossTransition = null;
-      world.cameraX = world.arenaActive ? bossArenaCameraX() : Math.max(0, world.checkpoint - 180);
+      world.cameraX = world.arenaActive ? bossArenaCameraX(world) : Math.max(0, world.checkpoint - 180);
       setMessage(world, "Back on your paws!", 1.7);
     };
 
@@ -1209,7 +1322,7 @@ export function TrashDashGame() {
         }
       } else if (state === "charge") {
         boss.x += boss.vx * dt;
-        const clampedX = clampArenaBossX(boss.x, boss.w);
+        const clampedX = clampArenaBossX(world, boss.x, boss.w);
         const hitWall = clampedX !== boss.x;
         boss.x = clampedX;
         if (boss.actionTimer <= 0 || hitWall) {
@@ -1226,7 +1339,7 @@ export function TrashDashGame() {
         boss.attackCooldown = Math.max(0, boss.attackCooldown - dt);
         boss.facing = world.player.x < boss.x ? -1 : 1;
         boss.vx = boss.facing * (boss.ragePlayed ? 88 : 66);
-        boss.x = clampArenaBossX(boss.x + boss.vx * dt, boss.w);
+        boss.x = clampArenaBossX(world, boss.x + boss.vx * dt, boss.w);
         if (boss.attackCooldown <= 0) setBossState(boss, "windup", BOSS_SEQUENCE_DURATIONS.windup);
       }
 
@@ -1334,7 +1447,7 @@ export function TrashDashGame() {
 
       player.x += player.vx * dt;
       player.y += player.vy * dt;
-      player.x = Math.max(0, Math.min(WORLD_WIDTH - player.w, player.x));
+      player.x = Math.max(0, Math.min(world.worldWidth - player.w, player.x));
       player.grounded = false;
 
       for (const platform of platforms) {
@@ -1359,14 +1472,14 @@ export function TrashDashGame() {
         return;
       }
 
-      if (!world.arenaActive && player.x >= BOSS_ARENA_TRIGGER_X) enterBossArena(world);
-      if (world.arenaActive) player.x = clampArenaPlayerX(player.x, player.w);
+      if (!world.arenaActive && player.x >= world.level.boss.triggerX) enterBossArena(world);
+      if (world.arenaActive) player.x = clampArenaPlayerX(world, player.x, player.w);
 
-      const nextCheckpointIndex = LEVEL_ONE.checkpoints.findIndex((checkpoint, index) =>
+      const nextCheckpointIndex = world.checkpoints.findIndex((checkpoint, index) =>
         index > world.checkpointIndex && player.x >= checkpoint.x,
       );
       if (nextCheckpointIndex >= 0) {
-        const checkpoint = LEVEL_ONE.checkpoints[nextCheckpointIndex];
+        const checkpoint = world.checkpoints[nextCheckpointIndex];
         world.checkpointIndex = nextCheckpointIndex;
         world.checkpointReached = true;
         world.checkpoint = checkpoint.respawnX;
@@ -1494,7 +1607,7 @@ export function TrashDashGame() {
       }
       world.particles = world.particles.filter((particle) => particle.life > 0);
 
-      if (world.bossDefeated && player.x > 6300 && screenRef.current === "playing" && !player.endSequence) {
+      if (world.bossDefeated && player.x > world.level.exit.x - 220 && screenRef.current === "playing" && !player.endSequence) {
         world.score += Math.max(0, Math.floor(4000 - world.elapsed * 12));
         const oldScore = Number(window.localStorage.getItem("trash-dash-high-score") ?? 0);
         const oldTime = Number(window.localStorage.getItem("trash-dash-best-time") ?? 0);
@@ -1519,13 +1632,13 @@ export function TrashDashGame() {
       }
 
       if (world.arenaActive && world.bossTransition) {
-        const transition = advanceBossTransition(world.bossTransition, dt, bossArenaCameraX());
+        const transition = advanceBossTransition(world.bossTransition, dt, bossArenaCameraX(world));
         world.cameraX = transition.cameraX;
         world.bossTransition = transition.complete ? null : transition.transition;
       } else {
         const cameraTarget = world.arenaActive
-          ? bossArenaCameraX()
-          : Math.max(0, Math.min(WORLD_WIDTH - WIDTH, player.x - WIDTH * 0.36));
+          ? bossArenaCameraX(world)
+          : Math.max(0, Math.min(world.worldWidth - WIDTH, player.x - WIDTH * 0.36));
         world.cameraX += (cameraTarget - world.cameraX) * Math.min(1, dt * (world.arenaActive ? 9 : 5.5));
       }
       pressedRef.current.clear();
@@ -1655,7 +1768,7 @@ export function TrashDashGame() {
       const backgroundDrawHeight = 514;
       const backgroundDrawY = GROUND_Y - backgroundDrawHeight;
       const stageCenterX = camera + WIDTH * 0.5;
-      const stageZone = levelOneZoneAt(stageCenterX);
+      const stageZone = campaignZoneAt(world.level, stageCenterX);
       const stageBackground = levelBackgroundRefs.current[stageZone.id] ?? null;
       if (stageBackground) {
         const drawStageSet = (layers: { far: HTMLImageElement | null; middle: HTMLImageElement | null; close: HTMLImageElement | null }, alpha: number) => {
@@ -1663,7 +1776,7 @@ export function TrashDashGame() {
           drawTiledLayer(layers.middle, camera, PARALLAX_SPEEDS.middle, -46, 2048, 716, alpha);
           drawTiledLayer(layers.close, camera, PARALLAX_SPEEDS.close, -46, 2048, 716, alpha);
         };
-        const blendState = levelBackgroundBlendAt(stageCenterX, LEVEL_ONE.zones);
+        const blendState = levelBackgroundBlendAt(stageCenterX, world.level.zones);
         const leftBackground = levelBackgroundRefs.current[blendState.leftId] ?? null;
         const rightBackground = blendState.rightId ? levelBackgroundRefs.current[blendState.rightId] ?? null : null;
         if (leftBackground && rightBackground) {
@@ -1679,14 +1792,15 @@ export function TrashDashGame() {
         drawTiledLayer(cityFarRef.current, camera, 0.045, backgroundDrawY, 1540, backgroundDrawHeight, cityMix * 0.72);
         drawTiledLayer(cityNearRef.current, camera, 0.11, backgroundDrawY, 1540, backgroundDrawHeight, cityMix * 0.9);
       }
-      const lighting = levelOneLightingAt(camera + WIDTH * 0.5);
-      const lightingOverlay = {
+      const lighting = campaignLightingAt(world.level, camera + WIDTH * 0.5);
+      const lightingOverlays: Record<string, { color: string; alpha: number } | null> = {
         "late-afternoon": null,
         sunset: { color: "rgba(255, 132, 66, 0.14)", alpha: 0.72 },
         dusk: { color: "rgba(75, 78, 152, 0.18)", alpha: 0.78 },
         night: { color: "rgba(12, 28, 78, 0.24)", alpha: 0.84 },
         moonlit: { color: "rgba(36, 46, 116, 0.28)", alpha: 0.9 },
-      }[lighting.lighting];
+      };
+      const lightingOverlay = lightingOverlays[lighting.lighting];
       if (lightingOverlay) {
         context.save();
         context.globalAlpha = lighting.progress * lightingOverlay.alpha;
@@ -1734,11 +1848,11 @@ export function TrashDashGame() {
         }
       }
 
-      for (const [index, checkpoint] of LEVEL_ONE.checkpoints.entries()) {
+      for (const [index, checkpoint] of world.checkpoints.entries()) {
         const checkpointAlpha = index <= world.checkpointIndex ? 1 : 0.62;
         drawDecorativeProp("checkpoint", checkpoint.x, GROUND_Y, camera, checkpointAlpha);
       }
-      const dumpsterRect = dumpsterDrawRect(DUMPSTER_GOAL_WORLD_X, camera, GROUND_Y);
+      const dumpsterRect = dumpsterDrawRect(dumpsterGoalWorldX(world), camera, GROUND_Y);
       const dumpsterState = selectDumpsterState(world.bossDefeated);
       const revealElapsed = world.dumpsterRevealStartedAt === null
         ? (world.bossDefeated ? 0.8 : 0)
@@ -1944,6 +2058,8 @@ export function TrashDashGame() {
     return () => cancelAnimationFrame(animationFrameId);
   }, [burst, changeScreen, setMessage, showPowerupNotice, tone]);
 
+  const canContinueCampaign = screen === "won" && campaignContinuationAvailable;
+
   const overlay = (() => {
     if (screen === "title") {
       return (
@@ -2008,7 +2124,7 @@ export function TrashDashGame() {
             <p>The alley is paused. Your checkpoint and collected trash are safe.</p>
             <div className="button-row">
               <button className="primary-button" type="button" onClick={togglePause}>Keep rummaging</button>
-              <button className="secondary-button" type="button" onClick={startGame}>Restart run</button>
+              <button className="secondary-button" type="button" onClick={() => startGame()}>Restart run</button>
             </div>
           </div>
         </div>
@@ -2043,7 +2159,14 @@ export function TrashDashGame() {
             <p className="victory-best">Best run: {best.score.toLocaleString()} points{best.time ? ` · ${formatTime(best.time)}` : ""}</p>
             {(victoryRecord.score || victoryRecord.time) && <span className="new-record">NEW BEST!</span>}
             <div className="button-row">
-              <button className="primary-button" type="button" onClick={openCharacterSelect}>Run it again</button>
+              {canContinueCampaign ? (
+                <>
+                  <button className="primary-button" type="button" onClick={continueCampaign}>CONTINUE</button>
+                  <button className="secondary-button" type="button" onClick={openCharacterSelect}>Run it again</button>
+                </>
+              ) : (
+                <button className="primary-button" type="button" onClick={openCharacterSelect}>Run it again</button>
+              )}
               <button className="secondary-button" type="button" onClick={() => { clearHeldInput(); changeScreen("title"); }}>Back to title</button>
             </div>
           </div>

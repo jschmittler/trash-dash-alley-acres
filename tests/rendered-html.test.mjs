@@ -36,7 +36,7 @@ test("ships the playable assets and removes the starter preview", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
-  const enemySource = game.slice(game.indexOf("const initialEnemies"), game.indexOf("const initialPickups"));
+  const worldSource = game.slice(game.indexOf("const makeWorld"), game.indexOf("const intersects"));
 
   assert.match(game, /requestAnimationFrame/);
   assert.match(game, /raccoon-sprites\.png/);
@@ -49,6 +49,10 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /Choose your raccoon/);
   assert.match(game, /createCharacterSelectionState/);
   assert.match(game, /levelTest === "creek" \|\| levelTest === "highway"/);
+  assert.match(game, /levelTwoTestStarts/);
+  assert.match(game, /levelTest === "level2-start"/);
+  assert.match(game, /devParams\?\.get\("level"\) === "2"/);
+  assert.match(game, /const levelId = levelIdOverride[\s\S]{0,800}makeWorld\(selectedProfile\.id, levelId/);
   assert.match(styles, /character-cards/);
   assert.match(game, /aria-label="Sprint"/);
   assert.match(game, /visibilityState === "hidden"/);
@@ -60,19 +64,24 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /trash-pickups-motion\.png/);
   assert.match(game, /taco-power-motion\.png/);
   assert.match(game, /dumpster-holy-atlas\.png/);
-  assert.match(game, /DUMPSTER_GOAL_WORLD_X/);
+  assert.match(game, /dumpsterGoalWorldX/);
   assert.match(game, /dumpsterRevealProgress/);
   assert.doesNotMatch(game, /midgroundProps\.checkpoint,[\s\S]{0,160}6288 - camera/);
   assert.match(game, /enemy-variety-motion\.png/);
   assert.match(game, /type PickupKind = "trash" \| "taco" \| "cap"/);
   assert.match(game, /const flyingEnemies = new Set<EnemyKind>/);
   assert.match(game, /\| "snake" \| "spider" \| "rat" \| "hedgehog"/);
-  assert.match(game, /from "\.\/level-one\.mjs"/);
-  assert.match(enemySource, /LEVEL_ONE\.encounters/);
-  assert.doesNotMatch(enemySource, /makeEnemy\("(?:slime|bat|beetle|moth|rat|hedgehog|crow|boar|frog)"/);
+  assert.match(game, /from "\.\/campaign\.mjs"/);
+  assert.match(game, /from "\.\/level-runtime\.mjs"/);
+  assert.match(worldSource, /createLevelRuntime/);
+  assert.match(worldSource, /campaignLevelById/);
+  assert.match(worldSource, /campaignProgress:/);
+  assert.match(worldSource, /worldWidth: level\.worldWidth/);
+  assert.doesNotMatch(game, /LEVEL_ONE/);
+  assert.doesNotMatch(worldSource, /makeEnemy\("(?:slime|bat|beetle|moth|rat|hedgehog|crow|boar|frog)"/);
   assert.match(game, /createEnemyPatrol/);
   assert.match(game, /patrolMinX,/);
-  assert.match(game, /LEVEL_ONE\.boss\.arenaStartX/);
+  assert.match(game, /world\.level\.boss\.arenaStartX/);
   assert.doesNotMatch(game, /makeEnemy\("bottle"/);
   assert.doesNotMatch(game, /enemy\.kind === "bottle"/);
   assert.doesNotMatch(game, /\bcrab\b/);
@@ -125,6 +134,8 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /victory-confetti/);
   assert.match(game, /victoryRecord/);
   assert.match(game, /NEW BEST!/);
+  assert.match(game, />CONTINUE</);
+  assert.match(game, /nextCampaignStart/);
   assert.doesNotMatch(game, /const groundedFrames =/);
   assert.doesNotMatch(game, /player\.large \? sprites\.largeHurt : sprites\.smallHurt/);
   assert.doesNotMatch(game, /player\.y > HEIGHT \+ 120\) \{\s*hurtPlayer\(world, 0\)/);
