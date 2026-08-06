@@ -8,6 +8,10 @@ const gameSource = await readFile(
   fileURLToPath(new URL("../app/trash-dash-game.tsx", import.meta.url)),
   "utf8",
 );
+const characterSource = await readFile(
+  fileURLToPath(new URL("../app/playable-character.mjs", import.meta.url)),
+  "utf8",
+);
 
 function namedFrame(name) {
   const match = gameSource.match(
@@ -81,7 +85,7 @@ test("hit reaction frames contain one complete sprite without clipped borders", 
 
 test("the active tail swipe uses isolated canonical atlas cells", async () => {
   assert.doesNotMatch(gameSource, /sprites\.largeAttack\[1\]/);
-  assert.match(gameSource, /player-hero-motion\.png/);
+  assert.match(characterSource, /player-hero-motion\.png/);
   assert.match(gameSource, /isTailSwipeActive\(playerFrameIndex\)/);
 
   const { data, info } = await sharp(

@@ -28,8 +28,9 @@ test("server-renders the finished game shell", async () => {
 });
 
 test("ships the playable assets and removes the starter preview", async () => {
-  const [game, mobileExperience, musicController, styles, packageJson] = await Promise.all([
+  const [game, characterProfiles, mobileExperience, musicController, styles, packageJson] = await Promise.all([
     readFile(new URL("../app/trash-dash-game.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/playable-character.mjs", import.meta.url), "utf8"),
     readFile(new URL("../app/mobile-experience.mjs", import.meta.url), "utf8"),
     readFile(new URL("../app/music-controller.mjs", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
@@ -75,7 +76,7 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.doesNotMatch(game, /makeEnemy\("bottle"/);
   assert.doesNotMatch(game, /enemy\.kind === "bottle"/);
   assert.doesNotMatch(game, /\bcrab\b/);
-  assert.match(game, /player-hero-motion\.png/);
+  assert.match(characterProfiles, /player-hero-motion\.png/);
   assert.match(game, /enemy-motion\.png/);
   assert.match(game, /midground-props\.png/);
   assert.match(game, /recycle-crates-v2\.png/);
@@ -109,8 +110,9 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /advanceHurtTimer/);
   assert.match(game, /resolvePitFall/);
   assert.match(game, /pendingDamage: "shrink" \| "respawn" \| "gameover" \| null/);
-  assert.match(game, /player-hero-motion\.png/);
-  assert.match(game, /selectPlayerAnimation/);
+  assert.match(characterProfiles, /player-hero-motion\.png/);
+  assert.match(game, /selectCharacterAnimation/);
+  assert.match(characterProfiles, /selectPlayerAnimation/);
   assert.match(game, /PLAYER_ANIMATIONS/);
   assert.match(game, /animationFrame/);
   assert.match(game, /isTailSwipeActive\(playerFrameIndex\)/);
@@ -157,6 +159,8 @@ test("ships the playable assets and removes the starter preview", async () => {
   await access(new URL("../public/assets/generated/trash-pickups-motion.png", import.meta.url));
   await access(new URL("../public/assets/generated/taco-power-motion.png", import.meta.url));
   await access(new URL("../public/assets/generated/dumpster-animation-atlas.png", import.meta.url));
+  await access(new URL("../public/assets/generated/jimothy-hero-motion.png", import.meta.url));
+  await access(new URL("../public/assets/generated/jimothy-selection.png", import.meta.url));
   await access(new URL("../public/assets/glider-motion.png", import.meta.url));
   await access(new URL("../public/assets/midground-props.png", import.meta.url));
   await access(new URL("../public/assets/recycle-crates-v2.png", import.meta.url));
