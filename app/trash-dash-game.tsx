@@ -66,6 +66,12 @@ import {
   dumpsterRevealProgress,
   selectDumpsterState,
 } from "./dumpster-render.mjs";
+import {
+  DECORATIVE_PROPS,
+  decorativeDrawRect,
+  decorativeShadowRect,
+  platformStripSegments,
+} from "./decorative-render.mjs";
 
 type Screen = "title" | "characterSelect" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
@@ -255,20 +261,6 @@ const varietyEnemyDrawSizes: Record<keyof typeof varietyEnemyMotion, [number, nu
   frog: [66, 62],
 };
 
-const assetRow = (row: number, count: number): Frame[] =>
-  Array.from({ length: count }, (_, index) => [index * ASSET_CELL, row * ASSET_CELL, ASSET_CELL, ASSET_CELL] as Frame);
-
-const recycleCrates = assetRow(0, 2);
-
-const midgroundProps = {
-  bush: [0, 0, ASSET_CELL, ASSET_CELL] as Frame,
-  tree: [ASSET_CELL, 0, ASSET_CELL, ASSET_CELL] as Frame,
-  bin: [ASSET_CELL * 2, 0, ASSET_CELL, ASSET_CELL] as Frame,
-  crate: [0, ASSET_CELL, ASSET_CELL, ASSET_CELL] as Frame,
-  checkpoint: [ASSET_CELL, ASSET_CELL, ASSET_CELL, ASSET_CELL] as Frame,
-  tires: [ASSET_CELL * 2, ASSET_CELL, ASSET_CELL, ASSET_CELL] as Frame,
-};
-
 const sprites = {
   smallIdle: [18, 10, 76, 84] as Frame,
   smallWalk: [
@@ -376,17 +368,17 @@ const platforms: Platform[] = [
 ];
 
 const scenery = [
-  { x: 360, groundY: GROUND_Y, frame: midgroundProps.bush, size: 98 },
-  { x: 1260, groundY: GROUND_Y, frame: midgroundProps.tree, size: 112 },
-  { x: 2050, groundY: GROUND_Y, frame: midgroundProps.bush, size: 100 },
-  { x: 2860, groundY: GROUND_Y, frame: midgroundProps.tree, size: 112 },
-  { x: 3940, groundY: GROUND_Y, frame: midgroundProps.bin, size: 92 },
-  { x: 4480, groundY: GROUND_Y, frame: midgroundProps.tires, size: 94 },
+  { x: 360, groundY: GROUND_Y, prop: "bush" as const },
+  { x: 1260, groundY: GROUND_Y, prop: "tree" as const },
+  { x: 2050, groundY: GROUND_Y, prop: "bush" as const },
+  { x: 2860, groundY: GROUND_Y, prop: "tree" as const },
+  { x: 3940, groundY: GROUND_Y, prop: "bin" as const },
+  { x: 4480, groundY: GROUND_Y, prop: "tires" as const },
 ];
 
 const recycleScenery = [
-  { x: 5100, groundY: GROUND_Y, frame: recycleCrates[0] },
-  { x: 6150, groundY: GROUND_Y, frame: recycleCrates[1] },
+  { x: 5100, groundY: GROUND_Y, prop: "crate" as const },
+  { x: 6150, groundY: GROUND_Y, prop: "crate" as const },
 ];
 
 const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y): Enemy => {
@@ -574,8 +566,9 @@ export function TrashDashGame() {
   const trashPickupMotionRef = useRef<HTMLImageElement | null>(null);
   const tacoPowerMotionRef = useRef<HTMLImageElement | null>(null);
   const dumpsterAtlasRef = useRef<HTMLImageElement | null>(null);
-  const midgroundPropsRef = useRef<HTMLImageElement | null>(null);
-  const recycleCratesRef = useRef<HTMLImageElement | null>(null);
+  const decorativeAtlasRef = useRef<HTMLImageElement | null>(null);
+  const branchPlatformRef = useRef<HTMLImageElement | null>(null);
+  const metalPlatformRef = useRef<HTMLImageElement | null>(null);
   const groundTileRef = useRef<HTMLImageElement | null>(null);
   const forestFarRef = useRef<HTMLImageElement | null>(null);
   const forestNearRef = useRef<HTMLImageElement | null>(null);
@@ -826,15 +819,16 @@ export function TrashDashGame() {
       loadImage(assetUrl("assets/generated/trash-pickups-motion.png")),
       loadImage(assetUrl("assets/generated/taco-power-motion.png")),
       loadImage(assetUrl("assets/generated/dumpster-holy-atlas.png")),
-      loadImage(assetUrl("assets/midground-props.png")),
-      loadImage(assetUrl("assets/recycle-crates-v2.png")),
+      loadImage(assetUrl("assets/generated/decorative-atlas.png")),
+      loadImage(assetUrl("assets/generated/branch-platform-strip.png")),
+      loadImage(assetUrl("assets/generated/metal-platform-strip.png")),
       loadImage(assetUrl("assets/ground-seamless.png")),
       loadImage(assetUrl("assets/backgrounds/forest-far.png")),
       loadImage(assetUrl("assets/backgrounds/forest-near.png")),
       loadImage(assetUrl("assets/backgrounds/city-far.png")),
       loadImage(assetUrl("assets/backgrounds/city-near.png")),
     ])
-      .then(([atlas, playerHeroAtlas, jimothyHeroAtlas, bossAtlas, enemyAtlas, varietyEnemyAtlas, trashPickupAtlas, tacoPowerAtlas, dumpsterAtlas, propAtlas, crateAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
+      .then(([atlas, playerHeroAtlas, jimothyHeroAtlas, bossAtlas, enemyAtlas, varietyEnemyAtlas, trashPickupAtlas, tacoPowerAtlas, dumpsterAtlas, decorativeAtlas, branchPlatform, metalPlatform, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
         if (cancelled) return;
         atlasRef.current = atlas;
         playerHeroMotionRef.current = playerHeroAtlas;
@@ -845,8 +839,9 @@ export function TrashDashGame() {
         trashPickupMotionRef.current = trashPickupAtlas;
         tacoPowerMotionRef.current = tacoPowerAtlas;
         dumpsterAtlasRef.current = dumpsterAtlas;
-        midgroundPropsRef.current = propAtlas;
-        recycleCratesRef.current = crateAtlas;
+        decorativeAtlasRef.current = decorativeAtlas;
+        branchPlatformRef.current = branchPlatform;
+        metalPlatformRef.current = metalPlatform;
         groundTileRef.current = groundTile;
         forestFarRef.current = forestFar;
         forestNearRef.current = forestNear;
@@ -1551,65 +1546,31 @@ export function TrashDashGame() {
       context.restore();
     };
 
-    const drawBranchPlatform = (x: number, y: number, width: number) => {
-      const left = Math.round(x);
-      const top = Math.round(y - 4);
-      const drawWidth = Math.ceil(width);
+    const drawDecorativeProp = (prop: keyof typeof DECORATIVE_PROPS, worldX: number, groundY: number, alpha = 1) => {
+      const rect = decorativeDrawRect(prop, worldX, camera, groundY);
+      const meta = DECORATIVE_PROPS[prop];
+      const sourceX = meta.frame.column * ASSET_CELL + Math.round((ASSET_CELL - meta.sourceWidth) / 2);
+      const sourceY = meta.frame.row * ASSET_CELL + meta.baseline - meta.sourceHeight;
+      const atlas = decorativeAtlasRef.current;
+      if (!atlas) return;
       context.save();
+      context.globalAlpha = alpha;
+      context.drawImage(atlas, sourceX, sourceY, meta.sourceWidth, meta.sourceHeight, rect.x, rect.y, rect.width, rect.height);
+      const shadow = decorativeShadowRect(prop, rect);
+      context.fillStyle = "rgba(10, 18, 26, 0.28)";
       context.beginPath();
-      context.rect(left, top, drawWidth, 32);
-      context.clip();
-      context.fillStyle = "#332117";
-      context.fillRect(left, top + 4, drawWidth, 24);
-      context.fillStyle = "#754522";
-      context.fillRect(left + 4, top + 2, Math.max(0, drawWidth - 8), 20);
-      context.fillStyle = "#a96c35";
-      context.fillRect(left + 5, top + 3, Math.max(0, drawWidth - 10), 4);
-      context.fillStyle = "#533019";
-      for (let detailX = left + 28; detailX < left + drawWidth - 18; detailX += 46) {
-        context.fillRect(detailX, top + 9, 13, 4);
-        context.fillRect(detailX + 5, top + 13, 5, 6);
-      }
-      context.fillStyle = "#2d7d3e";
-      for (let leafX = left + 24; leafX < left + drawWidth - 16; leafX += 72) {
-        context.fillRect(leafX, top, 8, 4);
-        context.fillRect(leafX + 4, top - 3, 8, 4);
-      }
-      context.fillStyle = "#24170f";
-      context.fillRect(left, top + 6, 5, 18);
-      context.fillRect(left + drawWidth - 5, top + 6, 5, 18);
+      context.ellipse(shadow.x + shadow.width / 2, shadow.y + shadow.height / 2, shadow.width / 2, shadow.height / 2, 0, 0, Math.PI * 2);
+      context.fill();
       context.restore();
     };
 
-    const drawMetalPlatform = (x: number, y: number, width: number) => {
-      const left = Math.round(x);
-      const top = Math.round(y - 4);
-      const drawWidth = Math.ceil(width);
-      context.save();
-      context.beginPath();
-      context.rect(left, top, drawWidth, 38);
-      context.clip();
-      context.fillStyle = "#26343b";
-      context.fillRect(left, top + 3, drawWidth, 33);
-      context.fillStyle = "#758594";
-      context.fillRect(left + 4, top, Math.max(0, drawWidth - 8), 29);
-      context.fillStyle = "#aebac2";
-      context.fillRect(left + 5, top + 1, Math.max(0, drawWidth - 10), 4);
-      context.fillStyle = "#586875";
-      context.fillRect(left + 5, top + 23, Math.max(0, drawWidth - 10), 5);
-      for (let seamX = left + 54; seamX < left + drawWidth - 18; seamX += 54) {
-        context.fillStyle = "#3f4d57";
-        context.fillRect(seamX, top + 5, 3, 18);
-        context.fillStyle = "#8f9da8";
-        context.fillRect(seamX + 3, top + 5, 2, 18);
+    const drawPlatformStrip = (kind: "branch" | "metal", x: number, y: number, width: number) => {
+      const image = kind === "branch" ? branchPlatformRef.current : metalPlatformRef.current;
+      if (!image) return;
+      for (const segment of platformStripSegments(kind, x, y - 4, width)) {
+        if (segment.dest.width <= 0) continue;
+        context.drawImage(image, segment.source.x, segment.source.y, segment.source.width, segment.source.height, segment.dest.x, segment.dest.y, segment.dest.width, segment.dest.height);
       }
-      context.fillStyle = "#26343b";
-      context.fillRect(left, top, 5, 31);
-      context.fillRect(left + drawWidth - 5, top, 5, 31);
-      context.fillStyle = "#c2cbd0";
-      context.fillRect(left + 9, top + 8, 4, 4);
-      context.fillRect(left + drawWidth - 13, top + 8, 4, 4);
-      context.restore();
     };
 
     const render = (world: World) => {
@@ -1656,31 +1617,13 @@ export function TrashDashGame() {
       for (const item of scenery) {
         const x = item.x - camera;
         if (x < -160 || x > WIDTH + 160) continue;
-        drawSprite(
-          item.frame,
-          x,
-          item.groundY - item.size,
-          item.size,
-          item.size,
-          false,
-          1,
-          midgroundPropsRef.current,
-        );
+        drawDecorativeProp(item.prop, item.x, item.groundY);
       }
 
       for (const item of recycleScenery) {
         const x = item.x - camera;
         if (x < -140 || x > WIDTH + 140) continue;
-        drawSprite(
-          item.frame,
-          x,
-          item.groundY - 112,
-          88,
-          112,
-          false,
-          1,
-          recycleCratesRef.current,
-        );
+        drawDecorativeProp(item.prop, item.x, item.groundY);
       }
 
       for (const platform of platforms) {
@@ -1701,34 +1644,15 @@ export function TrashDashGame() {
           }
           context.restore();
         } else if (platform.kind === "branch") {
-          drawBranchPlatform(x, platform.y, platform.w);
+          drawPlatformStrip("branch", x, platform.y, platform.w);
         } else if (platform.kind === "metal") {
-          drawMetalPlatform(x, platform.y, platform.w);
+          drawPlatformStrip("metal", x, platform.y, platform.w);
         } else {
-          const frame = recycleCrates[Math.round(platform.x / 60) % recycleCrates.length];
-          drawSprite(
-            frame,
-            x + platform.w / 2 - 34,
-            platform.y + platform.h - 78,
-            68,
-            80,
-            false,
-            1,
-            recycleCratesRef.current,
-          );
+          drawDecorativeProp("crate", platform.x + platform.w / 2 - 54, platform.y + platform.h);
         }
       }
 
-      drawSprite(
-        midgroundProps.checkpoint,
-        2988 - camera,
-        GROUND_Y - 104,
-        104,
-        104,
-        false,
-        world.checkpointReached ? 1 : 0.62,
-        midgroundPropsRef.current,
-      );
+      drawDecorativeProp("checkpoint", 2988, GROUND_Y, world.checkpointReached ? 1 : 0.62);
       const dumpsterRect = dumpsterDrawRect(DUMPSTER_GOAL_WORLD_X, camera, GROUND_Y);
       const dumpsterState = selectDumpsterState(world.bossDefeated);
       const revealElapsed = world.dumpsterRevealStartedAt === null
