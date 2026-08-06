@@ -62,7 +62,9 @@ import {
   DUMPSTER_DRAW_HEIGHT,
   DUMPSTER_DRAW_WIDTH,
   dumpsterDrawRect,
-  dumpsterFrameIndex,
+  dumpsterFrame,
+  dumpsterRevealProgress,
+  selectDumpsterState,
 } from "./dumpster-render.mjs";
 
 type Screen = "title" | "characterSelect" | "playing" | "paused" | "gameover" | "won";
@@ -165,6 +167,7 @@ interface World {
   checkpoint: number;
   checkpointReached: boolean;
   bossDefeated: boolean;
+  dumpsterRevealStartedAt: number | null;
   arenaActive: boolean;
   bossTransition: { fromCameraX: number; elapsed: number } | null;
   trash: number;
@@ -236,10 +239,6 @@ const trashPickupRows = [
 ];
 
 const tacoPowerMotion = motionRow(0, 4);
-const dumpsterMotion = {
-  idle: motionRow(0, 4),
-  stink: motionRow(1, 4),
-};
 const flyingEnemies = new Set<EnemyKind>(["bat", "wasp", "mosquito", "moth", "crow"]);
 const varietyEnemyDrawSizes: Record<keyof typeof varietyEnemyMotion, [number, number]> = {
   bat: [68, 68],
@@ -541,6 +540,7 @@ const makeWorld = (selectedCharacterId = "raccoon"): World => ({
   checkpoint: 125,
   checkpointReached: false,
   bossDefeated: false,
+  dumpsterRevealStartedAt: null,
   arenaActive: false,
   bossTransition: null,
   trash: 0,
@@ -740,6 +740,7 @@ export function TrashDashGame() {
       nextWorld.player.endSequence = "won";
       nextWorld.player.endTimer = 0.02;
       nextWorld.bossDefeated = true;
+      nextWorld.dumpsterRevealStartedAt = 62.2;
       nextWorld.trash = 12;
       nextWorld.score = 4720;
       nextWorld.elapsed = 63;
@@ -824,7 +825,7 @@ export function TrashDashGame() {
       loadImage(assetUrl("assets/generated/enemy-variety-motion.png")),
       loadImage(assetUrl("assets/generated/trash-pickups-motion.png")),
       loadImage(assetUrl("assets/generated/taco-power-motion.png")),
-      loadImage(assetUrl("assets/generated/dumpster-animation-atlas.png")),
+      loadImage(assetUrl("assets/generated/dumpster-holy-atlas.png")),
       loadImage(assetUrl("assets/midground-props.png")),
       loadImage(assetUrl("assets/recycle-crates-v2.png")),
       loadImage(assetUrl("assets/ground-seamless.png")),
@@ -1130,6 +1131,7 @@ export function TrashDashGame() {
       boss.active = false;
       boss.vx = 0;
       world.bossDefeated = true;
+      world.dumpsterRevealStartedAt = world.elapsed;
       setMessage(world, "Alley cleared — depot ahead!", 3);
       tone(420, 0.12);
       window.setTimeout(() => tone(620, 0.15), 100);
@@ -1727,21 +1729,49 @@ export function TrashDashGame() {
         world.checkpointReached ? 1 : 0.62,
         midgroundPropsRef.current,
       );
-      const dumpsterFrameNumber = dumpsterFrameIndex(world.elapsed, world.bossDefeated);
-      const dumpsterFrame = world.bossDefeated
-        ? dumpsterMotion.stink[dumpsterFrameNumber]
-        : dumpsterMotion.idle[dumpsterFrameNumber];
       const dumpsterRect = dumpsterDrawRect(DUMPSTER_GOAL_WORLD_X, camera, GROUND_Y);
-      drawSprite(
-        dumpsterFrame,
-        dumpsterRect.x,
-        dumpsterRect.y,
-        DUMPSTER_DRAW_WIDTH,
-        DUMPSTER_DRAW_HEIGHT,
-        false,
-        world.bossDefeated ? 1 : 0.45,
-        dumpsterMotionRef.current,
-      );
+      const dumpsterState = selectDumpsterState(world.bossDefeated);
+      const revealElapsed = world.dumpsterRevealStartedAt === null
+        ? (world.bossDefeated ? 0.8 : 0)
+        : world.elapsed - world.dumpsterRevealStartedAt;
+      const revealProgress = world.bossDefeated ? dumpsterRevealProgress(revealElapsed) : 0;
+      const sealedFrame = dumpsterFrame("sealed", world.elapsed).source as Frame;
+      const holyFrame = dumpsterFrame("holy", world.elapsed).source as Frame;
+      if (dumpsterState === "sealed") {
+        drawSprite(
+          sealedFrame,
+          dumpsterRect.x,
+          dumpsterRect.y,
+          DUMPSTER_DRAW_WIDTH,
+          DUMPSTER_DRAW_HEIGHT,
+          false,
+          0.62,
+          dumpsterMotionRef.current,
+        );
+      } else {
+        // Crossfade treatment only; both rows use the same destination rect,
+        // so the wheels and ground contact never jump during the reveal.
+        drawSprite(
+          sealedFrame,
+          dumpsterRect.x,
+          dumpsterRect.y,
+          DUMPSTER_DRAW_WIDTH,
+          DUMPSTER_DRAW_HEIGHT,
+          false,
+          0.62 * (1 - revealProgress),
+          dumpsterMotionRef.current,
+        );
+        drawSprite(
+          holyFrame,
+          dumpsterRect.x,
+          dumpsterRect.y,
+          DUMPSTER_DRAW_WIDTH,
+          DUMPSTER_DRAW_HEIGHT,
+          false,
+          revealProgress,
+          dumpsterMotionRef.current,
+        );
+      }
 
       context.save();
       context.font = "900 15px var(--font-body), sans-serif";
