@@ -67,5 +67,5 @@
 
 - [x] Run `npm test`, `npm run lint`, `npm run build:pages`, `npm run test:pages`, and `git diff --check`.
 - [x] Inspect the final diff and repository status for accidental generated files.
-- [ ] Commit the cleanup with an explicit message.
-- [ ] Push the current branch and `main`, then verify the public Pages URL serves the canonical assets.
+- [x] Commit the cleanup with an explicit message.
+- [x] Push the current branch and `main`, then verify the public Pages URL serves the canonical assets.
