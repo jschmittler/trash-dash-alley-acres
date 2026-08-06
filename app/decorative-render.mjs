@@ -7,7 +7,7 @@ export function decorativeDrawRect(prop, worldX, cameraX, groundY) {
   if (!meta) throw new Error(`Unknown decorative prop: ${prop}`);
   const width = Math.round(meta.sourceWidth * SCALE);
   const height = Math.round(meta.sourceHeight * SCALE);
-  return { x: Math.round(worldX - cameraX), y: Math.round(groundY - meta.baseline * SCALE), width, height };
+  return { x: Math.round(worldX - cameraX), y: Math.round(groundY - height), width, height };
 }
 
 export function decorativeShadowRect(prop, drawRect) {

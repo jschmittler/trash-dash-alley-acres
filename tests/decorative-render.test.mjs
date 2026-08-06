@@ -6,7 +6,7 @@ test("props preserve visible aspect ratio and share a baseline", () => {
   const props = ["bush", "tree", "bin", "crate", "checkpoint", "tires"];
   const rects = props.map((prop) => decorativeDrawRect(prop, 100, 20, 468));
   assert.equal(rects[0].x, 80);
-  assert.equal(rects[1].y + rects[1].height, 468 - (232 - 220) * 0.5);
+  for (const rect of rects) assert.equal(rect.y + rect.height, 468);
   const crate = rects[3];
   assert.ok(Math.abs(crate.width / crate.height - 214 / 188) < 0.01);
 });
