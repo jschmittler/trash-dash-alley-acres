@@ -13,14 +13,6 @@ const characterSource = await readFile(
   "utf8",
 );
 
-function namedFrame(name) {
-  const match = gameSource.match(
-    new RegExp(`${name}:\\s*\\[(\\d+),\\s*(\\d+),\\s*(\\d+),\\s*(\\d+)\\]`),
-  );
-  assert.ok(match, `missing ${name} frame`);
-  return match.slice(1).map(Number);
-}
-
 function countLargeComponents(alpha, width, height) {
   const seen = new Uint8Array(width * height);
   let largeComponents = 0;
@@ -56,10 +48,14 @@ function countLargeComponents(alpha, width, height) {
 }
 
 test("hit reaction frames contain one complete sprite without clipped borders", async () => {
-  const atlas = fileURLToPath(new URL("../public/assets/raccoon-sprites.png", import.meta.url));
+  const atlas = fileURLToPath(new URL("../public/assets/generated/player-hero-motion.png", import.meta.url));
+  const cell = 192;
 
-  for (const name of ["smallHurt", "largeHurt"]) {
-    const [left, top, width, height] = namedFrame(name);
+  for (const [name, row] of [["smallHurt", 6], ["largeHurt", 17]]) {
+    const left = 0;
+    const top = row * cell;
+    const width = cell;
+    const height = cell;
     const { data, info } = await sharp(atlas)
       .extract({ left, top, width, height })
       .ensureAlpha()

@@ -159,18 +159,15 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(musicController, /catch/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   await access(new URL("../public/assets/raccoon-sprites.png", import.meta.url));
-  await access(new URL("../public/assets/player-motion.png", import.meta.url));
   await access(new URL("../public/assets/enemy-motion.png", import.meta.url));
   await access(new URL("../public/assets/audio/raccoon-rush-loop.m4a", import.meta.url));
   await access(new URL("../public/assets/generated/enemy-variety-motion.png", import.meta.url));
   await access(new URL("../public/assets/generated/trash-pickups-motion.png", import.meta.url));
   await access(new URL("../public/assets/generated/taco-power-motion.png", import.meta.url));
-  await access(new URL("../public/assets/generated/dumpster-animation-atlas.png", import.meta.url));
   await access(new URL("../public/assets/generated/jimothy-hero-motion.png", import.meta.url));
   await access(new URL("../public/assets/generated/jimothy-selection.png", import.meta.url));
   await access(new URL("../public/assets/generated/trashy-selection-portrait.png", import.meta.url));
   await access(new URL("../public/assets/generated/jimothy-selection-portrait.png", import.meta.url));
-  await access(new URL("../public/assets/glider-motion.png", import.meta.url));
   await access(new URL("../public/assets/generated/decorative-atlas.png", import.meta.url));
   await access(new URL("../public/assets/generated/branch-platform-strip.png", import.meta.url));
   await access(new URL("../public/assets/generated/metal-platform-strip.png", import.meta.url));

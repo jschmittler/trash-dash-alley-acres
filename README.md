@@ -25,12 +25,18 @@ npm run dev
 
 Create a production build with `npm run build`.
 
-## Sprite processing
+## Asset pipeline
 
-The untouched source atlas lives at `public/assets/raccoon-sprite-source.png`. The game uses `public/assets/raccoon-sprites.png`, which has its connected gray backdrop removed.
+Runtime atlases are generated into `public/assets/generated/` from source art
+and normalized sheets in `concepts/`. The old single-raccoon backdrop-removal
+pipeline is retained only for historical reference; new work should use the
+family-specific atlas builders documented in [`docs/asset-manifest.md`](docs/asset-manifest.md).
 
-To rebuild the transparent derivative, run:
+For a complete project verification, run:
 
 ```bash
-python3 scripts/process-sprites.py public/assets/raccoon-sprite-source.png public/assets/raccoon-sprites.png
+npm test
+npm run lint
+npm run build:pages
+npm run test:pages
 ```

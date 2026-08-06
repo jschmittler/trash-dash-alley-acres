@@ -13,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 SHEETS = ROOT / "sheets"
 OUTPUT = ROOT / "dumpster-holy-atlas.png"
+PUBLIC_OUTPUT = ROOT.parent.parent / "public" / "assets" / "generated" / "dumpster-holy-atlas.png"
 FRAME_SIZE = 192
 ROW_SIZE = FRAME_SIZE * 4
 STINK_SCALE_X = 1.0
@@ -134,12 +135,14 @@ def main() -> None:
 
     atlas = sealed + holy
     write_png(OUTPUT, ROW_SIZE, FRAME_SIZE * 2, atlas)
+    PUBLIC_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    write_png(PUBLIC_OUTPUT, ROW_SIZE, FRAME_SIZE * 2, atlas)
 
     width, height, pixels = read_png(OUTPUT, ROW_SIZE, FRAME_SIZE * 2)
     if (width, height) != (ROW_SIZE, FRAME_SIZE * 2) or len(pixels) != ROW_SIZE * FRAME_SIZE * 2 * 4:
         raise ValueError(f"atlas validation failed: {width}x{height}")
 
-    print(f"Wrote {OUTPUT} ({ROW_SIZE}x{FRAME_SIZE * 2} RGBA)")
+    print(f"Wrote {OUTPUT} and {PUBLIC_OUTPUT} ({ROW_SIZE}x{FRAME_SIZE * 2} RGBA)")
 
 
 if __name__ == "__main__":

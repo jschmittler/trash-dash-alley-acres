@@ -28,5 +28,7 @@ transparent `192×192` atlas cells with the contact point at pixel `183`.
   anti-aliasing or gradients.
 - No scenery, floor plane, cast shadow, text, labels, logos, or extra props.
 
-The runtime atlas is assembled in a later implementation task; these source
-rows are retained so future revisions can be regenerated deterministically.
+Run `node concepts/dumpster/build-sheets.mjs` followed by
+`python3 concepts/dumpster/build-atlas.py` to rebuild both the review atlas in
+this folder and the canonical runtime copy at
+`public/assets/generated/dumpster-holy-atlas.png`.
