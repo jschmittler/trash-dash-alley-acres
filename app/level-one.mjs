@@ -192,6 +192,14 @@ export function levelOneZoneAt(x) {
     ?? (coordinate < LEVEL_ONE.zones[0].startX ? LEVEL_ONE.zones[0] : LEVEL_ONE.zones.at(-1));
 }
 
+export function levelOneLightingAt(x) {
+  const coordinate = Number.isFinite(x) ? x : 0;
+  const zone = levelOneZoneAt(coordinate);
+  const span = Math.max(1, zone.endX - zone.startX);
+  const progress = Math.max(0, Math.min(1, (coordinate - zone.startX) / span));
+  return { lighting: zone.lighting, progress };
+}
+
 export function levelOneEncounterData() {
   return LEVEL_ONE.encounters;
 }

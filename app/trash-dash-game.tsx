@@ -74,6 +74,7 @@ import {
   platformStripSegments,
 } from "./decorative-render.mjs";
 import { pickupYAboveSurface } from "./pickup-layout.mjs";
+import { LEVEL_ONE, levelOneLightingAt } from "./level-one.mjs";
 
 type Screen = "title" | "characterSelect" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
@@ -389,7 +390,7 @@ const scenery = [
   { x: 4480, groundY: GROUND_Y, prop: "tires" as const },
 ];
 
-const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y): Enemy => {
+const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y, patrolBounds?: readonly [number, number]): Enemy => {
   const sizes: Record<EnemyKind, [number, number]> = {
     pigeon: [46, 38],
     slime: [46, 38],
@@ -418,10 +419,13 @@ const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y): Enemy => {
     patrolRadius,
     grounded: !flyingEnemies.has(kind),
   }, platforms);
+  const patrolMinX = patrolBounds?.[0] ?? patrol.minX;
+  const patrolMaxX = patrolBounds?.[1] ?? patrol.maxX;
+  const spawnX = Math.max(patrolMinX, Math.min(patrolMaxX - w, x));
   const vx = kind === "boss" ? 0 : kind === "fox" || kind === "boar" ? -78 : flyingEnemies.has(kind) ? -64 : -42;
   return {
     kind,
-    x: patrol.spawnX,
+    x: spawnX,
     y: patrol.surfaceY - h,
     w,
     h,
@@ -432,10 +436,10 @@ const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y): Enemy => {
     phase: x / 100,
     hp: kind === "boss" ? 3 : 1,
     hitCooldown: 0,
-    originX: patrol.spawnX,
+    originX: spawnX,
     surfaceY: patrol.surfaceY,
-    patrolMinX: patrol.minX,
-    patrolMaxX: patrol.maxX,
+    patrolMinX,
+    patrolMaxX,
     actionTimer: 0,
     attackCooldown: kind === "boss" ? 1.1 : 0,
     ragePlayed: false,
@@ -461,54 +465,18 @@ const makeSurfacePickup = (
   gap = 18,
 ) => makePickup(kind, x, pickupYAboveSurface(kind, surfaceY, gap), phase);
 
-const initialEnemies = () => [
-  makeEnemy("pigeon", 520),
-  makeEnemy("pigeon", 610),
-  makeEnemy("pigeon", 640, 366),
-  makeEnemy("possum", 1280),
-  makeEnemy("wasp", 1450, 292),
-  makeEnemy("mosquito", 1525, 278),
-  makeEnemy("wasp", 1605, 264),
-  makeEnemy("snake", 1810),
-  makeEnemy("spider", 2440),
-  makeEnemy("possum", 2860),
-  makeEnemy("snake", 3380),
-  makeEnemy("spider", 4050),
-  makeEnemy("fox", 4320),
-  makeEnemy("snake", 5030),
-  makeEnemy("boss", 6120),
-];
+const initialEnemies = () => LEVEL_ONE.encounters.flatMap((encounter) => encounter.enemies.map((spawn) =>
+  makeEnemy(spawn.kind as EnemyKind, spawn.x, spawn.y ?? GROUND_Y, spawn.patrol),
+)).concat(makeEnemy("boss", LEVEL_ONE.boss.arenaStartX + 480));
 
-const initialPickups = () => [
-  makeSurfacePickup("trash", 300, GROUND_Y),
-  makeSurfacePickup("trash", 400, GROUND_Y, 1),
-  makeSurfacePickup("trash", 690, 366, 2),
-  makeSurfacePickup("trash", 760, 366, 3),
-  makeSurfacePickup("taco", 935, cratePlatforms[0].y),
-  makeSurfacePickup("trash", 1220, 396, 1),
-  makeSurfacePickup("trash", 1545, 352, 2),
-  makeSurfacePickup("trash", 1660, 352, 3),
-  makeSurfacePickup("trash", 1735, 352, 4),
-  makeSurfacePickup("cap", 1940, 300),
-  makeSurfacePickup("trash", 2255, 360, 2),
-  makeSurfacePickup("trash", 2365, 360, 3),
-  makeSurfacePickup("trash", 2710, 385),
-  makeSurfacePickup("trash", 2790, 385, 1),
-  makeSurfacePickup("trash", 2870, 385, 2),
-  makeSurfacePickup("trash", 3250, GROUND_Y, 3),
-  makeSurfacePickup("cap", 3600, 312),
-  makeSurfacePickup("trash", 3780, GROUND_Y),
-  makeSurfacePickup("trash", 3875, 392, 2),
-  makeSurfacePickup("trash", 4150, 350, 3),
-  makeSurfacePickup("trash", 4210, 350, 4),
-  makeSurfacePickup("trash", 4460, 320),
-  makeSurfacePickup("taco", 4420, 320),
-  makeSurfacePickup("trash", 5025, 382, 1),
-  makeSurfacePickup("trash", 5260, 330, 2),
-  makeSurfacePickup("trash", 5320, GROUND_Y),
-  makeSurfacePickup("trash", 5405, GROUND_Y, 2),
-  makeSurfacePickup("trash", 5460, GROUND_Y, 3),
-];
+const initialPickups = () => LEVEL_ONE.rewards
+  .filter((reward) => reward.kind !== "checkpoint")
+  .map((reward, index) => makeSurfacePickup(
+    reward.kind as PickupKind,
+    reward.x,
+    reward.surfaceY === 0 ? GROUND_Y : reward.surfaceY,
+    index,
+  ));
 
 const makeWorld = (selectedCharacterId = "raccoon"): World => ({
   selectedCharacterId: getPlayableCharacter(selectedCharacterId).id,
@@ -1643,6 +1611,21 @@ export function TrashDashGame() {
       drawTiledLayer(forestNearRef.current, camera, 0.13, backgroundDrawY, 1540, backgroundDrawHeight, forestMix * 0.82);
       drawTiledLayer(cityFarRef.current, camera, 0.045, backgroundDrawY, 1540, backgroundDrawHeight, cityMix * 0.72);
       drawTiledLayer(cityNearRef.current, camera, 0.11, backgroundDrawY, 1540, backgroundDrawHeight, cityMix * 0.9);
+      const lighting = levelOneLightingAt(camera + WIDTH * 0.5);
+      const lightingOverlay = {
+        "late-afternoon": null,
+        sunset: { color: "rgba(255, 132, 66, 0.14)", alpha: 0.72 },
+        dusk: { color: "rgba(75, 78, 152, 0.18)", alpha: 0.78 },
+        night: { color: "rgba(12, 28, 78, 0.24)", alpha: 0.84 },
+        moonlit: { color: "rgba(36, 46, 116, 0.28)", alpha: 0.9 },
+      }[lighting.lighting];
+      if (lightingOverlay) {
+        context.save();
+        context.globalAlpha = lighting.progress * lightingOverlay.alpha;
+        context.fillStyle = lightingOverlay.color;
+        context.fillRect(0, 0, WIDTH, GROUND_Y);
+        context.restore();
+      }
       if (world.arenaActive) {
         const arenaShade = context.createLinearGradient(0, 0, 0, GROUND_Y);
         arenaShade.addColorStop(0, "rgba(8, 9, 24, 0.46)");

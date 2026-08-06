@@ -5,6 +5,7 @@ import {
   LEVEL_ONE,
   LEVEL_ONE_ENEMY_KINDS,
   levelOneEncounterData,
+  levelOneLightingAt,
   levelOneZoneAt,
 } from "../app/level-one.mjs";
 
@@ -29,6 +30,16 @@ test("zone lookup is stable at boundaries and outside the world", () => {
   assert.equal(levelOneZoneAt(3550).id, "industrial-city-fringe");
   assert.equal(levelOneZoneAt(4800).id, "urban-park-transition");
   assert.equal(levelOneZoneAt(99999).id, "urban-park-transition");
+});
+
+test("lighting progression follows each visual chapter", () => {
+  assert.equal(levelOneLightingAt(0).lighting, "late-afternoon");
+  assert.equal(levelOneLightingAt(1300).lighting, "sunset");
+  assert.equal(levelOneLightingAt(2500).lighting, "dusk");
+  assert.equal(levelOneLightingAt(4000).lighting, "night");
+  assert.equal(levelOneLightingAt(5200).lighting, "moonlit");
+  assert.ok(levelOneLightingAt(1800).progress > 0);
+  assert.ok(levelOneLightingAt(1800).progress < 1);
 });
 
 test("level one uses the exact approved standard enemy roster and encounter order", () => {
