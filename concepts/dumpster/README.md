@@ -1,28 +1,32 @@
-# Dumpster goal sprite concept
+# Dumpster holy-grail source art
 
-Private, unintegrated prop exploration for the post-boss goal reveal. This workspace is intentionally kept outside `public/` and outside all application, test, manifest, and production-output paths. Nothing here is loaded by the game; do not move or copy an approved frame into a runtime asset directory until the concept has been reviewed and explicitly approved.
+This folder contains the approved, project-bound source rows for the redesigned
+boss-goal dumpster. The prop is a strict side-on 16-bit sprite: one silhouette,
+one wheel/contact baseline, and two lighting states.
 
-## Frame format
+## Source rows
 
-- Canvas: 768×384 pixels, RGBA.
-- Grid: four columns × two rows.
-- Cell size: 192×192 pixels.
-- Sampling: nearest-neighbor; preserve hard pixel edges.
-- Camera, scale, footprint, and contact point stay locked in every frame.
-- Row 0 (frames 0–3): ambient idle loop — restrained lid creak, trash settling, and/or fly movement.
-- Row 1 (frames 4–7): stink loop — curling muted green-brown odor wisps that rise and change shape.
+- `source/dumpster-sealed-key.png`: four-panel chroma-key row for the pre-boss
+  state. The dumpster is dark, sealed, and motionless.
+- `source/dumpster-holy-key.png`: four-panel chroma-key row for the post-boss
+  state. The body geometry is locked to the sealed row while a warm gold aura
+  and sparse pixel sparkles vary from frame to frame.
+- `dumpster-source-contact-sheet.png`: stacked review sheet (sealed on top,
+  holy below) used to check silhouette and baseline consistency.
 
-Final frame indices are 0–3 for idle and 4–7 for stink. Suggested playback is 140–180 ms per frame. Loop frames 0–3 and 4–7 independently; the stink loop may be enabled only while the goal is visible. Keep motion subtle enough for a stationary prop.
+Both source rows are `1774×887` PNGs with a uniform `#00ff00` background. The
+asset pipeline keys that background, trims each panel, and places the result in
+transparent `192×192` atlas cells with the contact point at pixel `183`.
 
-## Visual target
+## Acceptance notes
 
-Compact side view of an old, dark-green steel dumpster with chunky cartoon proportions, dents, chipped paint, rust, grime, crooked caster wheels, a partly open lid, overflowing trash, and non-legible graffiti marks. Match the hero and enemy sprites with a dark navy contour, chunky 16-bit pixel clusters, three-tone cel shading, crisp edges, and no gradients or anti-aliasing. Trash and graffiti may add color, but the dumpster body remains visually dominant.
+- Strict side profile; no three-quarter or diagonal camera angle.
+- Body, lid, trash load, wheels, width, height, and contact point stay aligned
+  between all eight frames.
+- Sealed state is dark and static; holy state changes only brightness/effects.
+- Hard pixel clusters, dark navy contour, three-tone cel shading, and no
+  anti-aliasing or gradients.
+- No scenery, floor plane, cast shadow, text, labels, logos, or extra props.
 
-## Workspace layout
-
-- `source/`: retained flat-key generation sheets for future revisions.
-- `sheets/`: cleaned, transparent idle and stink component sheets.
-- `dumpster-animation-atlas.png`: final 4×2 review atlas assembled from both sheets.
-- `PROMPTS.md`: exact generation prompts and constraints.
-
-This is concept art only: no gameplay integration, collision, goal behavior, boss sequencing, victory logic, or runtime references belong in this workspace.
+The runtime atlas is assembled in a later implementation task; these source
+rows are retained so future revisions can be regenerated deterministically.
