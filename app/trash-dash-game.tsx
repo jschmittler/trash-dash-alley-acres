@@ -74,7 +74,8 @@ import {
   platformStripSegments,
 } from "./decorative-render.mjs";
 import { pickupYAboveSurface } from "./pickup-layout.mjs";
-import { LEVEL_ONE, levelOneLightingAt } from "./level-one.mjs";
+import { LEVEL_ONE, levelOneLightingAt, levelOneZoneAt } from "./level-one.mjs";
+import { levelBackgroundBlendAt, PARALLAX_SPEEDS } from "./level-background.mjs";
 
 type Screen = "title" | "characterSelect" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
@@ -117,6 +118,7 @@ interface Enemy extends Rect {
   facing: 1 | -1;
   animationState: keyof typeof BOSS_ANIMATIONS | "walking" | "hit";
   active: boolean;
+  spawned: boolean;
   phase: number;
   hp: number;
   hitCooldown: number;
@@ -419,10 +421,11 @@ const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y, patrolBounds?: read
     surfaceY: y,
     patrolRadius,
     grounded: !flyingEnemies.has(kind),
+    patrolBounds,
   }, platforms);
-  const patrolMinX = patrolBounds?.[0] ?? patrol.minX;
-  const patrolMaxX = patrolBounds?.[1] ?? patrol.maxX;
-  const spawnX = Math.max(patrolMinX, Math.min(patrolMaxX - w, x));
+  const patrolMinX = patrol.minX;
+  const patrolMaxX = patrol.maxX;
+  const spawnX = patrol.spawnX;
   const vx = kind === "boss" ? 0 : kind === "fox" || kind === "boar" ? -78 : flyingEnemies.has(kind) ? -64 : -42;
   return {
     kind,
@@ -433,7 +436,8 @@ const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y, patrolBounds?: read
     vx,
     facing: vx < 0 ? -1 : 1,
     animationState: "walking",
-    active: true,
+    active: kind === "boss" || spawnX <= 780,
+    spawned: kind === "boss" || spawnX <= 780,
     phase: x / 100,
     hp: kind === "boss" ? 3 : 1,
     hitCooldown: 0,
@@ -560,6 +564,7 @@ export function TrashDashGame() {
   const forestNearRef = useRef<HTMLImageElement | null>(null);
   const cityFarRef = useRef<HTMLImageElement | null>(null);
   const cityNearRef = useRef<HTMLImageElement | null>(null);
+  const levelBackgroundRefs = useRef<Record<string, { far: HTMLImageElement | null; middle: HTMLImageElement | null; close: HTMLImageElement | null }>>({});
   const worldRef = useRef<World>(makeWorld());
   const keysRef = useRef(new Set<string>());
   const pressedRef = useRef(new Set<string>());
@@ -694,6 +699,7 @@ export function TrashDashGame() {
     const devParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
     const bossTest = devParams?.get("bossTest") ?? null;
     const levelTest = devParams?.get("levelTest") ?? null;
+    const backgroundTest = devParams?.get("backgroundTest") ?? null;
     const powerupTest = devParams?.get("powerupTest") ?? null;
     const victoryTest = devParams?.get("victoryTest") ?? null;
     if (bossTest) {
@@ -708,6 +714,18 @@ export function TrashDashGame() {
       nextWorld.checkpointReached = true;
       nextWorld.checkpointIndex = LEVEL_ONE.checkpoints.length - 1;
       nextWorld.cameraX = 5280;
+    } else if (backgroundTest) {
+      const backgroundStarts: Record<string, [number, number]> = {
+        woodland: [620, 260],
+        creek: [1700, 1340],
+        highway: [2900, 2420],
+        industrial: [4100, 3620],
+        park: [5200, 4680],
+      };
+      const [startX, cameraX] = backgroundStarts[backgroundTest] ?? backgroundStarts.creek;
+      nextWorld.player.x = startX;
+      nextWorld.player.y = GROUND_Y - nextWorld.player.h;
+      nextWorld.cameraX = cameraX;
     } else if (levelTest === "creek" || levelTest === "highway") {
       nextWorld.player.x = levelTest === "creek" ? 1180 : 3000;
       nextWorld.player.y = GROUND_Y - nextWorld.player.h;
@@ -821,8 +839,13 @@ export function TrashDashGame() {
       loadImage(assetUrl("assets/backgrounds/forest-near.png")),
       loadImage(assetUrl("assets/backgrounds/city-far.png")),
       loadImage(assetUrl("assets/backgrounds/city-near.png")),
+      ...["woodland", "creek", "highway", "industrial", "park"].flatMap((stage) => [
+        loadImage(assetUrl(`assets/backgrounds/level1-${stage}-far.png`)),
+        loadImage(assetUrl(`assets/backgrounds/level1-${stage}-middle.png`)),
+        loadImage(assetUrl(`assets/backgrounds/level1-${stage}-close.png`)),
+      ]),
     ])
-      .then(([atlas, playerHeroAtlas, jimothyHeroAtlas, bossAtlas, enemyAtlas, varietyEnemyAtlas, trashPickupAtlas, tacoPowerAtlas, dumpsterAtlas, decorativeAtlas, branchPlatform, metalPlatform, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
+      .then(([atlas, playerHeroAtlas, jimothyHeroAtlas, bossAtlas, enemyAtlas, varietyEnemyAtlas, trashPickupAtlas, tacoPowerAtlas, dumpsterAtlas, decorativeAtlas, branchPlatform, metalPlatform, groundTile, forestFar, forestNear, cityFar, cityNear, ...stageLayers]) => {
         if (cancelled) return;
         atlasRef.current = atlas;
         playerHeroMotionRef.current = playerHeroAtlas;
@@ -841,6 +864,13 @@ export function TrashDashGame() {
         forestNearRef.current = forestNear;
         cityFarRef.current = cityFar;
         cityNearRef.current = cityNear;
+        levelBackgroundRefs.current = {
+          "deep-woodland": { far: stageLayers[0], middle: stageLayers[1], close: stageLayers[2] },
+          "creek-and-ruined-mill": { far: stageLayers[3], middle: stageLayers[4], close: stageLayers[5] },
+          "forest-edge-highway": { far: stageLayers[6], middle: stageLayers[7], close: stageLayers[8] },
+          "industrial-city-fringe": { far: stageLayers[9], middle: stageLayers[10], close: stageLayers[11] },
+          "urban-park-transition": { far: stageLayers[12], middle: stageLayers[13], close: stageLayers[14] },
+        };
         setLoaded(true);
       })
       .catch(() => {
@@ -1388,6 +1418,10 @@ export function TrashDashGame() {
       }
 
       for (const enemy of world.enemies) {
+        if (!enemy.spawned && enemy.kind !== "boss" && player.x >= enemy.originX - 340) {
+          enemy.spawned = true;
+          enemy.active = true;
+        }
         if (!enemy.active) continue;
         if (enemy.kind === "boss") {
           updateBoss(world, enemy, dt);
@@ -1620,10 +1654,31 @@ export function TrashDashGame() {
       // camera speeds create depth while the oversized art keeps repetition subtle.
       const backgroundDrawHeight = 514;
       const backgroundDrawY = GROUND_Y - backgroundDrawHeight;
-      drawTiledLayer(forestFarRef.current, camera, 0.055, backgroundDrawY, 1540, backgroundDrawHeight, forestMix * 0.92);
-      drawTiledLayer(forestNearRef.current, camera, 0.13, backgroundDrawY, 1540, backgroundDrawHeight, forestMix * 0.82);
-      drawTiledLayer(cityFarRef.current, camera, 0.045, backgroundDrawY, 1540, backgroundDrawHeight, cityMix * 0.72);
-      drawTiledLayer(cityNearRef.current, camera, 0.11, backgroundDrawY, 1540, backgroundDrawHeight, cityMix * 0.9);
+      const stageCenterX = camera + WIDTH * 0.5;
+      const stageZone = levelOneZoneAt(stageCenterX);
+      const stageBackground = levelBackgroundRefs.current[stageZone.id] ?? null;
+      if (stageBackground) {
+        const drawStageSet = (layers: { far: HTMLImageElement | null; middle: HTMLImageElement | null; close: HTMLImageElement | null }, alpha: number) => {
+          drawTiledLayer(layers.far, camera, PARALLAX_SPEEDS.far, -46, 2048, 716, alpha);
+          drawTiledLayer(layers.middle, camera, PARALLAX_SPEEDS.middle, -46, 2048, 716, alpha);
+          drawTiledLayer(layers.close, camera, PARALLAX_SPEEDS.close, -46, 2048, 716, alpha);
+        };
+        const blendState = levelBackgroundBlendAt(stageCenterX, LEVEL_ONE.zones);
+        const leftBackground = levelBackgroundRefs.current[blendState.leftId] ?? null;
+        const rightBackground = blendState.rightId ? levelBackgroundRefs.current[blendState.rightId] ?? null : null;
+        if (leftBackground && rightBackground) {
+          drawStageSet(leftBackground, 1 - blendState.blend);
+          drawStageSet(rightBackground, blendState.blend);
+        } else {
+          drawStageSet(stageBackground, 1);
+        }
+      }
+      if (!stageBackground) {
+        drawTiledLayer(forestFarRef.current, camera, 0.055, backgroundDrawY, 1540, backgroundDrawHeight, forestMix * 0.92);
+        drawTiledLayer(forestNearRef.current, camera, 0.13, backgroundDrawY, 1540, backgroundDrawHeight, forestMix * 0.82);
+        drawTiledLayer(cityFarRef.current, camera, 0.045, backgroundDrawY, 1540, backgroundDrawHeight, cityMix * 0.72);
+        drawTiledLayer(cityNearRef.current, camera, 0.11, backgroundDrawY, 1540, backgroundDrawHeight, cityMix * 0.9);
+      }
       const lighting = levelOneLightingAt(camera + WIDTH * 0.5);
       const lightingOverlay = {
         "late-afternoon": null,

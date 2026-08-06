@@ -6,12 +6,14 @@ const horizontalDistance = (point, surface) => {
   return 0;
 };
 
-export function createEnemyPatrol({ x, width, surfaceY, patrolRadius, grounded }, surfaces) {
+export function createEnemyPatrol({ x, width, surfaceY, patrolRadius, grounded, patrolBounds }, surfaces) {
   if (!grounded) {
+    const requestedMin = patrolBounds?.[0] ?? (x - patrolRadius);
+    const requestedMax = patrolBounds?.[1] ?? (x + patrolRadius);
     return {
       spawnX: x,
-      minX: x - patrolRadius,
-      maxX: x + patrolRadius,
+      minX: Math.min(requestedMin, requestedMax),
+      maxX: Math.max(requestedMin, requestedMax),
       surfaceY,
     };
   }
@@ -20,7 +22,9 @@ export function createEnemyPatrol({ x, width, surfaceY, patrolRadius, grounded }
   const matchingSurfaces = surfaces
     .filter((surface) => Math.abs(surface.y - surfaceY) < 1 && surface.w >= width)
     .sort((left, right) => horizontalDistance(centerX, left) - horizontalDistance(centerX, right));
-  const support = matchingSurfaces[0];
+  const support = matchingSurfaces[0] ?? surfaces
+    .filter((surface) => surface.w >= width)
+    .sort((left, right) => horizontalDistance(centerX, left) - horizontalDistance(centerX, right))[0];
 
   if (!support) {
     return {
@@ -33,12 +37,18 @@ export function createEnemyPatrol({ x, width, surfaceY, patrolRadius, grounded }
 
   const supportMinX = support.x;
   const supportMaxX = support.x + support.w - width;
-  const spawnX = clamp(x, supportMinX, supportMaxX);
+  const requestedMin = patrolBounds?.[0] ?? (x - patrolRadius);
+  const requestedMax = patrolBounds?.[1] ?? (x + patrolRadius);
+  const requestedStart = Math.min(requestedMin, requestedMax);
+  const requestedEnd = Math.max(requestedMin, requestedMax);
+  const patrolMinX = clamp(requestedStart, supportMinX, supportMaxX);
+  const patrolMaxX = clamp(requestedEnd, supportMinX, supportMaxX);
+  const spawnX = clamp(x, patrolMinX, patrolMaxX);
 
   return {
     spawnX,
-    minX: Math.max(spawnX - patrolRadius, supportMinX),
-    maxX: Math.min(spawnX + patrolRadius, supportMaxX),
+    minX: Math.min(patrolMinX, patrolMaxX),
+    maxX: Math.max(patrolMinX, patrolMaxX),
     surfaceY: support.y,
   };
 }

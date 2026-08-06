@@ -80,8 +80,8 @@ const encounters = [
     zoneId: "deep-woodland",
     spawnX: 1010,
     enemies: [
-      { kind: "pigeon", x: 980, y: 260, patrol: [920, 1080] },
-      { kind: "pigeon", x: 1060, y: 230, patrol: [980, 1130] },
+      { kind: "pigeon", x: 980, patrol: [920, 1080] },
+      { kind: "pigeon", x: 1060, patrol: [980, 1130] },
     ],
     bypass: "campsite-upper-route",
   },
@@ -100,8 +100,8 @@ const encounters = [
     spawnX: 1920,
     enemies: [
       { kind: "spider", x: 1880, patrol: [1800, 2010] },
-      { kind: "pigeon", x: 1990, y: 220, patrol: [1880, 2140] },
-      { kind: "pigeon", x: 2090, y: 250, patrol: [1990, 2240] },
+      { kind: "pigeon", x: 1990, patrol: [1880, 2140] },
+      { kind: "pigeon", x: 2090, patrol: [1990, 2240] },
     ],
     bypass: "mill-glider-route",
   },
@@ -128,8 +128,8 @@ const encounters = [
     spawnX: 4080,
     enemies: [
       { kind: "spider", x: 4040, patrol: [3900, 4210] },
-      { kind: "pigeon", x: 4160, y: 220, patrol: [4000, 4340] },
-      { kind: "pigeon", x: 4260, y: 250, patrol: [4100, 4460] },
+      { kind: "pigeon", x: 4160, patrol: [4000, 4340] },
+      { kind: "pigeon", x: 4260, patrol: [4100, 4460] },
     ],
     bypass: "industrial-container-route",
   },

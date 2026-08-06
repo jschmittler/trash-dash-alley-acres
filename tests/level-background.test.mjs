@@ -1,0 +1,22 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { LEVEL_ONE } from "../app/level-one.mjs";
+import { levelBackgroundBlendAt, PARALLAX_SPEEDS } from "../app/level-background.mjs";
+
+test("background transition crosses each boundary once without resetting", () => {
+  const boundary = LEVEL_ONE.zones[0].endX;
+  const samples = [-220, -110, -1, 0, 1, 110, 220].map((offset) => (
+    levelBackgroundBlendAt(boundary + offset, LEVEL_ONE.zones).blend
+  ));
+  assert.deepEqual(samples.map((value) => Number(value.toFixed(3))), [0, 0.156, 0.497, 0.5, 0.503, 0.844, 1]);
+  for (let index = 1; index < samples.length; index += 1) {
+    assert.ok(samples[index] >= samples[index - 1], `blend reset at sample ${index}`);
+  }
+});
+
+test("far, middle and close layers have visibly distinct parallax speeds", () => {
+  assert.ok(PARALLAX_SPEEDS.far < PARALLAX_SPEEDS.middle);
+  assert.ok(PARALLAX_SPEEDS.middle < PARALLAX_SPEEDS.close);
+  assert.ok(PARALLAX_SPEEDS.close / PARALLAX_SPEEDS.far > 5);
+});
