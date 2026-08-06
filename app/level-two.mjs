@@ -35,6 +35,7 @@ const surfaces = [
   { id: "street-mailbox", x: 2070, y: 382, w: 100, h: 22, kind: "branch" },
   { id: "parked-car-west", x: 2190, y: 358, w: 185, h: 26, kind: "metal" },
   { id: "parked-car-east", x: 2415, y: 358, w: 185, h: 26, kind: "metal" },
+  { id: "street-fence-east", x: 2510, y: 332, w: 145, h: 24, kind: "branch" },
   { id: "obstacle-lawn", x: 2700, y: 468, w: 1500, h: 90, kind: "ground" },
   { id: "trampoline-landing", x: 3030, y: 400, w: 145, h: 22, kind: "metal" },
   { id: "obstacle-fence", x: 3280, y: 338, w: 220, h: 24, kind: "branch" },
@@ -65,8 +66,8 @@ const encounters = [
     enemies: [{ kind: "terrier", movement: "grounded", x: 1580, patrol: [1420, 2480], surfaceId: "street-ground" }],
   },
   {
-    id: "street-squirrel-repeat", zoneId: "garbage-night-street", spawnX: 2180, sizeClass: "small", bypass: "parked-car-route",
-    enemies: [{ kind: "squirrel", movement: "platform", x: 2110, patrol: [2075, 2150], surfaceId: "street-mailbox" }],
+    id: "street-squirrel-repeat", zoneId: "garbage-night-street", spawnX: 2550, sizeClass: "small", bypass: "parked-car-route",
+    enemies: [{ kind: "squirrel", movement: "platform", x: 2570, patrol: [2520, 2640], surfaceId: "street-fence-east" }],
   },
   {
     id: "obstacle-skunk-tutorial", zoneId: "backyard-obstacle-course", spawnX: 2900, sizeClass: "medium",
@@ -104,6 +105,7 @@ const rewards = [
   { id: "poolside-major-cache", kind: "trash", x: 3980, surfaceId: "poolside-ledge", surfaceY: 370, optional: true, gate: "poolside-secret" },
   { id: "culvert-recovery-trash", kind: "trash", x: 4700, surfaceId: "culvert-route", surfaceY: 404, optional: true, gate: "culvert-bypass" },
   { id: "utility-premium-cache", kind: "trash", x: 4850, surfaceId: "utility-route", surfaceY: 278, optional: true, gate: "utility-line-mastery" },
+  { id: "main-street-alley-cache", kind: "trash", x: 6820, zoneId: "suburban-main-street", surfaceId: "victory-street", surfaceY: 468, optional: true, secret: true },
   { id: "street-checkpoint-reward", kind: "checkpoint", x: 1370, surfaceId: "street-ground", surfaceY: 468, optional: false },
   { id: "obstacle-checkpoint-reward", kind: "checkpoint", x: 2750, surfaceId: "obstacle-lawn", surfaceY: 468, optional: false },
   { id: "drainage-checkpoint-reward", kind: "checkpoint", x: 4270, surfaceId: "drainage-entry-lawn", surfaceY: 468, optional: false },

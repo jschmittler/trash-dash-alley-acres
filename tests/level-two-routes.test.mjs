@@ -12,10 +12,15 @@ test("all optional routes point to known rewards and encounters", () => {
   }
 });
 
-test("large encounters own at least 900 pixels before another large encounter", () => {
-  const large = LEVEL_TWO.encounters.filter(({ sizeClass }) => sizeClass === "large");
-  for (let index = 1; index < large.length; index += 1) {
-    assert.ok(large[index].spawnX - large[index - 1].recoveryEndX >= 0);
+test("large encounters retain recovery space before the next ordinary encounter", () => {
+  const encounters = LEVEL_TWO.encounters;
+  for (let index = 0; index < encounters.length; index += 1) {
+    const encounter = encounters[index];
+    if (encounter.sizeClass !== "large") continue;
+    const nextOrdinary = encounters.slice(index + 1).find(({ enemies }) => enemies.length > 0);
+    if (nextOrdinary) {
+      assert.ok(nextOrdinary.spawnX > encounter.recoveryEndX, `${encounter.id} recovery overlaps ${nextOrdinary.id}`);
+    }
   }
 });
 

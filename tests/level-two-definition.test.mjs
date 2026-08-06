@@ -31,6 +31,31 @@ test("Level 2 uses the approved enemy roster and valid references", () => {
   }
 });
 
+test("every suburban chapter offers an optional route or authored secret", () => {
+  const routeZoneIds = new Set(LEVEL_TWO.routeChoices.map(({ startX }) => levelTwoZoneAt(startX).id));
+  const secretZoneIds = new Set(
+    LEVEL_TWO.rewards
+      .filter(({ optional, secret }) => optional && secret)
+      .map(({ zoneId }) => zoneId),
+  );
+
+  for (const zone of LEVEL_TWO.zones) {
+    assert.ok(routeZoneIds.has(zone.id) || secretZoneIds.has(zone.id), `${zone.id} needs a route or secret`);
+  }
+
+  const mainStreetSecret = LEVEL_TWO.rewards.find(({ id }) => id === "main-street-alley-cache");
+  assert.deepEqual(mainStreetSecret, {
+    id: "main-street-alley-cache",
+    kind: "trash",
+    x: 6820,
+    zoneId: "suburban-main-street",
+    surfaceId: "victory-street",
+    surfaceY: 468,
+    optional: true,
+    secret: true,
+  });
+});
+
 test("Level 2 preserves its complete encounter teaching sequence and immutable data", () => {
   assert.deepEqual(levelTwoEncounterData().map(({ id }) => id), [
     "backyard-squirrel-tutorial",
