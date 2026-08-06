@@ -1909,7 +1909,7 @@ export function TrashDashGame() {
       return (
         <div className="screen-overlay character-select-overlay" data-testid="character-selection" role="dialog" aria-labelledby="character-selection-title">
           <div className="character-select-copy">
-            <span className="selection-kicker">CHOOSE YOUR RACCOON</span>
+            <span className="selection-kicker">Choose your raccoon</span>
             <h2 id="character-selection-title">Pick a runner</h2>
             <p>Every hero can clean up Alley Acres. Choose the style that feels right.</p>
             <div className="character-cards" role="radiogroup" aria-label="Playable characters">
