@@ -48,6 +48,7 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /confirm-character/);
   assert.match(game, /Choose your raccoon/);
   assert.match(game, /createCharacterSelectionState/);
+  assert.match(game, /levelTest === "creek" \|\| levelTest === "highway"/);
   assert.match(styles, /character-cards/);
   assert.match(game, /aria-label="Sprint"/);
   assert.match(game, /visibilityState === "hidden"/);

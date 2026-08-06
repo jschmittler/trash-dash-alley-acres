@@ -693,6 +693,7 @@ export function TrashDashGame() {
     const nextWorld = makeWorld(selectedProfile.id);
     const devParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
     const bossTest = devParams?.get("bossTest") ?? null;
+    const levelTest = devParams?.get("levelTest") ?? null;
     const powerupTest = devParams?.get("powerupTest") ?? null;
     const victoryTest = devParams?.get("victoryTest") ?? null;
     if (bossTest) {
@@ -707,6 +708,10 @@ export function TrashDashGame() {
       nextWorld.checkpointReached = true;
       nextWorld.checkpointIndex = LEVEL_ONE.checkpoints.length - 1;
       nextWorld.cameraX = 5280;
+    } else if (levelTest === "creek" || levelTest === "highway") {
+      nextWorld.player.x = levelTest === "creek" ? 1180 : 3000;
+      nextWorld.player.y = GROUND_Y - nextWorld.player.h;
+      nextWorld.cameraX = levelTest === "creek" ? 820 : 2520;
     } else if (powerupTest === "taco" || powerupTest === "cap") {
       nextWorld.player.x = powerupTest === "taco" ? 920 : 3580;
       nextWorld.player.y = powerupTest === "taco"
