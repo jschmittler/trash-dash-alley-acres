@@ -15,6 +15,11 @@ test("Jimothy production atlas has the six-column, 22-row contract", async () =>
 
   for (const [name, animation] of Object.entries(JIMOTHY_ANIMATIONS)) {
     assert.equal(typeof JIMOTHY_ANIMATION_BASELINES[name], "number", `${name} missing baseline metadata`);
+    assert.equal(
+      animation.offsetY,
+      Math.round(animation.drawHeight - (animation.baseline * animation.drawHeight) / CELL),
+      `${name} baseline compensation drifted`,
+    );
     for (let column = 0; column < animation.frames; column += 1) {
       let left = CELL;
       let top = CELL;

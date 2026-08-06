@@ -58,6 +58,12 @@ import {
   POWERUP_NOTICE_DURATION,
 } from "./powerup-announcement.mjs";
 import { evaluateVictoryRecord } from "./victory-phase.mjs";
+import {
+  DUMPSTER_DRAW_HEIGHT,
+  DUMPSTER_DRAW_WIDTH,
+  dumpsterDrawRect,
+  dumpsterFrameIndex,
+} from "./dumpster-render.mjs";
 
 type Screen = "title" | "characterSelect" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
@@ -173,9 +179,8 @@ const WIDTH = 960;
 const HEIGHT = 540;
 const GROUND_Y = 468;
 const WORLD_WIDTH = 6600;
-const DUMPSTER_DRAW_SIZE = 180;
 const DUMPSTER_RIGHT_MARGIN = 30;
-const DUMPSTER_GOAL_WORLD_X = BOSS_ARENA_CAMERA_X + WIDTH - DUMPSTER_RIGHT_MARGIN - DUMPSTER_DRAW_SIZE;
+const DUMPSTER_GOAL_WORLD_X = BOSS_ARENA_CAMERA_X + WIDTH - DUMPSTER_RIGHT_MARGIN - DUMPSTER_DRAW_WIDTH;
 const MOTION_CELL = 192;
 const ASSET_CELL = 256;
 const INITIAL_BROWSER_EXPERIENCE = {
@@ -1722,16 +1727,17 @@ export function TrashDashGame() {
         world.checkpointReached ? 1 : 0.62,
         midgroundPropsRef.current,
       );
-      const dumpsterFrameIndex = Math.floor(world.elapsed * 5) % 4;
+      const dumpsterFrameNumber = dumpsterFrameIndex(world.elapsed, world.bossDefeated);
       const dumpsterFrame = world.bossDefeated
-        ? dumpsterMotion.stink[dumpsterFrameIndex]
-        : dumpsterMotion.idle[dumpsterFrameIndex];
+        ? dumpsterMotion.stink[dumpsterFrameNumber]
+        : dumpsterMotion.idle[dumpsterFrameNumber];
+      const dumpsterRect = dumpsterDrawRect(DUMPSTER_GOAL_WORLD_X, camera, GROUND_Y);
       drawSprite(
         dumpsterFrame,
-        DUMPSTER_GOAL_WORLD_X - camera,
-        GROUND_Y - 150,
-        DUMPSTER_DRAW_SIZE,
-        DUMPSTER_DRAW_SIZE,
+        dumpsterRect.x,
+        dumpsterRect.y,
+        DUMPSTER_DRAW_WIDTH,
+        DUMPSTER_DRAW_HEIGHT,
         false,
         world.bossDefeated ? 1 : 0.45,
         dumpsterMotionRef.current,

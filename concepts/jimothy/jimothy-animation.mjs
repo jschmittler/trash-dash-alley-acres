@@ -1,3 +1,5 @@
+const CELL = 192;
+
 const entry = (row, frames, fps, loop, drawWidth, drawHeight, baseline = 184) => ({
   row,
   frames,
@@ -6,7 +8,10 @@ const entry = (row, frames, fps, loop, drawWidth, drawHeight, baseline = 184) =>
   drawWidth,
   drawHeight,
   baseline,
-  offsetY: 0,
+  // The renderer positions the destination rectangle from its bottom edge.
+  // Convert the source-cell baseline into destination pixels so feet stay on
+  // the same world surface for every animation size.
+  offsetY: Math.round(drawHeight - (baseline * drawHeight) / CELL),
 });
 
 // Full-parity animation manifest. Source art is right-facing and is flipped
