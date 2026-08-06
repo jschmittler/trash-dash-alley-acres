@@ -88,5 +88,8 @@ async function buildRow(name) {
 }
 
 await fs.mkdir(sheetsDir, { recursive: true });
-await buildRow("dumpster-idle");
-await buildRow("dumpster-stink");
+// The runtime atlas uses two explicit visual states. Keep the older idle/stink
+// sheets rebuildable for reference, but generate the grounded replacement rows
+// from the approved side-on source art.
+await buildRow("dumpster-sealed");
+await buildRow("dumpster-holy");

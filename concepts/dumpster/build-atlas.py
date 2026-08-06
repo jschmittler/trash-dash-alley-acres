@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Assemble the private dumpster idle and stink sheets into one review atlas.
+"""Assemble the sealed and holy dumpster sheets into one runtime atlas.
 
 The compositor intentionally uses only the Python standard library so the
 review asset can be rebuilt from a clean checkout without installing Pillow.
@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SHEETS = ROOT / "sheets"
-OUTPUT = ROOT / "dumpster-animation-atlas.png"
+OUTPUT = ROOT / "dumpster-holy-atlas.png"
 FRAME_SIZE = 192
 ROW_SIZE = FRAME_SIZE * 4
 STINK_SCALE_X = 1.0
@@ -98,8 +98,8 @@ def load_row(name: str) -> bytearray:
     return pixels
 
 
-def normalize_stink_row(pixels: bytearray) -> bytearray:
-    """Match stink-cell footprint to idle while keeping the wisps animated."""
+def normalize_row(pixels: bytearray) -> bytearray:
+    """Align each frame's contact baseline without scaling its silhouette."""
     normalized = bytearray(len(pixels))
     scaled_width = round(FRAME_SIZE * STINK_SCALE_X)
     x_offset = (FRAME_SIZE - scaled_width) // 2
@@ -129,10 +129,10 @@ def normalize_stink_row(pixels: bytearray) -> bytearray:
 
 
 def main() -> None:
-    idle = load_row("dumpster-idle")
-    stink = normalize_stink_row(load_row("dumpster-stink"))
+    sealed = normalize_row(load_row("dumpster-sealed"))
+    holy = normalize_row(load_row("dumpster-holy"))
 
-    atlas = idle + stink
+    atlas = sealed + holy
     write_png(OUTPUT, ROW_SIZE, FRAME_SIZE * 2, atlas)
 
     width, height, pixels = read_png(OUTPUT, ROW_SIZE, FRAME_SIZE * 2)
