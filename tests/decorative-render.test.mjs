@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { decorativeDrawRect, decorativeShadowRect, platformStripSegments } from "../app/decorative-render.mjs";
+import {
+  decorativeCollisionRect,
+  decorativeDrawRect,
+  decorativeShadowRect,
+  platformStripSegments,
+} from "../app/decorative-render.mjs";
 
 test("props preserve visible aspect ratio and share a baseline", () => {
   const props = ["bush", "tree", "bin", "crate", "checkpoint", "tires"];
@@ -17,6 +22,17 @@ test("contact shadows stay near each prop's grounded bottom", () => {
   assert.ok(shadow.x > rect.x && shadow.x < rect.x + rect.width);
   assert.ok(shadow.y >= rect.y + rect.height - 8);
   assert.ok(shadow.x + shadow.width <= rect.x + rect.width);
+});
+
+test("decorative collision geometry matches the visible sprite rectangle", () => {
+  const drawRect = decorativeDrawRect("crate", 878, 0, 468);
+  const collision = decorativeCollisionRect("crate", 878, 468);
+  assert.deepEqual(collision, {
+    x: drawRect.x,
+    y: drawRect.y,
+    w: drawRect.width,
+    h: drawRect.height,
+  });
 });
 
 for (const width of [24, 64, 180, 420]) {

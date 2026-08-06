@@ -68,10 +68,12 @@ import {
 } from "./dumpster-render.mjs";
 import {
   DECORATIVE_PROPS,
+  decorativeCollisionRect,
   decorativeDrawRect,
   decorativeShadowRect,
   platformStripSegments,
 } from "./decorative-render.mjs";
+import { pickupYAboveSurface } from "./pickup-layout.mjs";
 
 type Screen = "title" | "characterSelect" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
@@ -345,11 +347,21 @@ const groundSegments: Platform[] = [
   { x: 4870, y: GROUND_Y, w: 1730, h: 90, kind: "ground" },
 ];
 
+const makeCratePlatform = (x: number, groundY = GROUND_Y): Platform => ({
+  ...decorativeCollisionRect("crate", x, groundY),
+  kind: "box",
+});
+
+const cratePlatforms: Platform[] = [
+  makeCratePlatform(878),
+  makeCratePlatform(938),
+  makeCratePlatform(5100),
+  makeCratePlatform(6150),
+];
+
 const platforms: Platform[] = [
   ...groundSegments,
   { x: 620, y: 366, w: 220, h: 22, kind: "branch" },
-  { x: 905, y: 420, w: 54, h: 48, kind: "box" },
-  { x: 965, y: 420, w: 54, h: 48, kind: "box" },
   { x: 1160, y: 396, w: 160, h: 72, kind: "ground" },
   { x: 1510, y: 352, w: 270, h: 22, kind: "branch" },
   { x: 1810, y: 300, w: 190, h: 22, kind: "branch" },
@@ -365,6 +377,7 @@ const platforms: Platform[] = [
   { x: 4560, y: 380, w: 180, h: 22, kind: "metal" },
   { x: 5000, y: 382, w: 180, h: 22, kind: "metal" },
   { x: 5230, y: 330, w: 170, h: 22, kind: "metal" },
+  ...cratePlatforms,
 ];
 
 const scenery = [
@@ -374,11 +387,6 @@ const scenery = [
   { x: 2860, groundY: GROUND_Y, prop: "tree" as const },
   { x: 3940, groundY: GROUND_Y, prop: "bin" as const },
   { x: 4480, groundY: GROUND_Y, prop: "tires" as const },
-];
-
-const recycleScenery = [
-  { x: 5100, groundY: GROUND_Y, prop: "crate" as const },
-  { x: 6150, groundY: GROUND_Y, prop: "crate" as const },
 ];
 
 const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y): Enemy => {
@@ -445,6 +453,14 @@ const makePickup = (kind: PickupKind, x: number, y: number, phase = 0): Pickup =
   phase,
 });
 
+const makeSurfacePickup = (
+  kind: PickupKind,
+  x: number,
+  surfaceY: number,
+  phase = 0,
+  gap = 18,
+) => makePickup(kind, x, pickupYAboveSurface(kind, surfaceY, gap), phase);
+
 const initialEnemies = () => [
   makeEnemy("pigeon", 520),
   makeEnemy("pigeon", 610),
@@ -464,34 +480,34 @@ const initialEnemies = () => [
 ];
 
 const initialPickups = () => [
-  makePickup("trash", 300, 410),
-  makePickup("trash", 400, 410, 1),
-  makePickup("trash", 690, 320, 2),
-  makePickup("trash", 760, 320, 3),
-  makePickup("taco", 935, 374),
-  makePickup("trash", 1220, 342, 1),
-  makePickup("trash", 1545, 406, 2),
-  makePickup("trash", 1660, 305, 3),
-  makePickup("trash", 1735, 305, 4),
-  makePickup("cap", 2000, 236),
-  makePickup("trash", 2255, 315, 2),
-  makePickup("trash", 2380, 405, 3),
-  makePickup("trash", 2710, 420),
-  makePickup("trash", 2790, 335, 1),
-  makePickup("trash", 2870, 335, 2),
-  makePickup("trash", 3250, 405, 3),
-  makePickup("cap", 3600, 255),
-  makePickup("trash", 3780, 410),
-  makePickup("trash", 3875, 344, 2),
-  makePickup("trash", 4150, 300, 3),
-  makePickup("trash", 4250, 300, 4),
-  makePickup("trash", 4460, 352),
-  makePickup("taco", 4420, 268),
-  makePickup("trash", 5025, 330, 1),
-  makePickup("trash", 5260, 278, 2),
-  makePickup("trash", 5320, 410),
-  makePickup("trash", 5405, 410, 2),
-  makePickup("trash", 5460, 410, 3),
+  makeSurfacePickup("trash", 300, GROUND_Y),
+  makeSurfacePickup("trash", 400, GROUND_Y, 1),
+  makeSurfacePickup("trash", 690, 366, 2),
+  makeSurfacePickup("trash", 760, 366, 3),
+  makeSurfacePickup("taco", 935, cratePlatforms[0].y),
+  makeSurfacePickup("trash", 1220, 396, 1),
+  makeSurfacePickup("trash", 1545, 352, 2),
+  makeSurfacePickup("trash", 1660, 352, 3),
+  makeSurfacePickup("trash", 1735, 352, 4),
+  makeSurfacePickup("cap", 1940, 300),
+  makeSurfacePickup("trash", 2255, 360, 2),
+  makeSurfacePickup("trash", 2365, 360, 3),
+  makeSurfacePickup("trash", 2710, 385),
+  makeSurfacePickup("trash", 2790, 385, 1),
+  makeSurfacePickup("trash", 2870, 385, 2),
+  makeSurfacePickup("trash", 3250, GROUND_Y, 3),
+  makeSurfacePickup("cap", 3600, 312),
+  makeSurfacePickup("trash", 3780, GROUND_Y),
+  makeSurfacePickup("trash", 3875, 392, 2),
+  makeSurfacePickup("trash", 4150, 350, 3),
+  makeSurfacePickup("trash", 4210, 350, 4),
+  makeSurfacePickup("trash", 4460, 320),
+  makeSurfacePickup("taco", 4420, 320),
+  makeSurfacePickup("trash", 5025, 382, 1),
+  makeSurfacePickup("trash", 5260, 330, 2),
+  makeSurfacePickup("trash", 5320, GROUND_Y),
+  makeSurfacePickup("trash", 5405, GROUND_Y, 2),
+  makeSurfacePickup("trash", 5460, GROUND_Y, 3),
 ];
 
 const makeWorld = (selectedCharacterId = "raccoon"): World => ({
@@ -722,7 +738,9 @@ export function TrashDashGame() {
       nextWorld.cameraX = 5280;
     } else if (powerupTest === "taco" || powerupTest === "cap") {
       nextWorld.player.x = powerupTest === "taco" ? 920 : 3580;
-      nextWorld.player.y = powerupTest === "taco" ? 370 : 215;
+      nextWorld.player.y = powerupTest === "taco"
+        ? cratePlatforms[0].y - nextWorld.player.h
+        : 215;
       nextWorld.cameraX = powerupTest === "taco" ? 560 : 3320;
     } else if (victoryTest === "1") {
       nextWorld.player.x = 6350;
@@ -1628,12 +1646,6 @@ export function TrashDashGame() {
         drawDecorativeProp(item.prop, item.x, item.groundY, camera);
       }
 
-      for (const item of recycleScenery) {
-        const x = item.x - camera;
-        if (x < -140 || x > WIDTH + 140) continue;
-        drawDecorativeProp(item.prop, item.x, item.groundY, camera);
-      }
-
       for (const platform of platforms) {
         const x = platform.x - camera;
         if (x + platform.w < -80 || x > WIDTH + 80) continue;
@@ -1656,7 +1668,7 @@ export function TrashDashGame() {
         } else if (platform.kind === "metal") {
           drawPlatformStrip("metal", x, platform.y, platform.w);
         } else {
-          drawDecorativeProp("crate", platform.x + platform.w / 2 - 54, platform.y + platform.h, camera);
+          drawDecorativeProp("crate", platform.x, platform.y + platform.h, camera);
         }
       }
 

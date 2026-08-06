@@ -10,6 +10,11 @@ export function decorativeDrawRect(prop, worldX, cameraX, groundY) {
   return { x: Math.round(worldX - cameraX), y: Math.round(groundY - height), width, height };
 }
 
+export function decorativeCollisionRect(prop, worldX, groundY) {
+  const rect = decorativeDrawRect(prop, worldX, 0, groundY);
+  return { x: rect.x, y: rect.y, w: rect.width, h: rect.height };
+}
+
 export function decorativeShadowRect(prop, drawRect) {
   const meta = DECORATIVE_PROPS[prop];
   if (!meta) throw new Error(`Unknown decorative prop: ${prop}`);
