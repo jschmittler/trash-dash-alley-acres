@@ -1,0 +1,37 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import { LEVEL_TWO } from "../app/level-two.mjs";
+
+test("all optional routes point to known rewards and encounters", () => {
+  const rewards = new Set(LEVEL_TWO.rewards.map(({ id }) => id));
+  const encounters = new Set(LEVEL_TWO.encounters.map(({ id }) => id));
+  for (const route of LEVEL_TWO.routeChoices) {
+    for (const id of route.rewardIds) assert.ok(rewards.has(id));
+    for (const id of route.bypassEncounterIds ?? []) assert.ok(encounters.has(id));
+  }
+});
+
+test("large encounters own at least 900 pixels before another large encounter", () => {
+  const large = LEVEL_TWO.encounters.filter(({ sizeClass }) => sizeClass === "large");
+  for (let index = 1; index < large.length; index += 1) {
+    assert.ok(large[index].spawnX - large[index - 1].recoveryEndX >= 0);
+  }
+});
+
+test("Level 2 has six optional routes, four ordered checkpoints, and Brutus metadata", () => {
+  assert.equal(LEVEL_TWO.routeChoices.length, 6);
+  assert.equal(LEVEL_TWO.routeChoices.every(({ optional }) => optional), true);
+  assert.equal(LEVEL_TWO.checkpoints.length, 4);
+  assert.ok(LEVEL_TWO.checkpoints.every(({ x, respawnX }) => respawnX < x));
+  assert.deepEqual(LEVEL_TWO.boss, {
+    id: "brutus-bin-hound",
+    kind: "brutus",
+    runwayStartX: 5300,
+    triggerX: 5750,
+    arenaStartX: 5700,
+    arenaEndX: 6550,
+    checkpointId: "boss-runway-checkpoint",
+  });
+  assert.deepEqual(LEVEL_TWO.exit, { nextLevelId: "level-3", x: 7120 });
+});
