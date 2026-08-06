@@ -89,3 +89,23 @@ test("level one definition is deeply immutable", () => {
   assert.equal(Object.isFrozen(LEVEL_ONE.encounters[0].enemies[0]), true);
   assert.equal(Object.isFrozen(LEVEL_ONE_ENEMY_KINDS), true);
 });
+
+test("Level 1 enemy placement references stable surfaces and flight bands", () => {
+  const surfaceIds = LEVEL_ONE.surfaces.map(({ id }) => id);
+  const flightBandIds = LEVEL_ONE.flightBands.map(({ id }) => id);
+  const flyingKinds = new Set(["pigeon", "wasp", "mosquito"]);
+  const enemies = levelOneEncounterData().flatMap(({ enemies: spawns }) => spawns);
+
+  assert.equal(new Set(surfaceIds).size, surfaceIds.length);
+  assert.equal(new Set(flightBandIds).size, flightBandIds.length);
+  for (const enemy of enemies) {
+    if (flyingKinds.has(enemy.kind)) {
+      assert.equal(typeof enemy.flightBand, "string");
+      assert.ok(flightBandIds.includes(enemy.flightBand));
+    } else {
+      assert.equal(typeof enemy.surfaceId, "string");
+      assert.ok(surfaceIds.includes(enemy.surfaceId));
+    }
+  }
+  assert.ok(surfaceIds.includes(LEVEL_ONE.boss.surfaceId));
+});

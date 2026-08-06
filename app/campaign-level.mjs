@@ -15,11 +15,12 @@ export function campaignZoneAt(level, x) {
 }
 
 export function campaignLightingAt(level, x) {
-  const zone = campaignZoneAt(level, x);
+  const coordinate = Number.isFinite(x) ? x : 0;
+  const zone = campaignZoneAt(level, coordinate);
   const span = Math.max(1, zone.endX - zone.startX);
   return {
     lighting: zone.lighting,
-    progress: Math.max(0, Math.min(1, (x - zone.startX) / span)),
+    progress: Math.max(0, Math.min(1, (coordinate - zone.startX) / span)),
   };
 }
 

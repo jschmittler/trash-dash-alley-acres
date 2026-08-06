@@ -31,6 +31,13 @@ test("generic zone and lighting lookup preserve Level 1 boundaries", () => {
   assert.equal(campaignLightingAt(LEVEL_ONE, 5200).lighting, "moonlit");
 });
 
+test("lighting lookup normalizes a non-finite coordinate before calculating progress", () => {
+  assert.deepEqual(campaignLightingAt(LEVEL_ONE, undefined), {
+    lighting: "late-afternoon",
+    progress: 0,
+  });
+});
+
 test("Level 1 exposes the shared campaign contract fields", () => {
   assert.equal(LEVEL_ONE.title, "Woodlands to City Limits");
   assert.equal(LEVEL_ONE.worldWidth, 6600);
