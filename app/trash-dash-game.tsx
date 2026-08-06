@@ -1546,7 +1546,13 @@ export function TrashDashGame() {
       context.restore();
     };
 
-    const drawDecorativeProp = (prop: keyof typeof DECORATIVE_PROPS, worldX: number, groundY: number, alpha = 1) => {
+    const drawDecorativeProp = (
+      prop: keyof typeof DECORATIVE_PROPS,
+      worldX: number,
+      groundY: number,
+      camera: number,
+      alpha = 1,
+    ) => {
       const rect = decorativeDrawRect(prop, worldX, camera, groundY);
       const meta = DECORATIVE_PROPS[prop];
       const sourceX = meta.frame.column * ASSET_CELL + Math.round((ASSET_CELL - meta.sourceWidth) / 2);
@@ -1617,13 +1623,13 @@ export function TrashDashGame() {
       for (const item of scenery) {
         const x = item.x - camera;
         if (x < -160 || x > WIDTH + 160) continue;
-        drawDecorativeProp(item.prop, item.x, item.groundY);
+        drawDecorativeProp(item.prop, item.x, item.groundY, camera);
       }
 
       for (const item of recycleScenery) {
         const x = item.x - camera;
         if (x < -140 || x > WIDTH + 140) continue;
-        drawDecorativeProp(item.prop, item.x, item.groundY);
+        drawDecorativeProp(item.prop, item.x, item.groundY, camera);
       }
 
       for (const platform of platforms) {
@@ -1648,11 +1654,11 @@ export function TrashDashGame() {
         } else if (platform.kind === "metal") {
           drawPlatformStrip("metal", x, platform.y, platform.w);
         } else {
-          drawDecorativeProp("crate", platform.x + platform.w / 2 - 54, platform.y + platform.h);
+          drawDecorativeProp("crate", platform.x + platform.w / 2 - 54, platform.y + platform.h, camera);
         }
       }
 
-      drawDecorativeProp("checkpoint", 2988, GROUND_Y, world.checkpointReached ? 1 : 0.62);
+      drawDecorativeProp("checkpoint", 2988, GROUND_Y, camera, world.checkpointReached ? 1 : 0.62);
       const dumpsterRect = dumpsterDrawRect(DUMPSTER_GOAL_WORLD_X, camera, GROUND_Y);
       const dumpsterState = selectDumpsterState(world.bossDefeated);
       const revealElapsed = world.dumpsterRevealStartedAt === null

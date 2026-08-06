@@ -85,11 +85,11 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(characterProfiles, /trashy-selection-portrait\.png/);
   assert.match(characterProfiles, /jimothy-selection-portrait\.png/);
   assert.match(game, /enemy-motion\.png/);
-  assert.match(game, /midground-props\.png/);
-  assert.match(game, /recycle-crates-v2\.png/);
+  assert.match(game, /assets\/generated\/decorative-atlas\.png/);
+  assert.match(game, /assets\/generated\/branch-platform-strip\.png/);
+  assert.match(game, /assets\/generated\/metal-platform-strip\.png/);
   assert.match(game, /ground-seamless\.png/);
-  assert.match(game, /const drawBranchPlatform/);
-  assert.match(game, /const drawMetalPlatform/);
+  assert.match(game, /drawPlatformStrip/);
   assert.match(game, /const frameIndex = Math\.floor\(enemy\.phase\) % 4/);
   assert.match(game, /nextEnemyIntent/);
   assert.match(game, /animationState: keyof typeof BOSS_ANIMATIONS/);
@@ -171,8 +171,9 @@ test("ships the playable assets and removes the starter preview", async () => {
   await access(new URL("../public/assets/generated/trashy-selection-portrait.png", import.meta.url));
   await access(new URL("../public/assets/generated/jimothy-selection-portrait.png", import.meta.url));
   await access(new URL("../public/assets/glider-motion.png", import.meta.url));
-  await access(new URL("../public/assets/midground-props.png", import.meta.url));
-  await access(new URL("../public/assets/recycle-crates-v2.png", import.meta.url));
+  await access(new URL("../public/assets/generated/decorative-atlas.png", import.meta.url));
+  await access(new URL("../public/assets/generated/branch-platform-strip.png", import.meta.url));
+  await access(new URL("../public/assets/generated/metal-platform-strip.png", import.meta.url));
   await access(new URL("../public/assets/ground-seamless.png", import.meta.url));
   await access(new URL("../public/og.png", import.meta.url));
   await assert.rejects(access(new URL("../app/_sites-preview/SkeletonPreview.tsx", import.meta.url)));

@@ -32,14 +32,18 @@ test("builds a complete GitHub Pages artifact under the repository base path", a
   assert.match(javascript, /assets\/generated\/player-hero-motion\.png/);
   assert.match(javascript, /assets\/generated\/boss-motion\.png/);
   assert.match(javascript, /assets\/audio\/trash-heap-tyrant-loop\.m4a/);
-  assert.match(javascript, /assets\/recycle-crates-v2\.png/);
+  assert.match(javascript, /assets\/generated\/decorative-atlas\.png/);
+  assert.match(javascript, /assets\/generated\/branch-platform-strip\.png/);
+  assert.match(javascript, /assets\/generated\/metal-platform-strip\.png/);
   assert.doesNotMatch(javascript, /["']\/assets\/generated\/player-hero-motion\.png/);
 
   await access(new URL(".nojekyll", pagesRoot));
   await access(new URL("assets/generated/player-hero-motion.png", pagesRoot));
   await access(new URL("assets/generated/boss-motion.png", pagesRoot));
   await access(new URL("assets/audio/trash-heap-tyrant-loop.m4a", pagesRoot));
-  await access(new URL("assets/recycle-crates-v2.png", pagesRoot));
+  await access(new URL("assets/generated/decorative-atlas.png", pagesRoot));
+  await access(new URL("assets/generated/branch-platform-strip.png", pagesRoot));
+  await access(new URL("assets/generated/metal-platform-strip.png", pagesRoot));
   await access(new URL("assets/audio/raccoon-rush-loop.m4a", pagesRoot));
   await access(new URL("og.png", pagesRoot));
 });
