@@ -573,7 +573,7 @@ export function TrashDashGame() {
   const varietyEnemyMotionRef = useRef<HTMLImageElement | null>(null);
   const trashPickupMotionRef = useRef<HTMLImageElement | null>(null);
   const tacoPowerMotionRef = useRef<HTMLImageElement | null>(null);
-  const dumpsterMotionRef = useRef<HTMLImageElement | null>(null);
+  const dumpsterAtlasRef = useRef<HTMLImageElement | null>(null);
   const midgroundPropsRef = useRef<HTMLImageElement | null>(null);
   const recycleCratesRef = useRef<HTMLImageElement | null>(null);
   const groundTileRef = useRef<HTMLImageElement | null>(null);
@@ -844,7 +844,7 @@ export function TrashDashGame() {
         varietyEnemyMotionRef.current = varietyEnemyAtlas;
         trashPickupMotionRef.current = trashPickupAtlas;
         tacoPowerMotionRef.current = tacoPowerAtlas;
-        dumpsterMotionRef.current = dumpsterAtlas;
+        dumpsterAtlasRef.current = dumpsterAtlas;
         midgroundPropsRef.current = propAtlas;
         recycleCratesRef.current = crateAtlas;
         groundTileRef.current = groundTile;
@@ -1746,7 +1746,7 @@ export function TrashDashGame() {
           DUMPSTER_DRAW_HEIGHT,
           false,
           0.62,
-          dumpsterMotionRef.current,
+          dumpsterAtlasRef.current,
         );
       } else {
         // Crossfade treatment only; both rows use the same destination rect,
@@ -1759,7 +1759,7 @@ export function TrashDashGame() {
           DUMPSTER_DRAW_HEIGHT,
           false,
           0.62 * (1 - revealProgress),
-          dumpsterMotionRef.current,
+          dumpsterAtlasRef.current,
         );
         drawSprite(
           holyFrame,
@@ -1769,7 +1769,7 @@ export function TrashDashGame() {
           DUMPSTER_DRAW_HEIGHT,
           false,
           revealProgress,
-          dumpsterMotionRef.current,
+          dumpsterAtlasRef.current,
         );
       }
 
