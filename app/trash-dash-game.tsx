@@ -137,7 +137,7 @@ interface Player extends Rect {
   attackId: number;
   boostCooldown: number;
   anim: number;
-  animationName: keyof typeof PLAYER_ANIMATIONS;
+  animationName: string;
   animationElapsed: number;
   landingTimer: number;
   airtime: number;
@@ -150,6 +150,7 @@ interface Player extends Rect {
 }
 
 interface World {
+  selectedCharacterId: string;
   player: Player;
   enemies: Enemy[];
   pickups: Pickup[];
@@ -497,7 +498,8 @@ const initialPickups = () => [
   makePickup("trash", 5460, 410, 3),
 ];
 
-const makeWorld = (): World => ({
+const makeWorld = (selectedCharacterId = "raccoon"): World => ({
+  selectedCharacterId: getPlayableCharacter(selectedCharacterId).id,
   player: {
     x: 125,
     y: GROUND_Y - 46,
@@ -560,6 +562,7 @@ export function TrashDashGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const atlasRef = useRef<HTMLImageElement | null>(null);
   const playerHeroMotionRef = useRef<HTMLImageElement | null>(null);
+  const jimothyHeroMotionRef = useRef<HTMLImageElement | null>(null);
   const bossMotionRef = useRef<HTMLImageElement | null>(null);
   const enemyMotionRef = useRef<HTMLImageElement | null>(null);
   const varietyEnemyMotionRef = useRef<HTMLImageElement | null>(null);
@@ -701,8 +704,9 @@ export function TrashDashGame() {
     disposeGameMusic(musicRef.current);
     musicRef.current = createGameMusic(assetUrl("assets/audio/raccoon-rush-loop.m4a"));
     void playGameMusic(musicRef.current, { muted: mutedRef.current, restart: true });
-    selectedCharacterRef.current = getPlayableCharacter(characterId).id;
-    const nextWorld = makeWorld();
+    const selectedProfile = getPlayableCharacter(characterId);
+    selectedCharacterRef.current = selectedProfile.id;
+    const nextWorld = makeWorld(selectedProfile.id);
     const devParams = import.meta.env.DEV ? new URLSearchParams(window.location.search) : null;
     const bossTest = devParams?.get("bossTest") ?? null;
     const powerupTest = devParams?.get("powerupTest") ?? null;
@@ -809,6 +813,7 @@ export function TrashDashGame() {
     void Promise.all([
       loadImage(assetUrl("assets/raccoon-sprites.png")),
       loadImage(assetUrl(RACCOON_PROFILE.atlasSrc)),
+      loadImage(assetUrl(getPlayableCharacter("jimothy").atlasSrc)),
       loadImage(assetUrl("assets/generated/boss-motion.png")),
       loadImage(assetUrl("assets/enemy-motion.png")),
       loadImage(assetUrl("assets/generated/enemy-variety-motion.png")),
@@ -823,10 +828,11 @@ export function TrashDashGame() {
       loadImage(assetUrl("assets/backgrounds/city-far.png")),
       loadImage(assetUrl("assets/backgrounds/city-near.png")),
     ])
-      .then(([atlas, playerHeroAtlas, bossAtlas, enemyAtlas, varietyEnemyAtlas, trashPickupAtlas, tacoPowerAtlas, dumpsterAtlas, propAtlas, crateAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
+      .then(([atlas, playerHeroAtlas, jimothyHeroAtlas, bossAtlas, enemyAtlas, varietyEnemyAtlas, trashPickupAtlas, tacoPowerAtlas, dumpsterAtlas, propAtlas, crateAtlas, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
         if (cancelled) return;
         atlasRef.current = atlas;
         playerHeroMotionRef.current = playerHeroAtlas;
+        jimothyHeroMotionRef.current = jimothyHeroAtlas;
         bossMotionRef.current = bossAtlas;
         enemyMotionRef.current = enemyAtlas;
         varietyEnemyMotionRef.current = varietyEnemyAtlas;
@@ -1199,6 +1205,7 @@ export function TrashDashGame() {
 
     const update = (world: World, dt: number) => {
       const player = world.player;
+      const profile = getPlayableCharacter(world.selectedCharacterId);
       const wasGrounded = player.grounded;
       const previousY = player.y;
       const previousBottom = previousY + player.h;
@@ -1349,7 +1356,7 @@ export function TrashDashGame() {
         burst(world, pickup.x + pickup.w / 2, pickup.y + pickup.h / 2, pickup.kind === "cap" ? "#ffd248" : "#8bdc63", 8);
       }
 
-      const nextPlayerAnimation = selectCharacterAnimation(RACCOON_PROFILE, {
+      const nextPlayerAnimation = selectCharacterAnimation(profile, {
         form: player.large ? "large" : "small",
         defeated: player.endSequence === "gameover",
         hurt: player.hurtTimer > 0,
@@ -1405,9 +1412,10 @@ export function TrashDashGame() {
           enemy.y = enemy.surfaceY - enemy.h + (flyingEnemies.has(enemy.kind) ? Math.sin(enemy.phase * 0.82) * 11 : 0);
         }
 
-        const playerAnimation = PLAYER_ANIMATIONS[player.animationName];
+        const profileAnimations = profile.animations as Record<string, typeof PLAYER_ANIMATIONS.small_idle>;
+        const playerAnimation = profileAnimations[player.animationName] ?? profileAnimations.small_idle;
         const playerFrameIndex = animationFrame(playerAnimation, player.animationElapsed);
-        if (player.large && player.animationName === "large_tail_swipe" && isTailSwipeActive(playerFrameIndex)) {
+        if (player.large && player.animationName === "large_tail_swipe" && (isTailSwipeActive(playerFrameIndex) || profile.attackFrames.includes(playerFrameIndex))) {
           const attackRect: Rect = {
             x: player.facing > 0 ? player.x + player.w - 4 : player.x - 58,
             y: player.y + 8,
@@ -1817,7 +1825,9 @@ export function TrashDashGame() {
 
       const player = world.player;
       const playerX = player.x - camera;
-      const playerAnimation = PLAYER_ANIMATIONS[player.animationName];
+      const profile = getPlayableCharacter(world.selectedCharacterId);
+      const profileAnimations = profile.animations as Record<string, typeof PLAYER_ANIMATIONS.small_idle>;
+      const playerAnimation = profileAnimations[player.animationName] ?? profileAnimations.small_idle;
       const playerFrameIndex = animationFrame(playerAnimation, player.animationElapsed);
       const frame = [
         playerFrameIndex * MOTION_CELL,
@@ -1836,7 +1846,7 @@ export function TrashDashGame() {
         drawH,
         player.facing < 0,
         player.hurtTimer <= 0 && player.invulnerable > 0 && Math.floor(player.invulnerable * 18) % 2 ? 0.45 : 1,
-        playerHeroMotionRef.current,
+        world.selectedCharacterId === "jimothy" ? jimothyHeroMotionRef.current : playerHeroMotionRef.current,
       );
 
       for (const particle of world.particles) {
