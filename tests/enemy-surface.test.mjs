@@ -54,12 +54,30 @@ test("clips a requested patrol range to the supporting ground segment", () => {
   );
 });
 
+test("explicit surfaceId wins over a nearby surface at the same height", () => {
+  const authoredSurfaces = [
+    { id: "left", x: 0, y: 400, w: 200 },
+    { id: "right", x: 220, y: 400, w: 200 },
+  ];
+  const patrol = createEnemyPatrol({
+    x: 260,
+    width: 40,
+    surfaceY: 400,
+    surfaceId: "left",
+    patrolRadius: 100,
+    grounded: true,
+  }, authoredSurfaces);
+
+  assert.equal(patrol.surfaceId, "left");
+  assert.ok(patrol.spawnX <= 160);
+});
+
 test("resolves actual Level 2 grounded enemies against their authored surfaces", () => {
   const widths = { squirrel: 50, terrier: 64, skunk: 58 };
   const expected = {
-    squirrel: { spawnX: 800, minX: 720, maxX: 930, surfaceY: 332 },
-    terrier: { spawnX: 1580, minX: 1420, maxX: 2480, surfaceY: 468 },
-    skunk: { spawnX: 2920, minX: 2800, maxX: 3100, surfaceY: 468 },
+    squirrel: { spawnX: 800, minX: 720, maxX: 930, surfaceY: 332, surfaceId: "backyard-fence" },
+    terrier: { spawnX: 1580, minX: 1420, maxX: 2480, surfaceY: 468, surfaceId: "street-ground" },
+    skunk: { spawnX: 2920, minX: 2800, maxX: 3100, surfaceY: 468, surfaceId: "obstacle-lawn" },
   };
 
   for (const kind of Object.keys(widths)) {

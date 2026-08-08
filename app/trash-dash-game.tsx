@@ -80,7 +80,7 @@ import { levelBackgroundBlendAt, PARALLAX_SPEEDS } from "./level-background.mjs"
 
 type Screen = "title" | "characterSelect" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
-type PlatformKind = "ground" | "branch" | "metal" | "box";
+type PlatformKind = "ground" | "branch" | "metal" | "crate";
 type PickupKind = "trash" | "taco" | "cap";
 type EnemyKind =
   | "pigeon" | "slime" | "beetle" | "possum" | "boss"
@@ -213,6 +213,7 @@ interface World {
   checkpoints: CampaignLevelDefinition["checkpoints"];
   surfaces: CampaignLevelDefinition["surfaces"];
   hazards: CampaignLevelDefinition["surfaces"];
+  platforms: Platform[];
   selectedCharacterId: string;
   player: Player;
   enemies: Enemy[];
@@ -259,6 +260,15 @@ const levelTwoTestStarts: Record<string, [number, number]> = {
   drainage: [4350, 3990],
   runway: [5400, 5040],
   "main-street": [6660, 6240],
+};
+
+const levelTwoTestSurfaces: Record<keyof typeof levelTwoTestStarts, string> = {
+  backyard: "backyard-lawn",
+  street: "street-ground",
+  obstacle: "obstacle-lawn",
+  drainage: "drainage-entry-lawn",
+  runway: "boss-runway",
+  "main-street": "victory-street",
 };
 
 const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
@@ -407,17 +417,9 @@ const sprites = {
   horizon: [554, 952, 879, 133] as Frame,
 } as const;
 
-const groundSegments: Platform[] = [
-  { x: 0, y: GROUND_Y, w: 1380, h: 90, kind: "ground" },
-  { x: 1490, y: GROUND_Y, w: 980, h: 90, kind: "ground" },
-  { x: 2590, y: GROUND_Y, w: 1020, h: 90, kind: "ground" },
-  { x: 3730, y: GROUND_Y, w: 1010, h: 90, kind: "ground" },
-  { x: 4870, y: GROUND_Y, w: 1730, h: 90, kind: "ground" },
-];
-
 const makeCratePlatform = (x: number, groundY = GROUND_Y): Platform => ({
   ...decorativeCollisionRect("crate", x, groundY),
-  kind: "box",
+  kind: "crate",
 });
 
 const cratePlatforms: Platform[] = [
@@ -427,26 +429,17 @@ const cratePlatforms: Platform[] = [
   makeCratePlatform(6150),
 ];
 
-const platforms: Platform[] = [
-  ...groundSegments,
-  { x: 620, y: 366, w: 220, h: 22, kind: "branch" },
-  { x: 1160, y: 396, w: 160, h: 72, kind: "ground" },
-  { x: 1510, y: 352, w: 270, h: 22, kind: "branch" },
-  { x: 1810, y: 300, w: 190, h: 22, kind: "branch" },
-  { x: 2070, y: 260, w: 175, h: 22, kind: "branch" },
-  { x: 2220, y: 360, w: 190, h: 22, kind: "branch" },
-  { x: 2660, y: 385, w: 240, h: 22, kind: "branch" },
-  { x: 3000, y: 330, w: 180, h: 22, kind: "branch" },
-  { x: 3300, y: 372, w: 180, h: 22, kind: "branch" },
-  { x: 3520, y: 312, w: 150, h: 22, kind: "branch" },
-  { x: 3800, y: 392, w: 190, h: 22, kind: "metal" },
-  { x: 4030, y: 350, w: 230, h: 22, kind: "metal" },
-  { x: 4300, y: 320, w: 210, h: 22, kind: "metal" },
-  { x: 4560, y: 380, w: 180, h: 22, kind: "metal" },
-  { x: 5000, y: 382, w: 180, h: 22, kind: "metal" },
-  { x: 5230, y: 330, w: 170, h: 22, kind: "metal" },
-  ...cratePlatforms,
-];
+const mapLevelSurfacesToPlatforms = (
+  surfaces: CampaignLevelDefinition["surfaces"],
+): Platform[] => surfaces
+  .filter(({ hazard }) => !hazard)
+  .map(({ x, y, w, h, kind }) => ({
+    x,
+    y,
+    w,
+    h,
+    kind: kind === "crate" || (kind as string) === "box" ? "crate" : kind,
+  }));
 
 const scenery = [
   { x: 360, groundY: GROUND_Y, prop: "bush" as const },
@@ -614,6 +607,7 @@ const makeWorld = (
     checkpoints: runtime.checkpoints,
     surfaces: runtime.surfaces,
     hazards: runtime.hazards,
+    platforms: mapLevelSurfacesToPlatforms(runtime.surfaces),
     selectedCharacterId: selectedProfile.id,
     player,
     enemies: runtime.enemies.concat(makeEnemy({
@@ -840,6 +834,22 @@ export function TrashDashGame() {
       nextWorld.checkpointReached = true;
       nextWorld.checkpointIndex = nextWorld.checkpoints.length - 1;
       nextWorld.cameraX = 5280;
+    } else if (levelTest !== null && Object.hasOwn(levelTwoTestStarts, levelTest)) {
+      const route = levelTest as keyof typeof levelTwoTestStarts;
+      const [requestedX, requestedCameraX] = levelTwoTestStarts[route];
+      const surface = nextWorld.surfaces.find(({ id }) => id === levelTwoTestSurfaces[route]);
+      if (surface) {
+        nextWorld.player.x = clamp(requestedX, surface.x, surface.x + surface.w - nextWorld.player.w);
+        nextWorld.player.y = surface.y - nextWorld.player.h;
+        nextWorld.player.grounded = true;
+      }
+      nextWorld.cameraX = clamp(requestedCameraX, 0, nextWorld.worldWidth - WIDTH);
+      if (route === "main-street") {
+        nextWorld.bossDefeated = true;
+        nextWorld.dumpsterRevealStartedAt = 0;
+        const boss = nextWorld.enemies.find(({ kind }) => kind === "boss");
+        if (boss) boss.active = false;
+      }
     } else if (backgroundTest) {
       const backgroundStarts: Record<string, [number, number]> = {
         woodland: [620, 260],
@@ -1477,7 +1487,7 @@ export function TrashDashGame() {
       player.x = Math.max(0, Math.min(world.worldWidth - player.w, player.x));
       player.grounded = false;
 
-      for (const platform of platforms) {
+      for (const platform of world.platforms) {
         const bottom = player.y + player.h;
         const overlapsX = player.x + player.w > platform.x + 4 && player.x < platform.x + platform.w - 4;
         if (overlapsX && player.vy >= 0 && previousBottom <= platform.y + 8 && bottom >= platform.y) {
@@ -1499,7 +1509,7 @@ export function TrashDashGame() {
         return;
       }
 
-      if (!world.arenaActive && player.x >= world.level.boss.triggerX) enterBossArena(world);
+      if (!world.arenaActive && !world.bossDefeated && player.x >= world.level.boss.triggerX) enterBossArena(world);
       if (world.arenaActive) player.x = clampArenaPlayerX(world, player.x, player.w);
 
       const nextCheckpointIndex = world.checkpoints.findIndex((checkpoint, index) =>
@@ -1849,7 +1859,7 @@ export function TrashDashGame() {
         drawDecorativeProp(item.prop, item.x, item.groundY, camera);
       }
 
-      for (const platform of platforms) {
+      for (const platform of world.platforms) {
         const x = platform.x - camera;
         if (x + platform.w < -80 || x > WIDTH + 80) continue;
         if (platform.kind === "ground") {

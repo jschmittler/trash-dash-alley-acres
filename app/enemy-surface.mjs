@@ -22,12 +22,14 @@ export function createEnemyPatrol({ x, width, surfaceY, surfaceId, patrolRadius,
   const authoredSupport = surfaceId
     ? surfaces.find((surface) => surface.id === surfaceId && surface.w >= width)
     : null;
-  const matchingSurfaces = surfaces
-    .filter((surface) => Math.abs(surface.y - surfaceY) < 1 && surface.w >= width)
-    .sort((left, right) => horizontalDistance(centerX, left) - horizontalDistance(centerX, right));
-  const support = authoredSupport ?? matchingSurfaces[0] ?? surfaces
-    .filter((surface) => surface.w >= width)
-    .sort((left, right) => horizontalDistance(centerX, left) - horizontalDistance(centerX, right))[0];
+  const support = surfaceId
+    ? authoredSupport
+    : surfaces
+      .filter((surface) => Math.abs(surface.y - surfaceY) < 1 && surface.w >= width)
+      .sort((left, right) => horizontalDistance(centerX, left) - horizontalDistance(centerX, right))[0]
+      ?? surfaces
+        .filter((surface) => surface.w >= width)
+        .sort((left, right) => horizontalDistance(centerX, left) - horizontalDistance(centerX, right))[0];
 
   if (!support) {
     return {
@@ -48,10 +50,11 @@ export function createEnemyPatrol({ x, width, surfaceY, surfaceId, patrolRadius,
   const patrolMaxX = clamp(requestedEnd, supportMinX, supportMaxX);
   const spawnX = clamp(x, patrolMinX, patrolMaxX);
 
-  return {
+  const patrol = {
     spawnX,
     minX: Math.min(patrolMinX, patrolMaxX),
     maxX: Math.max(patrolMinX, patrolMaxX),
     surfaceY: support.y,
   };
+  return surfaceId ? { ...patrol, surfaceId: support.id } : patrol;
 }
