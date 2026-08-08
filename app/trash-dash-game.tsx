@@ -81,6 +81,14 @@ import {
   levelBackgroundBlendAt,
   PARALLAX_SPEEDS,
 } from "./level-background.mjs";
+import {
+  levelTwoEnemyAnimation,
+  levelTwoEnvironmentRecords,
+  selectEncounterTestRoute,
+  updateBinLid,
+  updateLevelTwoEnemy,
+  updateSprinkler,
+} from "./level-two-enemies.mjs";
 
 type Screen = "title" | "characterSelect" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
@@ -156,6 +164,7 @@ interface Pickup extends Rect {
 }
 
 interface Enemy extends Rect {
+  id: string;
   kind: EnemyKind;
   vx: number;
   facing: 1 | -1;
@@ -173,6 +182,25 @@ interface Enemy extends Rect {
   attackCooldown: number;
   ragePlayed: boolean;
   rageQueued: boolean;
+  behaviorState: string;
+  surfaceId?: string;
+  flightBand?: string;
+  sprayActive: boolean;
+}
+
+interface BinLid extends Rect {
+  vx: number;
+  reflected: boolean;
+  ownerId: string;
+  lightweight: true;
+  active: boolean;
+}
+
+interface EnvironmentCollision extends Rect {
+  id: string;
+  kind: "bin-lid-source" | "charge-obstacle" | "sprinkler" | "porch-light";
+  encounterId: string;
+  flightBand?: string;
 }
 
 interface Particle {
@@ -223,6 +251,8 @@ interface World {
   selectedCharacterId: string;
   player: Player;
   enemies: Enemy[];
+  binLids: BinLid[];
+  environment: EnvironmentCollision[];
   pickups: Pickup[];
   particles: Particle[];
   cameraX: number;
@@ -332,6 +362,7 @@ const trashPickupRows = [
 
 const tacoPowerMotion = motionRow(0, 4);
 const flyingEnemies = new Set<EnemyKind>(["bat", "wasp", "mosquito", "moth", "crow"]);
+const levelTwoEnemyKinds = new Set<EnemyKind>(["squirrel", "terrier", "skunk", "moth"]);
 const varietyEnemyDrawSizes: Record<keyof typeof varietyEnemyMotion, [number, number]> = {
   bat: [68, 68],
   wasp: [66, 66],
@@ -507,6 +538,7 @@ const makeEnemy = (
   const spawnX = patrol.spawnX;
   const vx = kind === "boss" ? 0 : kind === "fox" || kind === "boar" ? -78 : flyingEnemies.has(kind) ? -64 : -42;
   return {
+    id: `${kind}:${spawnX}:${spawn.surfaceId ?? spawn.flightBand ?? "free"}`,
     kind,
     x: spawnX,
     y: patrol.surfaceY - h,
@@ -528,6 +560,10 @@ const makeEnemy = (
     attackCooldown: kind === "boss" ? 1.1 : 0,
     ragePlayed: false,
     rageQueued: false,
+    behaviorState: kind === "terrier" ? "sleep" : kind === "skunk" ? "patrol" : kind === "moth" ? "orbit" : "idle",
+    surfaceId: spawn.surfaceId,
+    flightBand: spawn.flightBand,
+    sprayActive: false,
   };
 };
 
@@ -621,6 +657,8 @@ const makeWorld = (
       x: worldBossSpawnX(level),
       surfaceId: level.boss.surfaceId,
     }, runtime.surfaces)),
+    binLids: [],
+    environment: level.id === "level-2" ? levelTwoEnvironmentRecords() as EnvironmentCollision[] : [],
     pickups: runtime.pickups,
     particles: [],
     cameraX: 0,
@@ -660,6 +698,7 @@ export function TrashDashGame() {
   const bossMotionRef = useRef<HTMLImageElement | null>(null);
   const enemyMotionRef = useRef<HTMLImageElement | null>(null);
   const varietyEnemyMotionRef = useRef<HTMLImageElement | null>(null);
+  const levelTwoEnemyMotionRef = useRef<HTMLImageElement | null>(null);
   const trashPickupMotionRef = useRef<HTMLImageElement | null>(null);
   const tacoPowerMotionRef = useRef<HTMLImageElement | null>(null);
   const dumpsterAtlasRef = useRef<HTMLImageElement | null>(null);
@@ -673,6 +712,7 @@ export function TrashDashGame() {
   const cityNearRef = useRef<HTMLImageElement | null>(null);
   const levelBackgroundRefs = useRef<Record<string, BackgroundLayers>>({});
   const levelBackgroundLoadPromisesRef = useRef(new Map<string, Promise<void>>());
+  const levelEnemyLoadPromisesRef = useRef(new Map<string, Promise<void>>());
   const worldRef = useRef<World>(makeWorld());
   const keysRef = useRef(new Set<string>());
   const pressedRef = useRef(new Set<string>());
@@ -731,6 +771,25 @@ export function TrashDashGame() {
         throw error;
       });
     levelBackgroundLoadPromisesRef.current.set(activeLevel.id, request);
+    return request;
+  }, []);
+  const loadLevelEnemyAtlas = useCallback((activeLevel: CampaignLevelDefinition) => {
+    if (activeLevel.id !== "level-2" || levelTwoEnemyMotionRef.current) return Promise.resolve();
+    const pending = levelEnemyLoadPromisesRef.current.get(activeLevel.id);
+    if (pending) return pending;
+    const request = new Promise<void>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => {
+        levelTwoEnemyMotionRef.current = image;
+        resolve();
+      };
+      image.onerror = reject;
+      image.src = assetUrl("assets/generated/level2-enemy-motion.png");
+    }).catch((error) => {
+      levelEnemyLoadPromisesRef.current.delete(activeLevel.id);
+      throw error;
+    });
+    levelEnemyLoadPromisesRef.current.set(activeLevel.id, request);
     return request;
   }, []);
   const [powerupNotice, setPowerupNotice] = useState<PowerupNotice | null>(null);
@@ -848,9 +907,11 @@ export function TrashDashGame() {
     const backgroundTest = devParams?.get("backgroundTest") ?? null;
     const powerupTest = devParams?.get("powerupTest") ?? null;
     const victoryTest = devParams?.get("victoryTest") ?? null;
+    const encounterTest = devParams?.get("encounterTest") ?? null;
     const levelTwoRequested = devParams?.get("level") === "2"
       || levelTest === "level2-start"
-      || (levelTest !== null && Object.hasOwn(levelTwoTestStarts, levelTest));
+      || (levelTest !== null && Object.hasOwn(levelTwoTestStarts, levelTest))
+      || encounterTest !== null;
     const levelId = levelIdOverride ?? (levelTwoRequested ? "level-2" : "level-1");
     const testCarry = levelTest === "level2-start"
       ? {
@@ -863,7 +924,28 @@ export function TrashDashGame() {
         }
       : null;
     const nextWorld = makeWorld(selectedProfile.id, levelId, carried ?? testCarry);
-    if (bossTest) {
+    if (encounterTest !== null) {
+      const selected = selectEncounterTestRoute(nextWorld.level, encounterTest) as {
+        encounter: { enemies: EnemySpawnDefinition[] };
+        environment: EnvironmentCollision[];
+        playerX: number;
+        playerSurfaceId: string;
+        cameraX: number;
+      };
+      nextWorld.enemies = selected.encounter.enemies.map((spawn) => {
+        const enemy = makeEnemy(spawn, nextWorld.surfaces);
+        enemy.spawned = true;
+        enemy.active = true;
+        return enemy;
+      });
+      nextWorld.environment = selected.environment;
+      const surface = nextWorld.surfaces.find(({ id }) => id === selected.playerSurfaceId);
+      if (!surface) throw new RangeError(`Missing encounter test surface "${selected.playerSurfaceId}"`);
+      nextWorld.player.x = clamp(selected.playerX, surface.x, surface.x + surface.w - nextWorld.player.w);
+      nextWorld.player.y = surface.y - nextWorld.player.h;
+      nextWorld.player.grounded = true;
+      nextWorld.cameraX = clamp(selected.cameraX, 0, nextWorld.worldWidth - WIDTH);
+    } else if (bossTest) {
       nextWorld.player.x = bossTest === "arena" ? 5690 : 5590;
       nextWorld.player.y = GROUND_Y - 58;
       nextWorld.player.w = 38;
@@ -929,7 +1011,7 @@ export function TrashDashGame() {
       nextWorld.cameraX = 5640;
       setVictoryRecord({ score: true, time: true });
     }
-    void loadLevelBackgrounds(nextWorld.level)
+    void Promise.all([loadLevelBackgrounds(nextWorld.level), loadLevelEnemyAtlas(nextWorld.level)])
       .then(() => {
         worldRef.current = nextWorld;
         setCampaignContinuationAvailable(Boolean(
@@ -941,7 +1023,7 @@ export function TrashDashGame() {
         window.setTimeout(() => tone(720, 0.12), 80);
       })
       .catch(() => setLoaded(false));
-  }, [changeScreen, clearHeldInput, dismissPowerupNotice, loadLevelBackgrounds, tone]);
+  }, [changeScreen, clearHeldInput, dismissPowerupNotice, loadLevelBackgrounds, loadLevelEnemyAtlas, tone]);
 
   const continueCampaign = useCallback(() => {
     const transition = nextCampaignStart(worldRef.current) as {
@@ -1052,7 +1134,10 @@ export function TrashDashGame() {
         forestNearRef.current = forestNear;
         cityFarRef.current = cityFar;
         cityNearRef.current = cityNear;
-        await loadLevelBackgrounds(worldRef.current.level);
+        await Promise.all([
+          loadLevelBackgrounds(worldRef.current.level),
+          loadLevelEnemyAtlas(worldRef.current.level),
+        ]);
         if (cancelled) return;
         setLoaded(true);
       })
@@ -1063,7 +1148,7 @@ export function TrashDashGame() {
     return () => {
       cancelled = true;
     };
-  }, [loadLevelBackgrounds]);
+  }, [loadLevelBackgrounds, loadLevelEnemyAtlas]);
 
   useEffect(() => {
     return () => {
@@ -1308,7 +1393,12 @@ export function TrashDashGame() {
     };
 
     const damageEnemy = (world: World, enemy: Enemy, stomp = false) => {
-      if (!enemy.active || enemy.hitCooldown > 0 || (enemy.kind === "boss" && enemy.animationState === "defeat")) return;
+      if (
+        !enemy.active
+        || enemy.hitCooldown > 0
+        || (enemy.kind !== "boss" && enemy.hp <= 0)
+        || (enemy.kind === "boss" && enemy.animationState === "defeat")
+      ) return;
       enemy.hp -= 1;
       enemy.hitCooldown = 0.5;
       burst(world, enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, enemy.kind === "boss" ? "#ffd248" : "#c7f170", enemy.kind === "boss" ? 12 : 7);
@@ -1326,7 +1416,13 @@ export function TrashDashGame() {
           setMessage(world, `${enemy.hp} hits left!`, 1.2);
         }
       } else if (enemy.hp <= 0) {
-        enemy.active = false;
+        if (levelTwoEnemyKinds.has(enemy.kind)) {
+          enemy.behaviorState = "defeated";
+          enemy.actionTimer = 0.55;
+          enemy.vx = 0;
+        } else {
+          enemy.active = false;
+        }
         world.score += stomp ? 250 : 180;
       }
     };
@@ -1612,35 +1708,116 @@ export function TrashDashGame() {
           updateBoss(world, enemy, dt);
           if (!enemy.active) continue;
         } else {
-          enemy.phase += dt * Math.max(3.4, Math.abs(enemy.vx) / 26);
+          if (enemy.kind !== "moth") enemy.phase += dt * Math.max(3.4, Math.abs(enemy.vx) / 26);
           enemy.hitCooldown = Math.max(0, enemy.hitCooldown - dt);
         }
 
         if (enemy.kind !== "boss") {
-          const intent = nextEnemyIntent({
-            kind: enemy.kind,
-            enemyX: enemy.x,
-            originX: enemy.originX,
-            playerX: player.x,
-            vx: enemy.vx,
-            facing: enemy.facing,
-          });
-          enemy.vx = intent.vx;
-          enemy.facing = intent.facing;
-          enemy.x += enemy.vx * (enemy.kind === "slime" ? 0.35 : 1) * dt;
+          if (levelTwoEnemyKinds.has(enemy.kind)) {
+            if (enemy.behaviorState === "defeated") {
+              enemy.actionTimer = Math.max(0, enemy.actionTimer - dt);
+              if (enemy.actionTimer === 0) enemy.active = false;
+              continue;
+            }
+            const playerInRange = Math.abs((player.x + player.w / 2) - (enemy.x + enemy.w / 2)) < (
+              enemy.kind === "terrier" ? 300 : enemy.kind === "moth" ? 210 : 260
+            );
+            if (enemy.kind === "squirrel" && enemy.behaviorState === "idle" && !playerInRange) {
+              enemy.x = clamp(enemy.x + enemy.vx * dt, enemy.patrolMinX, enemy.patrolMaxX);
+              if (enemy.x === enemy.patrolMinX) enemy.vx = Math.abs(enemy.vx);
+              if (enemy.x === enemy.patrolMaxX) enemy.vx = -Math.abs(enemy.vx);
+            }
+            const projected = { ...enemy, x: enemy.x + enemy.vx * dt };
+            const obstacleHit = enemy.kind === "terrier" && world.environment.some((item) => (
+              item.kind === "charge-obstacle" && intersects(projected, item)
+            ));
+            const flightBand = enemy.kind === "moth"
+              ? world.level.flightBands?.find(({ id }) => id === enemy.flightBand)
+              : null;
+            if (enemy.kind === "moth" && !flightBand) {
+              throw new RangeError(`Missing authored flight band "${enemy.flightBand}"`);
+            }
+            const next = updateLevelTwoEnemy({
+              ...enemy,
+              state: enemy.behaviorState,
+              timer: enemy.actionTimer,
+            }, {
+              dt,
+              playerInRange,
+              playerX: player.x + player.w / 2,
+              playerY: player.y,
+              patrolMinX: enemy.patrolMinX,
+              patrolMaxX: enemy.patrolMaxX,
+              obstacleHit,
+              lightX: enemy.originX,
+              flightY: enemy.surfaceY - enemy.h,
+              bandMinX: flightBand?.startX,
+              bandMaxX: flightBand ? flightBand.endX - enemy.w : undefined,
+              bandMinY: flightBand?.minY,
+              bandMaxY: flightBand ? flightBand.maxY - enemy.h : undefined,
+            });
+            enemy.behaviorState = next.state;
+            enemy.actionTimer = next.timer ?? enemy.actionTimer;
+            enemy.x = next.x ?? enemy.x;
+            enemy.y = enemy.kind === "moth" ? next.y ?? enemy.y : enemy.surfaceY - enemy.h;
+            enemy.vx = next.vx ?? enemy.vx;
+            enemy.sprayActive = next.sprayActive ?? false;
+            enemy.phase = next.phase ?? enemy.phase;
+            if (Math.abs(enemy.vx) > 8) enemy.facing = enemy.vx < 0 ? -1 : 1;
+            if (enemy.kind === "skunk" && enemy.sprayActive) {
+              const sprayRect: Rect = {
+                x: enemy.facing > 0 ? enemy.x - 126 : enemy.x + enemy.w,
+                y: enemy.y + 2,
+                w: 126,
+                h: enemy.h + 18,
+              };
+              if (intersects(player, sprayRect)) player.vx = enemy.facing > 0 ? -280 : 280;
+              for (const other of world.enemies) {
+                if (other.kind === "terrier" && other.behaviorState === "sleep" && intersects(other, sprayRect)) {
+                  other.behaviorState = "wake";
+                  other.actionTimer = 0.5;
+                }
+              }
+            }
+            if (next.spawnLid) {
+              world.binLids.push({
+                x: enemy.x + enemy.w / 2 - 14,
+                y: enemy.y + 8,
+                w: 28,
+                h: 10,
+                vx: enemy.facing * 140,
+                reflected: false,
+                ownerId: enemy.id,
+                lightweight: true,
+                active: true,
+              });
+            }
+          } else {
+            const intent = nextEnemyIntent({
+              kind: enemy.kind,
+              enemyX: enemy.x,
+              originX: enemy.originX,
+              playerX: player.x,
+              vx: enemy.vx,
+              facing: enemy.facing,
+            });
+            enemy.vx = intent.vx;
+            enemy.facing = intent.facing;
+            enemy.x += enemy.vx * (enemy.kind === "slime" ? 0.35 : 1) * dt;
 
-          const patrolMin = enemy.patrolMinX;
-          const patrolMax = enemy.patrolMaxX;
-          if (enemy.x <= patrolMin) {
-            enemy.x = patrolMin;
-            enemy.vx = Math.abs(enemy.vx);
-            enemy.facing = 1;
-          } else if (enemy.x >= patrolMax) {
-            enemy.x = patrolMax;
-            enemy.vx = -Math.abs(enemy.vx);
-            enemy.facing = -1;
+            const patrolMin = enemy.patrolMinX;
+            const patrolMax = enemy.patrolMaxX;
+            if (enemy.x <= patrolMin) {
+              enemy.x = patrolMin;
+              enemy.vx = Math.abs(enemy.vx);
+              enemy.facing = 1;
+            } else if (enemy.x >= patrolMax) {
+              enemy.x = patrolMax;
+              enemy.vx = -Math.abs(enemy.vx);
+              enemy.facing = -1;
+            }
+            enemy.y = enemy.surfaceY - enemy.h + (flyingEnemies.has(enemy.kind) ? Math.sin(enemy.phase * 0.82) * 11 : 0);
           }
-          enemy.y = enemy.surfaceY - enemy.h + (flyingEnemies.has(enemy.kind) ? Math.sin(enemy.phase * 0.82) * 11 : 0);
         }
 
         const profileAnimations = profile.animations as Record<string, typeof PLAYER_ANIMATIONS.small_idle>;
@@ -1670,6 +1847,66 @@ export function TrashDashGame() {
           hurtPlayer(world, player.x < enemy.x ? -1 : 1);
         }
       }
+
+      const attackAnimation = (profile.animations as Record<string, typeof PLAYER_ANIMATIONS.small_idle>)[player.animationName];
+      const attackFrameIndex = attackAnimation ? animationFrame(attackAnimation, player.animationElapsed) : 0;
+      const tailSwipeRect: Rect | null = player.large
+        && player.animationName === "large_tail_swipe"
+        && (isTailSwipeActive(attackFrameIndex) || profile.attackFrames.includes(attackFrameIndex))
+        ? {
+            x: player.facing > 0 ? player.x + player.w - 4 : player.x - 58,
+            y: player.y + 8,
+            w: 62,
+            h: player.h - 10,
+          }
+        : null;
+      for (const lid of world.binLids) {
+        if (!lid.active) continue;
+        if (tailSwipeRect && intersects(tailSwipeRect, lid)) {
+          Object.assign(lid, updateBinLid(lid, { tailSwipeHit: true }));
+          lid.vx = Math.abs(lid.vx) * player.facing;
+        }
+        for (const sprinkler of world.environment.filter(({ kind }) => kind === "sprinkler")) {
+          const sprinklerActive = Math.sin(world.elapsed * 2.4 + sprinkler.x) > -0.15;
+          const stream: Rect = { x: sprinkler.x - 74, y: sprinkler.y - 104, w: 182, h: 128 };
+          if (sprinklerActive && intersects(lid, stream)) {
+            Object.assign(lid, updateSprinkler(lid, {
+              active: true,
+              direction: Math.sin(world.elapsed * 1.2 + sprinkler.x) < 0 ? -1 : 1,
+            }));
+          }
+        }
+        for (const skunk of world.enemies.filter(({ kind, sprayActive }) => kind === "skunk" && sprayActive)) {
+          const stream: Rect = {
+            x: skunk.facing > 0 ? skunk.x - 126 : skunk.x + skunk.w,
+            y: skunk.y + 2,
+            w: 126,
+            h: skunk.h + 18,
+          };
+          if (intersects(lid, stream)) {
+            Object.assign(lid, updateSprinkler(lid, { active: true, direction: -skunk.facing }));
+          }
+        }
+        lid.x += lid.vx * dt;
+        if (lid.reflected) {
+          for (const enemy of world.enemies) {
+            if (!enemy.active || enemy.id === lid.ownerId || enemy.kind === "boss" || !intersects(lid, enemy)) continue;
+            damageEnemy(world, enemy);
+            lid.active = false;
+            break;
+          }
+          const owner = world.enemies.find(({ id }) => id === lid.ownerId);
+          if (lid.active && owner?.active && intersects(lid, owner)) {
+            damageEnemy(world, owner);
+            lid.active = false;
+          }
+        } else if (intersects(lid, player)) {
+          hurtPlayer(world, lid.vx < 0 ? -1 : 1);
+          lid.active = false;
+        }
+        if (lid.x < -80 || lid.x > world.worldWidth + 80) lid.active = false;
+      }
+      world.binLids = world.binLids.filter(({ active }) => active);
 
       for (const particle of world.particles) {
         particle.x += particle.vx * dt;
@@ -1982,6 +2219,46 @@ export function TrashDashGame() {
       }
       context.restore();
 
+      for (const item of world.environment) {
+        const x = item.x - camera;
+        if (x < -180 || x > WIDTH + 180) continue;
+        context.save();
+        if (item.kind === "sprinkler") {
+          context.fillStyle = "#173e3b";
+          context.fillRect(x, item.y, item.w, item.h);
+          context.fillStyle = "#9ddfd1";
+          context.fillRect(x + 8, item.y - 4, item.w - 16, 6);
+          if (Math.sin(world.elapsed * 2.4 + item.x) > -0.15) {
+            context.strokeStyle = "#9ddfd1";
+            context.lineWidth = 3;
+            context.beginPath();
+            context.moveTo(x + item.w / 2, item.y);
+            context.lineTo(x + item.w / 2 + Math.sin(world.elapsed * 1.2 + item.x) * 74, item.y - 94);
+            context.stroke();
+          }
+        } else if (item.kind === "charge-obstacle") {
+          context.fillStyle = "#173e3b";
+          context.fillRect(x, item.y, item.w, item.h);
+          context.fillStyle = "#6d8791";
+          context.fillRect(x + 6, item.y + 7, item.w - 12, item.h - 14);
+        } else if (item.kind === "bin-lid-source") {
+          context.fillStyle = "#173e3b";
+          context.beginPath();
+          context.ellipse(x + item.w / 2, item.y + item.h / 2, item.w / 2, item.h / 2, 0, 0, Math.PI * 2);
+          context.fill();
+          context.fillStyle = "#9fb0b4";
+          context.beginPath();
+          context.ellipse(x + item.w / 2, item.y + item.h / 2, item.w / 2 - 3, item.h / 2 - 3, 0, 0, Math.PI * 2);
+          context.fill();
+        } else if (item.kind === "porch-light") {
+          context.fillStyle = "#173e3b";
+          context.fillRect(x + 6, item.y - 8, 8, item.h + 12);
+          context.fillStyle = "#ffd86a";
+          context.fillRect(x + 2, item.y, 16, 12);
+        }
+        context.restore();
+      }
+
       for (const pickup of world.pickups) {
         if (!pickup.active) continue;
         const x = pickup.x - camera;
@@ -1996,6 +2273,23 @@ export function TrashDashGame() {
           const trashFrames = trashPickupRows[Math.abs(Math.floor(pickup.phase)) % trashPickupRows.length];
           drawSprite(trashFrames[pickupFrame], x - 8, y - 10, 46, 46, false, 1, trashPickupMotionRef.current);
         }
+      }
+
+      for (const lid of world.binLids) {
+        const x = lid.x - camera;
+        if (x < -60 || x > WIDTH + 60) continue;
+        context.save();
+        context.translate(x + lid.w / 2, lid.y + lid.h / 2);
+        context.rotate(world.elapsed * (lid.reflected ? 15 : 10));
+        context.fillStyle = "#173e3b";
+        context.beginPath();
+        context.ellipse(0, 0, lid.w / 2, lid.h / 2, 0, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = lid.reflected ? "#c7f170" : "#aebbc2";
+        context.beginPath();
+        context.ellipse(0, 0, lid.w / 2 - 3, lid.h / 2 - 2, 0, 0, Math.PI * 2);
+        context.fill();
+        context.restore();
       }
 
       for (const enemy of world.enemies) {
@@ -2028,9 +2322,38 @@ export function TrashDashGame() {
         if (enemy.kind === "possum") drawEnemy(enemyMotion.possum[frameIndex], 78, 78, 1, enemyMotionRef.current);
         const varietyKind = enemy.kind as keyof typeof varietyEnemyMotion;
         const varietyFrames = varietyEnemyMotion[varietyKind];
-        if (varietyFrames) {
+        if (varietyFrames && !(world.levelId === "level-2" && levelTwoEnemyKinds.has(enemy.kind))) {
           const [drawW, drawH] = varietyEnemyDrawSizes[varietyKind];
           drawEnemy(varietyFrames[frameIndex], drawW, drawH, 1, varietyEnemyMotionRef.current);
+        }
+        if (world.levelId === "level-2" && levelTwoEnemyKinds.has(enemy.kind)) {
+          const animation = levelTwoEnemyAnimation(enemy.kind, enemy.behaviorState);
+          if (animation) {
+            const stateFrame = Math.floor(world.elapsed * animation.fps) % animation.frames;
+            const stateFrameRect = [
+              stateFrame * MOTION_CELL,
+              animation.row * MOTION_CELL,
+              MOTION_CELL,
+              MOTION_CELL,
+            ] as Frame;
+            const drawSizes: Record<"squirrel" | "terrier" | "skunk" | "moth", [number, number]> = {
+              squirrel: [78, 76], terrier: [94, 82], skunk: [90, 78], moth: [84, 82],
+            };
+            const [drawW, drawH] = drawSizes[enemy.kind as keyof typeof drawSizes];
+            const drawY = enemy.kind === "moth"
+              ? enemy.y + enemy.h / 2 - drawH / 2
+              : enemy.y + enemy.h - drawH + drawH * (16 / MOTION_CELL);
+            drawSprite(
+              stateFrameRect,
+              x + enemy.w / 2 - drawW / 2,
+              drawY,
+              drawW,
+              drawH,
+              flip,
+              1,
+              levelTwoEnemyMotionRef.current,
+            );
+          }
         }
         if (enemy.kind === "boss") {
           const bossAnimation = BOSS_ANIMATIONS[enemy.animationState as keyof typeof BOSS_ANIMATIONS];

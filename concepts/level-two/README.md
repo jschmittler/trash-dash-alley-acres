@@ -42,3 +42,47 @@ with the production parallax rates, tiling, blend math, and Level 2 surface
 tops. Review `level2-parallax-motion-audit.png`; its measured offsets, blend
 samples, seam visibility, and close-center coverage are recorded in
 `level2-parallax-motion-audit.json`.
+
+## Enemy motion atlas
+
+Level 2's four ordinary enemies use `public/assets/generated/level2-enemy-motion.png`.
+The atlas is four columns by 20 rows, with 192×192 cells, right-facing source
+art, transparent RGBA, and nearest-neighbor runtime sampling. Run
+`npm run build:level-two-enemies` to rebuild it and the static
+`level2-enemy-motion-contact-sheet.png` audit.
+
+Each enemy was established as one visual anchor before its state variants were
+derived. The generated anchors and disciplined 4×4 motion sources live under
+`concepts/level-two/source/` as `<kind>-anchor.png` and
+`<kind>-motion-source.png`. The build removes the flat `#FF00FF` key, applies a
+hard 28/32-color palette without dithering, scales only with nearest-neighbor,
+and places every opaque silhouette with cell-edge clearance.
+
+| Rows | Enemy | Frames 0–3 |
+| ---: | --- | --- |
+| 0 | Bin-Lid Squirrel | Four-frame hop/locomotion loop |
+| 1 | Bin-Lid Squirrel | Overhead-lid telegraph |
+| 2 | Bin-Lid Squirrel | Lid throw |
+| 3 | Bin-Lid Squirrel | Hit |
+| 4 | Bin-Lid Squirrel | Embarrassed defeat / retreat |
+| 5 | Trash-Day Terrier | Four-frame trot loop |
+| 6 | Trash-Day Terrier | Sleep, ears-up, bark tell |
+| 7 | Trash-Day Terrier | Committed charge loop |
+| 8 | Trash-Day Terrier | Fence-impact stun |
+| 9 | Trash-Day Terrier | Seated defeat / retreat |
+| 10 | Sprinkler Skunk | Four-frame patrol loop |
+| 11 | Sprinkler Skunk | Tail-rise pale-green tell |
+| 12 | Sprinkler Skunk | Short hard-cluster spray |
+| 13 | Sprinkler Skunk | Hit |
+| 14 | Sprinkler Skunk | Defeat / retreat |
+| 15 | Porch-Light Moth | Four-frame orbit flap loop |
+| 16 | Porch-Light Moth | Dive telegraph |
+| 17 | Porch-Light Moth | Dive / climb action |
+| 18 | Porch-Light Moth | Hit / vulnerable climb |
+| 19 | Porch-Light Moth | Tumbling / folded-wing defeat |
+
+Squirrel, terrier, and skunk opaque feet end at local row 175 in every used
+frame. The renderer offsets the atlas's 16-pixel transparent foot inset so the
+opaque feet meet the authoritative support surface. Moth frames are centered
+on local `(95.5, 95.5)` after normalization, preserving body placement and wing
+clearance while runtime motion stays inside its authored flight band.
