@@ -52,8 +52,8 @@ test("Level 2 fixture contains the complete structural blockout", () => {
   );
 
   assert.deepEqual(
-    { id: LEVEL_TWO.boss.id, kind: LEVEL_TWO.boss.kind },
-    { id: "brutus-bin-hound", kind: "brutus" },
+    { id: LEVEL_TWO.boss.id, kind: LEVEL_TWO.boss.kind, surfaceId: LEVEL_TWO.boss.surfaceId },
+    { id: "brutus-bin-hound", kind: "brutus", surfaceId: "cul-de-sac" },
   );
   assert.deepEqual(LEVEL_TWO.exit, { nextLevelId: "level-3", x: 7120 });
 });

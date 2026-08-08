@@ -72,6 +72,34 @@ test("explicit surfaceId wins over a nearby surface at the same height", () => {
   assert.ok(patrol.spawnX <= 160);
 });
 
+test("rejects a missing explicit surfaceId instead of using an unbounded patrol", () => {
+  assert.throws(
+    () => createEnemyPatrol({
+      x: 260,
+      width: 40,
+      surfaceY: 400,
+      surfaceId: "missing",
+      patrolRadius: 100,
+      grounded: true,
+    }, [{ id: "right", x: 220, y: 400, w: 200 }]),
+    /unknown authored surface "missing"/i,
+  );
+});
+
+test("rejects an explicit support that is narrower than the enemy", () => {
+  assert.throws(
+    () => createEnemyPatrol({
+      x: 0,
+      width: 40,
+      surfaceY: 400,
+      surfaceId: "narrow",
+      patrolRadius: 100,
+      grounded: true,
+    }, [{ id: "narrow", x: 0, y: 400, w: 30 }]),
+    /authored surface "narrow" is 30px wide; enemy requires 40px/i,
+  );
+});
+
 test("resolves actual Level 2 grounded enemies against their authored surfaces", () => {
   const widths = { squirrel: 50, terrier: 64, skunk: 58 };
   const expected = {
@@ -115,5 +143,27 @@ test("keeps an authored Level 2 flight baseline independent from terrain", () =>
       grounded: false,
     }, LEVEL_TWO.surfaces),
     { spawnX: 4020, minX: 3960, maxX: 4160, surfaceY: 220 },
+  );
+});
+
+test("resolves Brutus against the dedicated Level 2 arena support", () => {
+  const support = LEVEL_TWO.surfaces.find(({ id }) => id === LEVEL_TWO.boss.surfaceId);
+
+  assert.deepEqual(
+    createEnemyPatrol({
+      x: LEVEL_TWO.boss.arenaStartX + 480,
+      width: 96,
+      surfaceY: support.y,
+      surfaceId: LEVEL_TWO.boss.surfaceId,
+      patrolRadius: 360,
+      grounded: true,
+    }, LEVEL_TWO.surfaces),
+    {
+      spawnX: 6180,
+      minX: 5820,
+      maxX: 6454,
+      surfaceY: 468,
+      surfaceId: "cul-de-sac",
+    },
   );
 });

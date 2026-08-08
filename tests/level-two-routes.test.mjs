@@ -36,6 +36,7 @@ test("Level 2 has six optional routes, four ordered checkpoints, and Brutus meta
     triggerX: 5750,
     arenaStartX: 5700,
     arenaEndX: 6550,
+    surfaceId: "cul-de-sac",
     checkpointId: "boss-runway-checkpoint",
   });
   assert.deepEqual(LEVEL_TWO.exit, { nextLevelId: "level-3", x: 7120 });

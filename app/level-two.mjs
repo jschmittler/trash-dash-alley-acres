@@ -156,6 +156,7 @@ export const LEVEL_TWO = freezeDeep({
     triggerX: 5750,
     arenaStartX: 5700,
     arenaEndX: 6550,
+    surfaceId: "cul-de-sac",
     checkpointId: "boss-runway-checkpoint",
   },
   exit: { nextLevelId: "level-3", x: 7120 },

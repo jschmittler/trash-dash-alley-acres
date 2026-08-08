@@ -19,10 +19,19 @@ export function createEnemyPatrol({ x, width, surfaceY, surfaceId, patrolRadius,
   }
 
   const centerX = x + width / 2;
-  const authoredSupport = surfaceId
-    ? surfaces.find((surface) => surface.id === surfaceId && surface.w >= width)
+  const hasAuthoredSurface = surfaceId !== undefined;
+  const authoredSupport = hasAuthoredSurface
+    ? surfaces.find((surface) => surface.id === surfaceId)
     : null;
-  const support = surfaceId
+  if (hasAuthoredSurface && !authoredSupport) {
+    throw new RangeError(`Unknown authored surface "${surfaceId}"`);
+  }
+  if (authoredSupport && authoredSupport.w < width) {
+    throw new RangeError(
+      `Authored surface "${surfaceId}" is ${authoredSupport.w}px wide; enemy requires ${width}px`,
+    );
+  }
+  const support = hasAuthoredSurface
     ? authoredSupport
     : surfaces
       .filter((surface) => Math.abs(surface.y - surfaceY) < 1 && surface.w >= width)
@@ -56,5 +65,5 @@ export function createEnemyPatrol({ x, width, surfaceY, surfaceId, patrolRadius,
     maxX: Math.max(patrolMinX, patrolMaxX),
     surfaceY: support.y,
   };
-  return surfaceId ? { ...patrol, surfaceId: support.id } : patrol;
+  return hasAuthoredSurface ? { ...patrol, surfaceId: support.id } : patrol;
 }
