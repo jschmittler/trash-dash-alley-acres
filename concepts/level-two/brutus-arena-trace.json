@@ -1,6 +1,6 @@
 {
   "dt": 0.1,
-  "completionElapsed": 12.4,
+  "completionElapsed": 14.3,
   "transitions": [
     {
       "elapsed": 0,
@@ -271,11 +271,11 @@
       "arenaUnlocked": false
     },
     {
-      "elapsed": 12.4,
+      "elapsed": 14.3,
       "mode": "complete",
       "hp": 0,
       "phase": 3,
-      "x": 6068,
+      "x": 6740,
       "hydrantHit": false,
       "hazards": [],
       "arenaUnlocked": true
@@ -306,8 +306,11 @@
   ],
   "defeatExit": {
     "startX": 5852,
-    "completeX": 6068,
-    "travel": 216
+    "targetX": 6740,
+    "completeX": 6740,
+    "travel": 888,
+    "lockedCameraRight": 6660,
+    "renderLeftAtComplete": 6678
   },
   "runwayOrdinaryAfterActivation": 0,
   "lockedPlayerSamples": [

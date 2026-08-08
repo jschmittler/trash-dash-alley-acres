@@ -28,7 +28,11 @@ test("phase two owns at most one rolling can", () => {
 test("defeat unlocks only after the full animation", () => {
   const state = { ...createBrutusState(), hp: 0, mode: "defeat", timer: 0.2 };
   assert.equal(updateBrutus(state, { dt: 0.1 }).arenaUnlocked, false);
-  assert.equal(updateBrutus(state, { dt: 1.5 }).arenaUnlocked, true);
+  const exiting = updateBrutus(state, { dt: 1.5 });
+  assert.equal(exiting.mode, "defeat-exit");
+  assert.equal(exiting.arenaUnlocked, false);
+  assert.equal(updateBrutus(exiting, { dt: 10 }).arenaUnlocked, false);
+  assert.equal(updateBrutus(exiting, { dt: 0, exitComplete: true }).arenaUnlocked, true);
   assert.deepEqual(brutusArenaHazards(state), []);
 });
 
@@ -76,6 +80,9 @@ test("Level 2 authors the hydrant, alternating sprinklers, and hostile-free rele
   assert.equal(LEVEL_TWO.boss.hydrant.id, "brutus-hydrant");
   assert.deepEqual(LEVEL_TWO.boss.sprinklers.map(({ side }) => side), ["left", "right"]);
   assert.equal(LEVEL_TWO.boss.postBossStartX, LEVEL_TWO.boss.arenaEndX);
+  const lockedCameraRight = LEVEL_TWO.boss.arenaStartX + 960;
+  const renderLeftAtExit = LEVEL_TWO.boss.defeatExitX + 96 / 2 - 220 / 2;
+  assert.ok(renderLeftAtExit > lockedCameraRight);
   assert.equal(
     LEVEL_TWO.encounters.some(({ enemies, spawnX }) => enemies.length > 0 && spawnX >= LEVEL_TWO.boss.runwayStartX),
     false,
@@ -126,15 +133,20 @@ test("recovery leaves the hydrant boundary before faster phase charges can recon
   assert.deepEqual([1, 2, 3].map(elapsedToHydrant), [1.1, 1, 0.9]);
 });
 
-test("defeat exit translates Brutus while the arena remains locked", () => {
-  const state = { ...createBrutusState(), hp: 0, phase: 3, mode: "defeat-exit", timer: 0.2 };
-  const moved = moveBrutusInArena(
-    { x: 5852, w: 96, facing: -1 },
-    state,
-    { dt: 0.1, boss: LEVEL_TWO.boss },
-  );
-  assert.ok(moved.x > 5852);
-  assert.equal(moved.facing, 1);
-  assert.equal(updateBrutus(state, { dt: 0.1 }).arenaUnlocked, false);
-  assert.equal(updateBrutus(state, { dt: 0.2 }).arenaUnlocked, true);
+test("defeat exit clears the locked viewport before the arena unlocks", () => {
+  let state = { ...createBrutusState(), hp: 0, phase: 3, mode: "defeat-exit", timer: 0 };
+  let actor = { x: 5852, w: 96, facing: -1 };
+  for (let step = 0; step < 100 && actor.x < LEVEL_TWO.boss.defeatExitX; step += 1) {
+    const moved = moveBrutusInArena(actor, state, { dt: 0.1, boss: LEVEL_TWO.boss });
+    actor = { ...actor, ...moved };
+    state = updateBrutus(state, { dt: 0.1, exitComplete: moved.exitComplete });
+    if (actor.x < LEVEL_TWO.boss.defeatExitX) {
+      assert.equal(state.mode, "defeat-exit");
+      assert.equal(state.arenaUnlocked, false);
+    }
+  }
+  assert.equal(actor.x, LEVEL_TWO.boss.defeatExitX);
+  assert.notEqual(actor.x, 6068);
+  assert.equal(state.mode, "complete");
+  assert.equal(state.arenaUnlocked, true);
 });

@@ -155,6 +155,7 @@ interface CampaignLevelDefinition {
     surfaceId?: string;
     hydrant?: Omit<EnvironmentCollision, "kind" | "encounterId">;
     recoveryX?: number;
+    defeatExitX?: number;
     sprinklers?: Array<Omit<EnvironmentCollision, "kind" | "encounterId"> & { side: "left" | "right" }>;
     postBossStartX?: number;
   };
@@ -1566,7 +1567,11 @@ export function TrashDashGame() {
       boss.vx = movement.vx;
       boss.facing = movement.facing;
 
-      const next = updateBrutus(state, { dt, hydrantHit: movement.hydrantHit });
+      const next = updateBrutus(state, {
+        dt,
+        hydrantHit: movement.hydrantHit,
+        exitComplete: movement.exitComplete,
+      });
       if (next.mode !== state.mode || next.visualState !== state.visualState) boss.stateElapsed = 0;
       else boss.stateElapsed += dt;
       boss.brutusState = next;

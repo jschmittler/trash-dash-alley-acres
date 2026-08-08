@@ -63,18 +63,36 @@ export function moveBrutusInArena(actor, state, { dt = 0, boss }) {
   const width = actor.w ?? 96;
   const minimumX = boss.arenaStartX + 100;
   const maximumX = boss.arenaEndX - width - 36;
-  const base = { x: clamp(actor.x, minimumX, maximumX), vx: 0, facing: actor.facing, hydrantHit: false };
+  const exitTargetX = boss.defeatExitX ?? boss.arenaEndX + width;
+
+  // Combat movement is arena-clamped, but the authored defeat target lives
+  // beyond the locked camera. Reaching it is the only signal that may finish
+  // the exit and release the arena.
+  if (state.mode === "defeat-exit") {
+    const startX = Math.max(minimumX, actor.x);
+    const x = approach(startX, exitTargetX, BRUTUS_EXIT_SPEED * elapsed);
+    return {
+      x,
+      vx: elapsed > 0 ? (x - startX) / elapsed : 0,
+      facing: 1,
+      hydrantHit: false,
+      exitComplete: x >= exitTargetX,
+    };
+  }
+
+  const base = {
+    x: clamp(actor.x, minimumX, maximumX),
+    vx: 0,
+    facing: actor.facing,
+    hydrantHit: false,
+    exitComplete: false,
+  };
 
   if (state.mode === "recover") {
     const fallbackTarget = (boss.hydrant?.x ?? minimumX) + (boss.hydrant?.w ?? 0) + 348;
     const target = clamp(boss.recoveryX ?? fallbackTarget, minimumX, maximumX);
     const x = approach(base.x, target, BRUTUS_RECOVERY_SPEED * elapsed);
     return { ...base, x, vx: elapsed > 0 ? (x - base.x) / elapsed : 0, facing: x < base.x ? -1 : 1 };
-  }
-
-  if (state.mode === "defeat-exit") {
-    const x = Math.min(maximumX, base.x + BRUTUS_EXIT_SPEED * elapsed);
-    return { ...base, x, vx: elapsed > 0 ? (x - base.x) / elapsed : 0, facing: 1 };
   }
 
   if (state.mode !== "charge") return base;
@@ -116,20 +134,22 @@ const tickSprinkler = (state, dt) => {
   };
 };
 
-const advanceDefeat = (state, dt) => {
+const advanceDefeat = (state, dt, exitComplete = false) => {
   let next = state.mode === "defeat" ? { ...state, mode: "defeat-slide" } : { ...state };
   let remaining = Math.max(0, dt);
   const sequence = ["defeat-slide", "defeat-shake", "defeat-exit"];
   while (sequence.includes(next.mode) && remaining >= 0) {
+    if (next.mode === "defeat-exit") {
+      return exitComplete
+        ? { ...next, mode: "complete", timer: 0, arenaUnlocked: true, rollingCanId: null }
+        : { ...next, timer: 0, arenaUnlocked: false };
+    }
     const timer = next.timer ?? timerFor(next.mode);
     if (remaining < timer) return { ...next, timer: timer - remaining, arenaUnlocked: false };
     remaining -= timer;
     const index = sequence.indexOf(next.mode);
-    if (index === sequence.length - 1) {
-      return { ...next, mode: "complete", timer: 0, arenaUnlocked: true, rollingCanId: null };
-    }
     const mode = sequence[index + 1];
-    next = { ...next, mode, timer: timerFor(mode), arenaUnlocked: false };
+    next = { ...next, mode, timer: mode === "defeat-exit" ? 0 : timerFor(mode), arenaUnlocked: false };
   }
   return next;
 };
@@ -140,7 +160,7 @@ export function updateBrutus(state, input = {}) {
     return { ...state, mode: "complete", timer: 0, arenaUnlocked: true, rollingCanId: null };
   }
   if (state.mode === "defeat" || state.mode.startsWith("defeat-")) {
-    return advanceDefeat(state, dt);
+    return advanceDefeat(state, dt, input.exitComplete === true);
   }
 
   let next = tickSprinkler({

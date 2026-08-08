@@ -32,6 +32,7 @@ for (let step = 0; step < 300 && !state.arenaUnlocked; step += 1) {
   state = updateBrutus(state, {
     dt: 0.1,
     hydrantHit: movement.hydrantHit,
+    exitComplete: movement.exitComplete,
     playerAttackHit: state.mode === "stunned-open",
   });
   elapsed = Number((elapsed + 0.1).toFixed(1));
@@ -73,6 +74,10 @@ if (!(chargeProfiles[0].elapsed > chargeProfiles[1].elapsed && chargeProfiles[1]
   throw new Error("Accelerated phase charge times are not strictly descending");
 }
 if (defeatExitStartX === null || actor.x <= defeatExitStartX) throw new Error("Defeat exit did not translate Brutus away");
+if (actor.x !== LEVEL_TWO.boss.defeatExitX) throw new Error("Brutus completed before reaching the authored exit target");
+const lockedCameraRight = LEVEL_TWO.boss.arenaStartX + 960;
+const renderLeftAtComplete = actor.x + actor.w / 2 - 220 / 2;
+if (renderLeftAtComplete <= lockedCameraRight) throw new Error("Brutus render did not fully clear the locked camera");
 
 const activated = activateBossArena([
   { kind: "terrier", active: true },
@@ -85,7 +90,14 @@ const audit = {
   completionElapsed: elapsed,
   transitions,
   chargeProfiles,
-  defeatExit: { startX: defeatExitStartX, completeX: actor.x, travel: actor.x - defeatExitStartX },
+  defeatExit: {
+    startX: defeatExitStartX,
+    targetX: LEVEL_TWO.boss.defeatExitX,
+    completeX: actor.x,
+    travel: actor.x - defeatExitStartX,
+    lockedCameraRight,
+    renderLeftAtComplete,
+  },
   runwayOrdinaryAfterActivation: activated.enemies.filter(({ kind }) => kind !== "boss").length,
   lockedPlayerSamples: [5400, 5750, 6700].map((x) => clampArenaPlayerX(x, 38, LEVEL_TWO.boss)),
   releasePlayerSample: 6700,
