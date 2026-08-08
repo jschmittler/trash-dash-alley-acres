@@ -56,29 +56,33 @@ derived. The generated anchors and disciplined 4×4 motion sources live under
 `concepts/level-two/source/` as `<kind>-anchor.png` and
 `<kind>-motion-source.png`. The build removes the flat `#FF00FF` key, applies a
 hard 28/32-color palette without dithering, scales only with nearest-neighbor,
-and places every opaque silhouette with cell-edge clearance.
+and places every opaque silhouette with cell-edge clearance. Connected-component
+cleanup removes small detached key-colored fragments before and after resize,
+maps retained purple key fringe to the dark navy contour value, and aligns from
+the primary character component. Legitimate detached lids and spray clusters
+remain visible but cannot establish a false foot or body anchor.
 
 | Rows | Enemy | Frames 0–3 |
 | ---: | --- | --- |
 | 0 | Bin-Lid Squirrel | Four-frame hop/locomotion loop |
 | 1 | Bin-Lid Squirrel | Overhead-lid telegraph |
 | 2 | Bin-Lid Squirrel | Lid throw |
-| 3 | Bin-Lid Squirrel | Hit |
+| 3 | Bin-Lid Squirrel | Two-frame hit / flattened hurt |
 | 4 | Bin-Lid Squirrel | Embarrassed defeat / retreat |
 | 5 | Trash-Day Terrier | Four-frame trot loop |
 | 6 | Trash-Day Terrier | Sleep, ears-up, bark tell |
 | 7 | Trash-Day Terrier | Committed charge loop |
-| 8 | Trash-Day Terrier | Fence-impact stun |
+| 8 | Trash-Day Terrier | Two-frame fence-impact stun / recovery |
 | 9 | Trash-Day Terrier | Seated defeat / retreat |
 | 10 | Sprinkler Skunk | Four-frame patrol loop |
 | 11 | Sprinkler Skunk | Tail-rise pale-green tell |
 | 12 | Sprinkler Skunk | Short hard-cluster spray |
-| 13 | Sprinkler Skunk | Hit |
+| 13 | Sprinkler Skunk | Two-frame hit / dazed recovery |
 | 14 | Sprinkler Skunk | Defeat / retreat |
 | 15 | Porch-Light Moth | Four-frame orbit flap loop |
 | 16 | Porch-Light Moth | Dive telegraph |
 | 17 | Porch-Light Moth | Dive / climb action |
-| 18 | Porch-Light Moth | Hit / vulnerable climb |
+| 18 | Porch-Light Moth | Two-frame hit / vulnerable climb |
 | 19 | Porch-Light Moth | Tumbling / folded-wing defeat |
 
 Squirrel, terrier, and skunk opaque feet end at local row 175 in every used

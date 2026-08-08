@@ -82,10 +82,19 @@ import {
   PARALLAX_SPEEDS,
 } from "./level-background.mjs";
 import {
+  advanceLevelTwoEnemyPlayback,
+  applyLevelTwoBehaviorTransition,
+  beginLevelTwoEnemyHit,
+  enemyAnimationFrame,
+  facingFromVelocity,
+  LEVEL_TWO_ENEMY_COLLISION,
   levelTwoEnemyAnimation,
+  levelTwoEnemyCanContactDamage,
+  levelTwoEnemyCanReceiveAttack,
   levelTwoEnvironmentRecords,
+  reflectBinLidFromTail,
+  selectChargeObstacle,
   selectEncounterTestRoute,
-  updateBinLid,
   updateLevelTwoEnemy,
   updateSprinkler,
 } from "./level-two-enemies.mjs";
@@ -186,6 +195,9 @@ interface Enemy extends Rect {
   surfaceId?: string;
   flightBand?: string;
   sprayActive: boolean;
+  stateElapsed: number;
+  visualState: string | null;
+  visualTimer: number;
 }
 
 interface BinLid extends Rect {
@@ -502,7 +514,7 @@ const makeEnemy = (
     bat: [50, 34],
     wasp: [48, 32],
     mosquito: [46, 30],
-    moth: [50, 34],
+    moth: LEVEL_TWO_ENEMY_COLLISION.moth,
     snake: [58, 28],
     spider: [52, 30],
     rat: [54, 34],
@@ -511,9 +523,9 @@ const makeEnemy = (
     crow: [52, 36],
     boar: [62, 42],
     frog: [48, 30],
-    squirrel: [50, 36],
-    terrier: [64, 42],
-    skunk: [58, 38],
+    squirrel: LEVEL_TWO_ENEMY_COLLISION.squirrel,
+    terrier: LEVEL_TWO_ENEMY_COLLISION.terrier,
+    skunk: LEVEL_TWO_ENEMY_COLLISION.skunk,
   };
   const [w, h] = sizes[kind];
   const patrolRadius = kind === "boss" ? 360 : kind === "slime" ? 85 : 105;
@@ -564,6 +576,9 @@ const makeEnemy = (
     surfaceId: spawn.surfaceId,
     flightBand: spawn.flightBand,
     sprayActive: false,
+    stateElapsed: 0,
+    visualState: null,
+    visualTimer: 0,
   };
 };
 
@@ -1397,6 +1412,7 @@ export function TrashDashGame() {
         !enemy.active
         || enemy.hitCooldown > 0
         || (enemy.kind !== "boss" && enemy.hp <= 0)
+        || (levelTwoEnemyKinds.has(enemy.kind) && !levelTwoEnemyCanReceiveAttack(enemy.kind, enemy.behaviorState))
         || (enemy.kind === "boss" && enemy.animationState === "defeat")
       ) return;
       enemy.hp -= 1;
@@ -1417,9 +1433,7 @@ export function TrashDashGame() {
         }
       } else if (enemy.hp <= 0) {
         if (levelTwoEnemyKinds.has(enemy.kind)) {
-          enemy.behaviorState = "defeated";
-          enemy.actionTimer = 0.55;
-          enemy.vx = 0;
+          Object.assign(enemy, beginLevelTwoEnemyHit(enemy));
         } else {
           enemy.active = false;
         }
@@ -1710,6 +1724,9 @@ export function TrashDashGame() {
         } else {
           if (enemy.kind !== "moth") enemy.phase += dt * Math.max(3.4, Math.abs(enemy.vx) / 26);
           enemy.hitCooldown = Math.max(0, enemy.hitCooldown - dt);
+          if (levelTwoEnemyKinds.has(enemy.kind)) {
+            Object.assign(enemy, advanceLevelTwoEnemyPlayback(enemy, dt));
+          }
         }
 
         if (enemy.kind !== "boss") {
@@ -1727,10 +1744,13 @@ export function TrashDashGame() {
               if (enemy.x === enemy.patrolMinX) enemy.vx = Math.abs(enemy.vx);
               if (enemy.x === enemy.patrolMaxX) enemy.vx = -Math.abs(enemy.vx);
             }
-            const projected = { ...enemy, x: enemy.x + enemy.vx * dt };
-            const obstacleHit = enemy.kind === "terrier" && world.environment.some((item) => (
-              item.kind === "charge-obstacle" && intersects(projected, item)
-            ));
+            const obstacle = enemy.kind === "terrier"
+              ? selectChargeObstacle(
+                  enemy,
+                  world.environment.filter(({ kind }) => kind === "charge-obstacle"),
+                  dt,
+                )
+              : null;
             const flightBand = enemy.kind === "moth"
               ? world.level.flightBands?.find(({ id }) => id === enemy.flightBand)
               : null;
@@ -1748,22 +1768,19 @@ export function TrashDashGame() {
               playerY: player.y,
               patrolMinX: enemy.patrolMinX,
               patrolMaxX: enemy.patrolMaxX,
-              obstacleHit,
+              obstacle,
               lightX: enemy.originX,
               flightY: enemy.surfaceY - enemy.h,
-              bandMinX: flightBand?.startX,
-              bandMaxX: flightBand ? flightBand.endX - enemy.w : undefined,
-              bandMinY: flightBand?.minY,
-              bandMaxY: flightBand ? flightBand.maxY - enemy.h : undefined,
+              flightBand,
             });
-            enemy.behaviorState = next.state;
+            Object.assign(enemy, applyLevelTwoBehaviorTransition(enemy, next.state));
             enemy.actionTimer = next.timer ?? enemy.actionTimer;
             enemy.x = next.x ?? enemy.x;
             enemy.y = enemy.kind === "moth" ? next.y ?? enemy.y : enemy.surfaceY - enemy.h;
             enemy.vx = next.vx ?? enemy.vx;
             enemy.sprayActive = next.sprayActive ?? false;
             enemy.phase = next.phase ?? enemy.phase;
-            if (Math.abs(enemy.vx) > 8) enemy.facing = enemy.vx < 0 ? -1 : 1;
+            enemy.facing = facingFromVelocity(enemy.vx, enemy.facing);
             if (enemy.kind === "skunk" && enemy.sprayActive) {
               const sprayRect: Rect = {
                 x: enemy.facing > 0 ? enemy.x - 126 : enemy.x + enemy.w,
@@ -1836,9 +1853,11 @@ export function TrashDashGame() {
         if (!intersects(player, enemy)) continue;
         const bossAnimation = enemy.kind === "boss" ? BOSS_ANIMATIONS[enemy.animationState as keyof typeof BOSS_ANIMATIONS] : null;
         const bossFrame = bossAnimation ? bossAnimationFrame(bossAnimation, enemy.phase) : 0;
-        const bossCanDamage = enemy.kind !== "boss"
-          || enemy.animationState === "walk"
-          || (enemy.animationState === "charge" && isBossChargeActive(bossFrame));
+        const bossCanDamage = enemy.kind === "boss"
+          ? enemy.animationState === "walk"
+            || (enemy.animationState === "charge" && isBossChargeActive(bossFrame))
+          : !levelTwoEnemyKinds.has(enemy.kind)
+            || levelTwoEnemyCanContactDamage(enemy.kind, enemy.behaviorState);
         const stomped = player.vy > 80 && previousBottom <= enemy.y + 16;
         if (stomped) {
           player.vy = -360;
@@ -1863,8 +1882,10 @@ export function TrashDashGame() {
       for (const lid of world.binLids) {
         if (!lid.active) continue;
         if (tailSwipeRect && intersects(tailSwipeRect, lid)) {
-          Object.assign(lid, updateBinLid(lid, { tailSwipeHit: true }));
-          lid.vx = Math.abs(lid.vx) * player.facing;
+          Object.assign(lid, reflectBinLidFromTail(lid, {
+            tailSwipeHit: true,
+            playerFacing: player.facing,
+          }));
         }
         for (const sprinkler of world.environment.filter(({ kind }) => kind === "sprinkler")) {
           const sprinklerActive = Math.sin(world.elapsed * 2.4 + sprinkler.x) > -0.15;
@@ -2327,9 +2348,9 @@ export function TrashDashGame() {
           drawEnemy(varietyFrames[frameIndex], drawW, drawH, 1, varietyEnemyMotionRef.current);
         }
         if (world.levelId === "level-2" && levelTwoEnemyKinds.has(enemy.kind)) {
-          const animation = levelTwoEnemyAnimation(enemy.kind, enemy.behaviorState);
+          const animation = levelTwoEnemyAnimation(enemy.kind, enemy.visualState ?? enemy.behaviorState);
           if (animation) {
-            const stateFrame = Math.floor(world.elapsed * animation.fps) % animation.frames;
+            const stateFrame = enemyAnimationFrame(animation, enemy.stateElapsed);
             const stateFrameRect = [
               stateFrame * MOTION_CELL,
               animation.row * MOTION_CELL,
