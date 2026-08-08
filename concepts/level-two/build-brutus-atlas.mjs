@@ -25,7 +25,7 @@ const outputRows = [
   ["active", [[2, 2], [2, 2], [2, 2], [2, 2]]],
   ["active", [[2, 3], [3, 0], [2, 3], [3, 0]]],
   ["active", [[3, 1], [3, 2], [3, 3], [3, 3]]],
-  ["defeat", [[0, 0], [0, 1], [0, 0], [0, 1]]],
+  ["recovery", [[0, 0], [0, 1], [0, 0], [0, 1]]],
   ["defeat", [[0, 2], [0, 3], [0, 2], [0, 3]]],
   ["defeat", [[1, 0], [1, 1], [1, 0], [1, 1]]],
   ["defeat", [[1, 2], [1, 3], [1, 2], [1, 3]]],
@@ -100,7 +100,7 @@ const keyAndClean = async (input, preserveWater = false) => {
   if (!found.length) throw new Error("Brutus source frame is empty after chroma removal");
   for (const component of found.slice(1)) {
     const water = component.blue > component.red * 1.3 && component.green > component.red * 1.2;
-    if (component.area >= found[0].area * 0.012 || (preserveWater && water && component.area >= 6)) continue;
+    if (preserveWater && water && component.area >= 6) continue;
     for (const pixel of component.pixels) data[pixel * 4 + 3] = 0;
   }
   return sharp(data, { raw: info }).png().toBuffer();
@@ -151,6 +151,18 @@ const extractSheet = async (definition) => {
 
 const sheets = {};
 for (const [name, definition] of Object.entries(sources)) sheets[name] = await extractSheet(definition);
+const activeAnchorWidth = sources.active.reference.reduce((sum, [row, column]) => (
+  sum + sheets.active.cells[row][column].primaryWidth * sheets.active.scale
+), 0) / sources.active.reference.length;
+const recoverySourceWidth = sources.defeat.reference.reduce((sum, [row, column]) => (
+  sum + sheets.defeat.cells[row][column].primaryWidth
+), 0) / sources.defeat.reference.length;
+sheets.recovery = {
+  cells: sheets.defeat.cells,
+  // Recovery is part of the active loop: register it to the active anchor,
+  // independent of the larger pool/shake/exit source-sheet composition.
+  scale: activeAnchorWidth / recoverySourceWidth,
+};
 
 const composites = [];
 for (const [outputRow, [sheetName, frames]] of outputRows.entries()) {

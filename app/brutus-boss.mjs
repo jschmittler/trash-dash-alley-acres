@@ -31,6 +31,10 @@ export const BRUTUS_DURATIONS = Object.freeze({
 });
 
 const phaseFromHp = (hp) => Math.min(3, Math.max(1, 4 - hp));
+const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
+const approach = (value, target, amount) => (
+  value < target ? Math.min(target, value + amount) : Math.max(target, value - amount)
+);
 const timerFor = (mode, phase = 1) => (
   mode === "charge" ? BRUTUS_DURATIONS.charge[phase] : BRUTUS_DURATIONS[mode] ?? 0
 );
@@ -48,6 +52,52 @@ export function createBrutusState() {
     visualState: null,
     visualTimer: 0,
   };
+}
+
+export const BRUTUS_CHARGE_SPEED = Object.freeze({ 1: 310, 2: 360, 3: 420 });
+export const BRUTUS_RECOVERY_SPEED = 760;
+export const BRUTUS_EXIT_SPEED = 360;
+
+export function moveBrutusInArena(actor, state, { dt = 0, boss }) {
+  const elapsed = Math.max(0, dt);
+  const width = actor.w ?? 96;
+  const minimumX = boss.arenaStartX + 100;
+  const maximumX = boss.arenaEndX - width - 36;
+  const base = { x: clamp(actor.x, minimumX, maximumX), vx: 0, facing: actor.facing, hydrantHit: false };
+
+  if (state.mode === "recover") {
+    const fallbackTarget = (boss.hydrant?.x ?? minimumX) + (boss.hydrant?.w ?? 0) + 348;
+    const target = clamp(boss.recoveryX ?? fallbackTarget, minimumX, maximumX);
+    const x = approach(base.x, target, BRUTUS_RECOVERY_SPEED * elapsed);
+    return { ...base, x, vx: elapsed > 0 ? (x - base.x) / elapsed : 0, facing: x < base.x ? -1 : 1 };
+  }
+
+  if (state.mode === "defeat-exit") {
+    const x = Math.min(maximumX, base.x + BRUTUS_EXIT_SPEED * elapsed);
+    return { ...base, x, vx: elapsed > 0 ? (x - base.x) / elapsed : 0, facing: 1 };
+  }
+
+  if (state.mode !== "charge") return base;
+  const vx = (actor.facing < 0 ? -1 : 1) * BRUTUS_CHARGE_SPEED[state.phase];
+  const proposedX = clamp(base.x + vx * elapsed, minimumX, maximumX);
+  const hydrant = boss.hydrant;
+  if (!hydrant) return { ...base, x: proposedX, vx };
+
+  const currentLeft = base.x;
+  const currentRight = base.x + width;
+  const proposedLeft = proposedX;
+  const proposedRight = proposedX + width;
+  const hydrantHit = vx < 0
+    ? currentLeft > hydrant.x + hydrant.w && proposedLeft <= hydrant.x + hydrant.w
+    : currentRight < hydrant.x && proposedRight >= hydrant.x;
+  return hydrantHit
+    ? {
+        ...base,
+        x: vx < 0 ? hydrant.x + hydrant.w : hydrant.x - width,
+        vx: 0,
+        hydrantHit: true,
+      }
+    : { ...base, x: proposedX, vx };
 }
 
 const tickSprinkler = (state, dt) => {

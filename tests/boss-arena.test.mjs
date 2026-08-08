@@ -11,6 +11,7 @@ import {
   bossArenaCameraX,
   clampArenaBossX,
   clampArenaPlayerX,
+  selectBossTestRoute,
 } from "../app/boss-arena.mjs";
 
 test("arena activation removes every ordinary enemy and preserves the boss", () => {
@@ -48,4 +49,17 @@ test("active boss metadata controls arena clamping and camera placement", () => 
   assert.equal(clampArenaBossX(4000, 96, brutus), 5800);
   assert.equal(clampArenaBossX(7000, 96, brutus), 6418);
   assert.equal(bossArenaCameraX(brutus), 5700);
+});
+
+test("boss test routes preserve canonical Level 1 positions and isolate Brutus", () => {
+  assert.deepEqual(selectBossTestRoute("1"), {
+    levelId: "level-1", playerX: 5590, checkpointX: 5590, cameraX: 5280, glider: 0,
+  });
+  assert.deepEqual(selectBossTestRoute("arena"), {
+    levelId: "level-1", playerX: 5690, checkpointX: 5590, cameraX: 5280, glider: 0,
+  });
+  assert.deepEqual(selectBossTestRoute("brutus"), {
+    levelId: "level-2", playerX: 5650, checkpointX: 5200, cameraX: 5300, glider: 14,
+  });
+  assert.equal(selectBossTestRoute("unknown"), null);
 });

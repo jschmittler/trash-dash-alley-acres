@@ -12,6 +12,16 @@ const defaultArena = Object.freeze({
   arenaEndX: BOSS_ARENA_RIGHT,
 });
 
+const bossTestRoutes = Object.freeze({
+  "1": Object.freeze({ levelId: "level-1", playerX: 5590, checkpointX: 5590, cameraX: 5280, glider: 0 }),
+  arena: Object.freeze({ levelId: "level-1", playerX: 5690, checkpointX: 5590, cameraX: 5280, glider: 0 }),
+  brutus: Object.freeze({ levelId: "level-2", playerX: 5650, checkpointX: 5200, cameraX: 5300, glider: 14 }),
+});
+
+export function selectBossTestRoute(routeName) {
+  return bossTestRoutes[routeName] ?? null;
+}
+
 export function activateBossArena(enemies) {
   return {
     arenaActive: true,

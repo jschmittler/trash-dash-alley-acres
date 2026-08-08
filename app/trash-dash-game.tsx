@@ -44,6 +44,7 @@ import {
   activateBossArena,
   clampArenaBossX as metadataClampArenaBossX,
   clampArenaPlayerX as metadataClampArenaPlayerX,
+  selectBossTestRoute,
 } from "./boss-arena.mjs";
 import {
   advanceBossTransition,
@@ -60,6 +61,7 @@ import {
   brutusAnimationFrame,
   brutusArenaHazards,
   createBrutusState,
+  moveBrutusInArena,
   updateBrutus,
 } from "./brutus-boss.mjs";
 import {
@@ -152,6 +154,7 @@ interface CampaignLevelDefinition {
     arenaEndX: number;
     surfaceId?: string;
     hydrant?: Omit<EnvironmentCollision, "kind" | "encounterId">;
+    recoveryX?: number;
     sprinklers?: Array<Omit<EnvironmentCollision, "kind" | "encounterId"> & { side: "left" | "right" }>;
     postBossStartX?: number;
   };
@@ -958,6 +961,7 @@ export function TrashDashGame() {
     selectedCharacterRef.current = selectedProfile.id;
     const devParams = import.meta.env.DEV && !levelIdOverride ? new URLSearchParams(window.location.search) : null;
     const bossTest = devParams?.get("bossTest") ?? null;
+    const bossRoute = selectBossTestRoute(bossTest);
     const levelTest = devParams?.get("levelTest") ?? null;
     const backgroundTest = devParams?.get("backgroundTest") ?? null;
     const powerupTest = devParams?.get("powerupTest") ?? null;
@@ -967,7 +971,7 @@ export function TrashDashGame() {
       || levelTest === "level2-start"
       || (levelTest !== null && Object.hasOwn(levelTwoTestStarts, levelTest))
       || encounterTest !== null
-      || bossTest === "brutus"
+      || bossRoute?.levelId === "level-2"
       || victoryTest === "level2";
     const levelId = levelIdOverride ?? (levelTwoRequested ? "level-2" : "level-1");
     const testCarry = levelTest === "level2-start"
@@ -1002,19 +1006,19 @@ export function TrashDashGame() {
       nextWorld.player.y = surface.y - nextWorld.player.h;
       nextWorld.player.grounded = true;
       nextWorld.cameraX = clamp(selected.cameraX, 0, nextWorld.worldWidth - WIDTH);
-    } else if (bossTest === "brutus" || bossTest === "arena") {
-      nextWorld.player.x = bossTest === "brutus" ? 5650 : 5690;
+    } else if (bossRoute) {
+      nextWorld.player.x = bossRoute.playerX;
       nextWorld.player.y = GROUND_Y - 58;
       nextWorld.player.w = 38;
       nextWorld.player.h = 58;
       nextWorld.player.large = true;
       nextWorld.player.animationName = "large_idle";
       nextWorld.trash = 5;
-      nextWorld.player.glider = bossTest === "brutus" ? 14 : nextWorld.player.glider;
-      nextWorld.checkpoint = bossTest === "brutus" ? 5200 : 5590;
+      nextWorld.player.glider = bossRoute.glider;
+      nextWorld.checkpoint = bossRoute.checkpointX;
       nextWorld.checkpointReached = true;
       nextWorld.checkpointIndex = nextWorld.checkpoints.length - 1;
-      nextWorld.cameraX = bossTest === "brutus" ? 5300 : 5280;
+      nextWorld.cameraX = bossRoute.cameraX;
     } else if (levelTest !== null && Object.hasOwn(levelTwoTestStarts, levelTest)) {
       const route = levelTest as keyof typeof levelTwoTestStarts;
       const [requestedX, requestedCameraX] = levelTwoTestStarts[route];
@@ -1557,34 +1561,12 @@ export function TrashDashGame() {
         return;
       }
 
-      let hydrantHit = false;
-      if (state.mode === "charge") {
-        const speed = state.phase === 3 ? 420 : state.phase === 2 ? 360 : 310;
-        boss.vx = boss.facing * speed;
-        const proposedX = clampArenaBossX(world, boss.x + boss.vx * dt, boss.w);
-        const hydrant = world.environment.find(({ kind, encounterId }) => kind === "hydrant" && encounterId === "brutus");
-        if (hydrant) {
-          const currentLeft = boss.x;
-          const currentRight = boss.x + boss.w;
-          const proposedLeft = proposedX;
-          const proposedRight = proposedX + boss.w;
-          const verticalOverlap = boss.y < hydrant.y + hydrant.h && boss.y + boss.h > hydrant.y;
-          hydrantHit = verticalOverlap && (boss.vx < 0
-            ? (currentLeft >= hydrant.x + hydrant.w && proposedLeft <= hydrant.x + hydrant.w)
-            : (currentRight <= hydrant.x && proposedRight >= hydrant.x));
-          if (hydrantHit) {
-            boss.x = boss.vx < 0 ? hydrant.x + hydrant.w : hydrant.x - boss.w;
-          } else {
-            boss.x = proposedX;
-          }
-        } else {
-          boss.x = proposedX;
-        }
-      } else {
-        boss.vx = 0;
-      }
+      const movement = moveBrutusInArena(boss, state, { dt, boss: world.level.boss });
+      boss.x = movement.x;
+      boss.vx = movement.vx;
+      boss.facing = movement.facing;
 
-      const next = updateBrutus(state, { dt, hydrantHit });
+      const next = updateBrutus(state, { dt, hydrantHit: movement.hydrantHit });
       if (next.mode !== state.mode || next.visualState !== state.visualState) boss.stateElapsed = 0;
       else boss.stateElapsed += dt;
       boss.brutusState = next;

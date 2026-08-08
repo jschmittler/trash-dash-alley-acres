@@ -6,6 +6,7 @@ import {
   BRUTUS_ANIMATIONS,
   brutusArenaHazards,
   createBrutusState,
+  moveBrutusInArena,
   updateBrutus,
 } from "../app/brutus-boss.mjs";
 import { LEVEL_TWO } from "../app/level-two.mjs";
@@ -83,11 +84,57 @@ test("Level 2 authors the hydrant, alternating sprinklers, and hostile-free rele
 
 test("strict Brutus and Level 2 victory test routes preserve lazy boss loading", async () => {
   const source = await readFile(new URL("../app/trash-dash-game.tsx", import.meta.url), "utf8");
-  assert.match(source, /bossTest === "brutus"/);
   assert.match(source, /victoryTest === "level2"/);
-  assert.match(source, /nextWorld\.player\.x = bossTest === "brutus" \? 5650 : 5690/);
+  assert.match(source, /const bossRoute = selectBossTestRoute\(bossTest\)/);
+  assert.match(source, /nextWorld\.player\.x = bossRoute\.playerX/);
   assert.match(source, /nextWorld\.enemies = \[\]/);
   const eagerStart = source.indexOf("void Promise.all([", source.indexOf("useEffect(() =>"));
   const eagerEnd = source.indexOf("]).then(([", eagerStart);
   assert.doesNotMatch(source.slice(eagerStart, eagerEnd), /brutus-motion\.png/);
+});
+
+test("recovery leaves the hydrant boundary before faster phase charges can reconnect", () => {
+  const contactX = LEVEL_TWO.boss.hydrant.x + LEVEL_TWO.boss.hydrant.w;
+  const recovered = moveBrutusInArena(
+    { x: contactX, w: 96, facing: -1 },
+    { ...createBrutusState(), hp: 2, phase: 2, mode: "recover" },
+    { dt: 0.5, boss: LEVEL_TWO.boss },
+  );
+  assert.equal(recovered.x, LEVEL_TWO.boss.recoveryX);
+
+  const firstChargeStep = moveBrutusInArena(
+    { x: recovered.x, w: 96, facing: -1 },
+    { ...createBrutusState(), hp: 2, phase: 2, mode: "charge" },
+    { dt: 0.1, boss: LEVEL_TWO.boss },
+  );
+  assert.equal(firstChargeStep.hydrantHit, false);
+  assert.ok(firstChargeStep.x < recovered.x);
+
+  const elapsedToHydrant = (phase) => {
+    let actor = { x: phase === 1 ? LEVEL_TWO.boss.arenaStartX + 480 : LEVEL_TWO.boss.recoveryX, w: 96, facing: -1 };
+    let elapsed = 0;
+    while (elapsed < 2) {
+      const moved = moveBrutusInArena(actor, { ...createBrutusState(), phase, mode: "charge" }, {
+        dt: 0.1, boss: LEVEL_TWO.boss,
+      });
+      elapsed = Number((elapsed + 0.1).toFixed(1));
+      actor = { ...actor, ...moved };
+      if (moved.hydrantHit) return elapsed;
+    }
+    throw new Error(`phase ${phase} never reached the hydrant`);
+  };
+  assert.deepEqual([1, 2, 3].map(elapsedToHydrant), [1.1, 1, 0.9]);
+});
+
+test("defeat exit translates Brutus while the arena remains locked", () => {
+  const state = { ...createBrutusState(), hp: 0, phase: 3, mode: "defeat-exit", timer: 0.2 };
+  const moved = moveBrutusInArena(
+    { x: 5852, w: 96, facing: -1 },
+    state,
+    { dt: 0.1, boss: LEVEL_TWO.boss },
+  );
+  assert.ok(moved.x > 5852);
+  assert.equal(moved.facing, 1);
+  assert.equal(updateBrutus(state, { dt: 0.1 }).arenaUnlocked, false);
+  assert.equal(updateBrutus(state, { dt: 0.2 }).arenaUnlocked, true);
 });

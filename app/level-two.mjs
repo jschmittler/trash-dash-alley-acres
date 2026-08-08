@@ -159,6 +159,7 @@ export const LEVEL_TWO = freezeDeep({
     surfaceId: "cul-de-sac",
     checkpointId: "boss-runway-checkpoint",
     hydrant: { id: "brutus-hydrant", x: 5810, y: 400, w: 42, h: 68 },
+    recoveryX: 6200,
     sprinklers: [
       { id: "brutus-sprinkler-left", side: "left", x: 6000, y: 444, w: 34, h: 24 },
       { id: "brutus-sprinkler-right", side: "right", x: 6320, y: 444, w: 34, h: 24 },

@@ -101,6 +101,10 @@ derived active/defeat sources live under `concepts/level-two/source/` as
 flat `#FF00FF` key, discard detached key fragments, quantize to a hard limited
 palette without dithering, align every opaque foot/pool base to local row 175,
 and rebuild the runtime atlas and `brutus-motion-contact-sheet.png`.
+Every active/pool/exit runtime cell is one connected silhouette; only authored
+cyan shake droplets may remain detached. Recovery frames are scaled from the
+active anchor rather than the larger defeat-sheet composition, preventing a
+size jump after hit playback while keeping the bin/body center registered.
 
 | Row | State | Frames |
 | ---: | --- | --- |
