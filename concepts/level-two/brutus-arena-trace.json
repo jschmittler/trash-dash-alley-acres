@@ -1,0 +1,252 @@
+{
+  "dt": 0.1,
+  "completionElapsed": 9.7,
+  "transitions": [
+    {
+      "elapsed": 0,
+      "mode": "intro",
+      "hp": 3,
+      "phase": 1,
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 0.8,
+      "mode": "sniff",
+      "hp": 3,
+      "phase": 1,
+      "hazards": [],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 1.5,
+      "mode": "bark",
+      "hp": 3,
+      "phase": 1,
+      "hazards": [],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 2.1,
+      "mode": "charge",
+      "hp": 3,
+      "phase": 1,
+      "hazards": [],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 2.2,
+      "mode": "stunned-open",
+      "hp": 3,
+      "phase": 1,
+      "hazards": [],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 2.3,
+      "mode": "hit",
+      "hp": 2,
+      "phase": 2,
+      "hazards": [
+        {
+          "kind": "rolling-can",
+          "id": "brutus-can"
+        }
+      ],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 2.8,
+      "mode": "recover",
+      "hp": 2,
+      "phase": 2,
+      "hazards": [
+        {
+          "kind": "rolling-can",
+          "id": "brutus-can"
+        }
+      ],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 3.4,
+      "mode": "sniff",
+      "hp": 2,
+      "phase": 2,
+      "hazards": [
+        {
+          "kind": "rolling-can",
+          "id": "brutus-can"
+        }
+      ],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 4.1,
+      "mode": "bark",
+      "hp": 2,
+      "phase": 2,
+      "hazards": [
+        {
+          "kind": "rolling-can",
+          "id": "brutus-can"
+        }
+      ],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 4.7,
+      "mode": "charge",
+      "hp": 2,
+      "phase": 2,
+      "hazards": [
+        {
+          "kind": "rolling-can",
+          "id": "brutus-can"
+        }
+      ],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 4.8,
+      "mode": "stunned-open",
+      "hp": 2,
+      "phase": 2,
+      "hazards": [
+        {
+          "kind": "rolling-can",
+          "id": "brutus-can"
+        }
+      ],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 4.9,
+      "mode": "hit",
+      "hp": 1,
+      "phase": 3,
+      "hazards": [
+        {
+          "kind": "sprinkler",
+          "side": "left"
+        }
+      ],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 5.4,
+      "mode": "recover",
+      "hp": 1,
+      "phase": 3,
+      "hazards": [
+        {
+          "kind": "sprinkler",
+          "side": "left"
+        }
+      ],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 6,
+      "mode": "sniff",
+      "hp": 1,
+      "phase": 3,
+      "hazards": [
+        {
+          "kind": "sprinkler",
+          "side": "right"
+        }
+      ],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 6.7,
+      "mode": "bark",
+      "hp": 1,
+      "phase": 3,
+      "hazards": [
+        {
+          "kind": "sprinkler",
+          "side": "left"
+        }
+      ],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 7.3,
+      "mode": "charge",
+      "hp": 1,
+      "phase": 3,
+      "hazards": [
+        {
+          "kind": "sprinkler",
+          "side": "right"
+        }
+      ],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 7.4,
+      "mode": "stunned-open",
+      "hp": 1,
+      "phase": 3,
+      "hazards": [
+        {
+          "kind": "sprinkler",
+          "side": "right"
+        }
+      ],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 7.5,
+      "mode": "hit",
+      "hp": 0,
+      "phase": 3,
+      "hazards": [],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 8,
+      "mode": "defeat-slide",
+      "hp": 0,
+      "phase": 3,
+      "hazards": [],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 8.6,
+      "mode": "defeat-shake",
+      "hp": 0,
+      "phase": 3,
+      "hazards": [],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 9.1,
+      "mode": "defeat-exit",
+      "hp": 0,
+      "phase": 3,
+      "hazards": [],
+      "arenaUnlocked": false
+    },
+    {
+      "elapsed": 9.7,
+      "mode": "complete",
+      "hp": 0,
+      "phase": 3,
+      "hazards": [],
+      "arenaUnlocked": true
+    }
+  ],
+  "runwayOrdinaryAfterActivation": 0,
+  "lockedPlayerSamples": [
+    5724,
+    5750,
+    6488
+  ],
+  "releasePlayerSample": 6700,
+  "manualFeelBoundary": [
+    "Input cadence and audiovisual feel require browser playtesting.",
+    "Localhost/browser access was prohibited for Task 7; no browser attempt was made."
+  ]
+}

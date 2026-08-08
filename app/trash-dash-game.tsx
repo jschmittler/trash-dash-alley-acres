@@ -42,6 +42,8 @@ import {
 } from "./boss-animation.mjs";
 import {
   activateBossArena,
+  clampArenaBossX as metadataClampArenaBossX,
+  clampArenaPlayerX as metadataClampArenaPlayerX,
 } from "./boss-arena.mjs";
 import {
   advanceBossTransition,
@@ -53,6 +55,13 @@ import {
   POWERUP_NOTICE_DURATION,
 } from "./powerup-announcement.mjs";
 import { evaluateVictoryRecord } from "./victory-phase.mjs";
+import {
+  brutusAnimation,
+  brutusAnimationFrame,
+  brutusArenaHazards,
+  createBrutusState,
+  updateBrutus,
+} from "./brutus-boss.mjs";
 import {
   DUMPSTER_DRAW_HEIGHT,
   DUMPSTER_DRAW_WIDTH,
@@ -135,7 +144,17 @@ interface CampaignLevelDefinition {
   encounters: Array<{ enemies: EnemySpawnDefinition[] }>;
   rewards: Array<{ kind: string; x: number; surfaceY: number }>;
   checkpoints: Array<{ id: string; x: number; respawnX: number; label: string }>;
-  boss: { kind: string; triggerX: number; arenaStartX: number; arenaEndX: number; surfaceId?: string };
+  boss: {
+    kind: string;
+    runwayStartX?: number;
+    triggerX: number;
+    arenaStartX: number;
+    arenaEndX: number;
+    surfaceId?: string;
+    hydrant?: Omit<EnvironmentCollision, "kind" | "encounterId">;
+    sprinklers?: Array<Omit<EnvironmentCollision, "kind" | "encounterId"> & { side: "left" | "right" }>;
+    postBossStartX?: number;
+  };
   exit: { nextLevelId: string | null; x: number };
 }
 
@@ -198,6 +217,8 @@ interface Enemy extends Rect {
   stateElapsed: number;
   visualState: string | null;
   visualTimer: number;
+  brutusState: ReturnType<typeof createBrutusState> | null;
+  brutusCanSpawned: boolean;
 }
 
 interface BinLid extends Rect {
@@ -210,7 +231,7 @@ interface BinLid extends Rect {
 
 interface EnvironmentCollision extends Rect {
   id: string;
-  kind: "bin-lid-source" | "charge-obstacle" | "sprinkler" | "porch-light";
+  kind: "bin-lid-source" | "charge-obstacle" | "sprinkler" | "porch-light" | "hydrant";
   encounterId: string;
   flightBand?: string;
 }
@@ -322,10 +343,10 @@ const levelTwoTestSurfaces: Record<keyof typeof levelTwoTestStarts, string> = {
 const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
 const bossArenaCameraX = (world: World) => world.level.boss.arenaStartX;
 const clampArenaPlayerX = (world: World, x: number, width: number) => (
-  clamp(x, world.level.boss.arenaStartX + 24, world.level.boss.arenaEndX - width - 24)
+  metadataClampArenaPlayerX(x, width, world.level.boss)
 );
 const clampArenaBossX = (world: World, x: number, width: number) => (
-  clamp(x, world.level.boss.arenaStartX + 100, world.level.boss.arenaEndX - width - 36)
+  metadataClampArenaBossX(x, width, world.level.boss)
 );
 const worldBossSpawnX = (level: CampaignLevelDefinition) => level.boss.arenaStartX + 480;
 const dumpsterGoalWorldX = (world: World) => (
@@ -579,6 +600,8 @@ const makeEnemy = (
     stateElapsed: 0,
     visualState: null,
     visualTimer: 0,
+    brutusState: null,
+    brutusCanSpawned: false,
   };
 };
 
@@ -656,6 +679,16 @@ const makeWorld = (
     ),
   });
 
+  const boss = makeEnemy({
+    kind: "boss",
+    x: worldBossSpawnX(level),
+    surfaceId: level.boss.surfaceId,
+  }, runtime.surfaces);
+  if (level.boss.kind === "brutus") {
+    boss.brutusState = createBrutusState();
+    boss.behaviorState = boss.brutusState.mode;
+  }
+
   return {
     levelId: level.id,
     level,
@@ -667,13 +700,15 @@ const makeWorld = (
     platforms: mapLevelSurfacesToPlatforms(runtime.surfaces),
     selectedCharacterId: selectedProfile.id,
     player,
-    enemies: runtime.enemies.concat(makeEnemy({
-      kind: "boss",
-      x: worldBossSpawnX(level),
-      surfaceId: level.boss.surfaceId,
-    }, runtime.surfaces)),
+    enemies: runtime.enemies.concat(boss),
     binLids: [],
-    environment: level.id === "level-2" ? levelTwoEnvironmentRecords() as EnvironmentCollision[] : [],
+    environment: level.id === "level-2"
+      ? [
+          ...levelTwoEnvironmentRecords() as EnvironmentCollision[],
+          ...(level.boss.hydrant ? [{ ...level.boss.hydrant, kind: "hydrant", encounterId: "brutus" } as EnvironmentCollision] : []),
+          ...(level.boss.sprinklers ?? []).map((item) => ({ ...item, kind: "sprinkler", encounterId: "brutus" } as EnvironmentCollision)),
+        ]
+      : [],
     pickups: runtime.pickups,
     particles: [],
     cameraX: 0,
@@ -711,6 +746,7 @@ export function TrashDashGame() {
   const playerHeroMotionRef = useRef<HTMLImageElement | null>(null);
   const jimothyHeroMotionRef = useRef<HTMLImageElement | null>(null);
   const bossMotionRef = useRef<HTMLImageElement | null>(null);
+  const brutusMotionRef = useRef<HTMLImageElement | null>(null);
   const enemyMotionRef = useRef<HTMLImageElement | null>(null);
   const varietyEnemyMotionRef = useRef<HTMLImageElement | null>(null);
   const levelTwoEnemyMotionRef = useRef<HTMLImageElement | null>(null);
@@ -789,17 +825,21 @@ export function TrashDashGame() {
     return request;
   }, []);
   const loadLevelEnemyAtlas = useCallback((activeLevel: CampaignLevelDefinition) => {
-    if (activeLevel.id !== "level-2" || levelTwoEnemyMotionRef.current) return Promise.resolve();
+    if (activeLevel.id !== "level-2" || (levelTwoEnemyMotionRef.current && brutusMotionRef.current)) return Promise.resolve();
     const pending = levelEnemyLoadPromisesRef.current.get(activeLevel.id);
     if (pending) return pending;
-    const request = new Promise<void>((resolve, reject) => {
+    const loadImage = (source: string) => new Promise<HTMLImageElement>((resolve, reject) => {
       const image = new Image();
-      image.onload = () => {
-        levelTwoEnemyMotionRef.current = image;
-        resolve();
-      };
+      image.onload = () => resolve(image);
       image.onerror = reject;
-      image.src = assetUrl("assets/generated/level2-enemy-motion.png");
+      image.src = assetUrl(source);
+    });
+    const request = Promise.all([
+      loadImage("assets/generated/level2-enemy-motion.png"),
+      loadImage("assets/generated/brutus-motion.png"),
+    ]).then(([enemyAtlas, brutusAtlas]) => {
+      levelTwoEnemyMotionRef.current = enemyAtlas;
+      brutusMotionRef.current = brutusAtlas;
     }).catch((error) => {
       levelEnemyLoadPromisesRef.current.delete(activeLevel.id);
       throw error;
@@ -926,7 +966,9 @@ export function TrashDashGame() {
     const levelTwoRequested = devParams?.get("level") === "2"
       || levelTest === "level2-start"
       || (levelTest !== null && Object.hasOwn(levelTwoTestStarts, levelTest))
-      || encounterTest !== null;
+      || encounterTest !== null
+      || bossTest === "brutus"
+      || victoryTest === "level2";
     const levelId = levelIdOverride ?? (levelTwoRequested ? "level-2" : "level-1");
     const testCarry = levelTest === "level2-start"
       ? {
@@ -960,18 +1002,19 @@ export function TrashDashGame() {
       nextWorld.player.y = surface.y - nextWorld.player.h;
       nextWorld.player.grounded = true;
       nextWorld.cameraX = clamp(selected.cameraX, 0, nextWorld.worldWidth - WIDTH);
-    } else if (bossTest) {
-      nextWorld.player.x = bossTest === "arena" ? 5690 : 5590;
+    } else if (bossTest === "brutus" || bossTest === "arena") {
+      nextWorld.player.x = bossTest === "brutus" ? 5650 : 5690;
       nextWorld.player.y = GROUND_Y - 58;
       nextWorld.player.w = 38;
       nextWorld.player.h = 58;
       nextWorld.player.large = true;
       nextWorld.player.animationName = "large_idle";
       nextWorld.trash = 5;
-      nextWorld.checkpoint = 5590;
+      nextWorld.player.glider = bossTest === "brutus" ? 14 : nextWorld.player.glider;
+      nextWorld.checkpoint = bossTest === "brutus" ? 5200 : 5590;
       nextWorld.checkpointReached = true;
       nextWorld.checkpointIndex = nextWorld.checkpoints.length - 1;
-      nextWorld.cameraX = 5280;
+      nextWorld.cameraX = bossTest === "brutus" ? 5300 : 5280;
     } else if (levelTest !== null && Object.hasOwn(levelTwoTestStarts, levelTest)) {
       const route = levelTest as keyof typeof levelTwoTestStarts;
       const [requestedX, requestedCameraX] = levelTwoTestStarts[route];
@@ -984,9 +1027,9 @@ export function TrashDashGame() {
       nextWorld.cameraX = clamp(requestedCameraX, 0, nextWorld.worldWidth - WIDTH);
       if (route === "main-street") {
         nextWorld.bossDefeated = true;
+        nextWorld.arenaActive = false;
         nextWorld.dumpsterRevealStartedAt = 0;
-        const boss = nextWorld.enemies.find(({ kind }) => kind === "boss");
-        if (boss) boss.active = false;
+        nextWorld.enemies = [];
       }
     } else if (backgroundTest) {
       const backgroundStarts: Record<string, [number, number]> = {
@@ -1010,6 +1053,19 @@ export function TrashDashGame() {
         ? cratePlatforms[0].y - nextWorld.player.h
         : 215;
       nextWorld.cameraX = powerupTest === "taco" ? 560 : 3320;
+    } else if (victoryTest === "level2") {
+      nextWorld.player.x = nextWorld.level.boss.postBossStartX ?? nextWorld.level.boss.arenaEndX;
+      nextWorld.player.y = GROUND_Y - 58;
+      nextWorld.player.w = 38;
+      nextWorld.player.h = 58;
+      nextWorld.player.large = true;
+      nextWorld.player.glider = 14;
+      nextWorld.player.animationName = "large_idle";
+      nextWorld.bossDefeated = true;
+      nextWorld.arenaActive = false;
+      nextWorld.enemies = [];
+      nextWorld.trash = 5;
+      nextWorld.cameraX = nextWorld.level.boss.arenaEndX - 120;
     } else if (victoryTest === "1") {
       nextWorld.player.x = 6350;
       nextWorld.player.y = GROUND_Y - 58;
@@ -1381,7 +1437,7 @@ export function TrashDashGame() {
     };
 
     const enterBossArena = (world: World) => {
-      const transition = createBossTransition(world.cameraX);
+      const transition = createBossTransition(world.cameraX, world.level.boss);
       const activated = activateBossArena(world.enemies);
       world.enemies = activated.enemies;
       world.arenaActive = activated.arenaActive;
@@ -1390,10 +1446,16 @@ export function TrashDashGame() {
       if (boss) {
         boss.active = true;
         boss.vx = 0;
-        boss.attackCooldown = 0.85;
-        setBossState(boss, "idle");
+        if (boss.brutusState) {
+          boss.brutusState = createBrutusState();
+          boss.behaviorState = boss.brutusState.mode;
+          boss.stateElapsed = 0;
+        } else {
+          boss.attackCooldown = 0.85;
+          setBossState(boss, "idle");
+        }
       }
-      setMessage(world, "TRASH HEAP TYRANT", 2.4);
+      setMessage(world, boss?.brutusState ? "BRUTUS THE BIN-HOUND" : "TRASH HEAP TYRANT", 2.4);
       tone(92, 0.32, "sawtooth");
 
       const switchId = ++musicSwitchIdRef.current;
@@ -1408,6 +1470,27 @@ export function TrashDashGame() {
     };
 
     const damageEnemy = (world: World, enemy: Enemy, stomp = false) => {
+      if (enemy.kind === "boss" && enemy.brutusState) {
+        if (!enemy.active || enemy.hitCooldown > 0) return;
+        const previousHp = enemy.brutusState.hp;
+        const next = updateBrutus(enemy.brutusState, { dt: 0, playerAttackHit: true });
+        if (next.hp === previousHp) return;
+        enemy.brutusState = next;
+        enemy.hp = next.hp;
+        enemy.behaviorState = next.mode;
+        enemy.stateElapsed = 0;
+        enemy.hitCooldown = 0.16;
+        enemy.vx = 0;
+        burst(world, enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, "#ffd248", 12);
+        tone(170, 0.09, "square");
+        if (next.hp === 0) {
+          world.score += 2500;
+          setMessage(world, "Brutus is headed for the pool!", 2);
+        } else {
+          setMessage(world, `${next.hp} hits left!`, 1.2);
+        }
+        return;
+      }
       if (
         !enemy.active
         || enemy.hitCooldown > 0
@@ -1451,7 +1534,91 @@ export function TrashDashGame() {
       window.setTimeout(() => tone(620, 0.15), 100);
     };
 
+    const finishBrutusDefeat = (world: World, boss: Enemy) => {
+      if (world.bossDefeated) return;
+      boss.active = false;
+      boss.vx = 0;
+      world.bossDefeated = true;
+      world.arenaActive = false;
+      world.bossTransition = null;
+      world.binLids = [];
+      setMessage(world, "Cul-de-sac cleared — downtown ahead!", 3);
+      tone(420, 0.12);
+      window.setTimeout(() => tone(620, 0.15), 100);
+    };
+
+    const updateBrutusBoss = (world: World, boss: Enemy, dt: number) => {
+      const state = boss.brutusState;
+      if (!state) return;
+      boss.hitCooldown = Math.max(0, boss.hitCooldown - dt);
+      if (!world.arenaActive || world.bossTransition) {
+        boss.vx = 0;
+        boss.y = boss.surfaceY - boss.h;
+        return;
+      }
+
+      let hydrantHit = false;
+      if (state.mode === "charge") {
+        const speed = state.phase === 3 ? 420 : state.phase === 2 ? 360 : 310;
+        boss.vx = boss.facing * speed;
+        const proposedX = clampArenaBossX(world, boss.x + boss.vx * dt, boss.w);
+        const hydrant = world.environment.find(({ kind, encounterId }) => kind === "hydrant" && encounterId === "brutus");
+        if (hydrant) {
+          const currentLeft = boss.x;
+          const currentRight = boss.x + boss.w;
+          const proposedLeft = proposedX;
+          const proposedRight = proposedX + boss.w;
+          const verticalOverlap = boss.y < hydrant.y + hydrant.h && boss.y + boss.h > hydrant.y;
+          hydrantHit = verticalOverlap && (boss.vx < 0
+            ? (currentLeft >= hydrant.x + hydrant.w && proposedLeft <= hydrant.x + hydrant.w)
+            : (currentRight <= hydrant.x && proposedRight >= hydrant.x));
+          if (hydrantHit) {
+            boss.x = boss.vx < 0 ? hydrant.x + hydrant.w : hydrant.x - boss.w;
+          } else {
+            boss.x = proposedX;
+          }
+        } else {
+          boss.x = proposedX;
+        }
+      } else {
+        boss.vx = 0;
+      }
+
+      const next = updateBrutus(state, { dt, hydrantHit });
+      if (next.mode !== state.mode || next.visualState !== state.visualState) boss.stateElapsed = 0;
+      else boss.stateElapsed += dt;
+      boss.brutusState = next;
+      boss.hp = next.hp;
+      boss.behaviorState = next.mode;
+      if (next.mode === "charge" && state.mode !== "charge") {
+        boss.facing = world.player.x < boss.x ? -1 : 1;
+      }
+
+      if (next.phase === 2 && !boss.brutusCanSpawned) {
+        boss.brutusCanSpawned = true;
+        world.binLids = world.binLids.filter(({ ownerId }) => ownerId !== "brutus-can");
+        world.binLids.push({
+          x: boss.x + boss.w / 2 - 16,
+          y: boss.surfaceY - 32,
+          w: 32,
+          h: 32,
+          vx: boss.facing < 0 ? -170 : 170,
+          reflected: false,
+          ownerId: "brutus-can",
+          lightweight: true,
+          active: true,
+        });
+      }
+      if (next.phase >= 3) world.binLids = world.binLids.filter(({ ownerId }) => ownerId !== "brutus-can");
+      if (next.arenaUnlocked) finishBrutusDefeat(world, boss);
+      boss.y = boss.surfaceY - boss.h;
+    };
+
     const updateBoss = (world: World, boss: Enemy, dt: number) => {
+      if (boss.brutusState) {
+        updateBrutusBoss(world, boss, dt);
+        return;
+      }
       boss.phase += dt;
       boss.hitCooldown = Math.max(0, boss.hitCooldown - dt);
       boss.actionTimer = Math.max(0, boss.actionTimer - dt);
@@ -1654,6 +1821,14 @@ export function TrashDashGame() {
         return;
       }
 
+      if (
+        !world.arenaActive
+        && !world.bossDefeated
+        && world.level.boss.runwayStartX !== undefined
+        && player.x >= world.level.boss.runwayStartX
+      ) {
+        world.enemies = world.enemies.filter(({ kind }) => kind === "boss");
+      }
       if (!world.arenaActive && !world.bossDefeated && player.x >= world.level.boss.triggerX) enterBossArena(world);
       if (world.arenaActive) player.x = clampArenaPlayerX(world, player.x, player.w);
 
@@ -1851,11 +2026,15 @@ export function TrashDashGame() {
         }
 
         if (!intersects(player, enemy)) continue;
-        const bossAnimation = enemy.kind === "boss" ? BOSS_ANIMATIONS[enemy.animationState as keyof typeof BOSS_ANIMATIONS] : null;
+        const bossAnimation = enemy.kind === "boss" && !enemy.brutusState
+          ? BOSS_ANIMATIONS[enemy.animationState as keyof typeof BOSS_ANIMATIONS]
+          : null;
         const bossFrame = bossAnimation ? bossAnimationFrame(bossAnimation, enemy.phase) : 0;
         const bossCanDamage = enemy.kind === "boss"
-          ? enemy.animationState === "walk"
-            || (enemy.animationState === "charge" && isBossChargeActive(bossFrame))
+          ? enemy.brutusState
+            ? enemy.brutusState.mode === "charge"
+            : enemy.animationState === "walk"
+              || (enemy.animationState === "charge" && isBossChargeActive(bossFrame))
           : !levelTwoEnemyKinds.has(enemy.kind)
             || levelTwoEnemyCanContactDamage(enemy.kind, enemy.behaviorState);
         const stomped = player.vy > 80 && previousBottom <= enemy.y + 16;
@@ -1888,12 +2067,21 @@ export function TrashDashGame() {
           }));
         }
         for (const sprinkler of world.environment.filter(({ kind }) => kind === "sprinkler")) {
-          const sprinklerActive = Math.sin(world.elapsed * 2.4 + sprinkler.x) > -0.15;
+          const brutus = world.enemies.find((enemy) => enemy.kind === "boss" && enemy.brutusState);
+          const activeSide = brutus
+            ? brutusArenaHazards(brutus.brutusState).find(({ kind }) => kind === "sprinkler")?.side
+            : null;
+          const authoredSide = world.level.boss.sprinklers?.find(({ id }) => id === sprinkler.id)?.side;
+          const sprinklerActive = sprinkler.encounterId === "brutus"
+            ? Boolean(activeSide && activeSide === authoredSide)
+            : Math.sin(world.elapsed * 2.4 + sprinkler.x) > -0.15;
           const stream: Rect = { x: sprinkler.x - 74, y: sprinkler.y - 104, w: 182, h: 128 };
           if (sprinklerActive && intersects(lid, stream)) {
             Object.assign(lid, updateSprinkler(lid, {
               active: true,
-              direction: Math.sin(world.elapsed * 1.2 + sprinkler.x) < 0 ? -1 : 1,
+              direction: authoredSide === "right"
+                ? -1
+                : authoredSide === "left" ? 1 : Math.sin(world.elapsed * 1.2 + sprinkler.x) < 0 ? -1 : 1,
             }));
           }
         }
@@ -1929,6 +2117,27 @@ export function TrashDashGame() {
       }
       world.binLids = world.binLids.filter(({ active }) => active);
 
+      const brutus = world.enemies.find((enemy) => enemy.kind === "boss" && enemy.brutusState);
+      const activeBrutusSprinkler = brutus
+        ? brutusArenaHazards(brutus.brutusState).find(({ kind }) => kind === "sprinkler")
+        : null;
+      if (activeBrutusSprinkler) {
+        const sprinkler = world.environment.find((item) => (
+          item.kind === "sprinkler"
+          && item.encounterId === "brutus"
+          && (world.level.boss.sprinklers ?? []).find(({ id, side }) => id === item.id && side === activeBrutusSprinkler.side)
+        ));
+        if (sprinkler) {
+          const stream: Rect = {
+            x: activeBrutusSprinkler.side === "left" ? sprinkler.x : sprinkler.x - 148,
+            y: sprinkler.y - 104,
+            w: 182,
+            h: 128,
+          };
+          if (intersects(player, stream)) hurtPlayer(world, activeBrutusSprinkler.side === "left" ? 1 : -1);
+        }
+      }
+
       for (const particle of world.particles) {
         particle.x += particle.vx * dt;
         particle.y += particle.vy * dt;
@@ -1962,7 +2171,7 @@ export function TrashDashGame() {
       }
 
       if (world.arenaActive && world.bossTransition) {
-        const transition = advanceBossTransition(world.bossTransition, dt, bossArenaCameraX(world));
+        const transition = advanceBossTransition(world.bossTransition, dt, world.level.boss);
         world.cameraX = transition.cameraX;
         world.bossTransition = transition.complete ? null : transition.transition;
       } else {
@@ -2245,16 +2454,25 @@ export function TrashDashGame() {
         if (x < -180 || x > WIDTH + 180) continue;
         context.save();
         if (item.kind === "sprinkler") {
+          const brutus = world.enemies.find((enemy) => enemy.kind === "boss" && enemy.brutusState);
+          const activeSide = brutus
+            ? brutusArenaHazards(brutus.brutusState).find(({ kind }) => kind === "sprinkler")?.side
+            : null;
+          const authoredSide = world.level.boss.sprinklers?.find(({ id }) => id === item.id)?.side;
+          const sprinklerActive = item.encounterId === "brutus"
+            ? Boolean(activeSide && activeSide === authoredSide)
+            : Math.sin(world.elapsed * 2.4 + item.x) > -0.15;
           context.fillStyle = "#173e3b";
           context.fillRect(x, item.y, item.w, item.h);
           context.fillStyle = "#9ddfd1";
           context.fillRect(x + 8, item.y - 4, item.w - 16, 6);
-          if (Math.sin(world.elapsed * 2.4 + item.x) > -0.15) {
+          if (sprinklerActive) {
             context.strokeStyle = "#9ddfd1";
             context.lineWidth = 3;
             context.beginPath();
             context.moveTo(x + item.w / 2, item.y);
-            context.lineTo(x + item.w / 2 + Math.sin(world.elapsed * 1.2 + item.x) * 74, item.y - 94);
+            const direction = authoredSide === "right" ? -1 : 1;
+            context.lineTo(x + item.w / 2 + direction * 74, item.y - 94);
             context.stroke();
           }
         } else if (item.kind === "charge-obstacle") {
@@ -2276,6 +2494,14 @@ export function TrashDashGame() {
           context.fillRect(x + 6, item.y - 8, 8, item.h + 12);
           context.fillStyle = "#ffd86a";
           context.fillRect(x + 2, item.y, 16, 12);
+        } else if (item.kind === "hydrant") {
+          context.fillStyle = "#172b46";
+          context.fillRect(x + 5, item.y + 10, item.w - 10, item.h - 10);
+          context.fillStyle = "#d9584d";
+          context.fillRect(x + 9, item.y + 5, item.w - 18, item.h - 12);
+          context.fillRect(x, item.y + 22, item.w, 15);
+          context.fillStyle = "#ffd36a";
+          context.fillRect(x + 14, item.y, item.w - 28, 7);
         }
         context.restore();
       }
@@ -2301,7 +2527,18 @@ export function TrashDashGame() {
         if (x < -60 || x > WIDTH + 60) continue;
         context.save();
         context.translate(x + lid.w / 2, lid.y + lid.h / 2);
-        context.rotate(world.elapsed * (lid.reflected ? 15 : 10));
+        context.rotate(world.elapsed * (lid.reflected ? 15 : lid.ownerId === "brutus-can" ? 5 : 10));
+        if (lid.ownerId === "brutus-can") {
+          context.fillStyle = "#172b46";
+          context.fillRect(-lid.w / 2, -lid.h / 2, lid.w, lid.h);
+          context.fillStyle = "#708695";
+          context.fillRect(-lid.w / 2 + 4, -lid.h / 2 + 3, lid.w - 8, lid.h - 8);
+          context.fillStyle = "#172b46";
+          context.fillRect(-lid.w / 2 + 7, lid.h / 2 - 5, 6, 6);
+          context.fillRect(lid.w / 2 - 13, lid.h / 2 - 5, 6, 6);
+          context.restore();
+          continue;
+        }
         context.fillStyle = "#173e3b";
         context.beginPath();
         context.ellipse(0, 0, lid.w / 2, lid.h / 2, 0, 0, Math.PI * 2);
@@ -2377,21 +2614,39 @@ export function TrashDashGame() {
           }
         }
         if (enemy.kind === "boss") {
-          const bossAnimation = BOSS_ANIMATIONS[enemy.animationState as keyof typeof BOSS_ANIMATIONS];
-          const bossFrameIndex = bossAnimationFrame(bossAnimation, enemy.phase);
-          const bossFrame = [
-            bossFrameIndex * ASSET_CELL,
-            bossAnimation.row * ASSET_CELL,
-            ASSET_CELL,
-            ASSET_CELL,
-          ] as Frame;
-          drawEnemy(
-            bossFrame,
-            bossAnimation.drawWidth,
-            bossAnimation.drawHeight,
-            1,
-            bossMotionRef.current,
-          );
+          if (enemy.brutusState) {
+            const animation = brutusAnimation(enemy.brutusState);
+            const stateFrame = brutusAnimationFrame(animation, enemy.stateElapsed);
+            const frame = [stateFrame * 256, animation.row * 192, 256, 192] as Frame;
+            const drawWidth = 220;
+            const drawHeight = 165;
+            drawSprite(
+              frame,
+              x + enemy.w / 2 - drawWidth / 2,
+              enemy.y + enemy.h - drawHeight + drawHeight * (16 / 192),
+              drawWidth,
+              drawHeight,
+              flip,
+              1,
+              brutusMotionRef.current,
+            );
+          } else {
+            const bossAnimation = BOSS_ANIMATIONS[enemy.animationState as keyof typeof BOSS_ANIMATIONS];
+            const bossFrameIndex = bossAnimationFrame(bossAnimation, enemy.phase);
+            const bossFrame = [
+              bossFrameIndex * ASSET_CELL,
+              bossAnimation.row * ASSET_CELL,
+              ASSET_CELL,
+              ASSET_CELL,
+            ] as Frame;
+            drawEnemy(
+              bossFrame,
+              bossAnimation.drawWidth,
+              bossAnimation.drawHeight,
+              1,
+              bossMotionRef.current,
+            );
+          }
           context.fillStyle = "#173e3b";
           context.fillRect(x + 4, enemy.y - 48, 88, 9);
           context.fillStyle = "#ffb13b";

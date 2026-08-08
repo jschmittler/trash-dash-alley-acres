@@ -40,3 +40,12 @@ test("player and boss remain inside their distinct arena margins", () => {
   assert.equal(clampArenaBossX(4000, 96), 5740);
   assert.equal(clampArenaBossX(7000, 96), 6468);
 });
+
+test("active boss metadata controls arena clamping and camera placement", () => {
+  const brutus = { arenaStartX: 5700, arenaEndX: 6550 };
+  assert.equal(clampArenaPlayerX(4000, 38, brutus), 5724);
+  assert.equal(clampArenaPlayerX(7000, 38, brutus), 6488);
+  assert.equal(clampArenaBossX(4000, 96, brutus), 5800);
+  assert.equal(clampArenaBossX(7000, 96, brutus), 6418);
+  assert.equal(bossArenaCameraX(brutus), 5700);
+});

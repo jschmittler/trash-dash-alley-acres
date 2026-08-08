@@ -90,3 +90,28 @@ frame. The renderer offsets the atlas's 16-pixel transparent foot inset so the
 opaque feet meet the authoritative support surface. Moth frames are centered
 on local `(95.5, 95.5)` after normalization, preserving body placement and wing
 clearance while runtime motion stays inside its authored flight band.
+
+## Brutus boss atlas and deterministic arena audit
+
+Brutus uses `public/assets/generated/brutus-motion.png`, a four-column by
+11-row RGBA atlas with fixed 256×192 cells. The generated visual anchor and
+derived active/defeat sources live under `concepts/level-two/source/` as
+`brutus-anchor.png`, `brutus-active-motion-source.png`, and
+`brutus-defeat-motion-source.png`. Run `npm run build:brutus` to remove the
+flat `#FF00FF` key, discard detached key fragments, quantize to a hard limited
+palette without dithering, align every opaque foot/pool base to local row 175,
+and rebuild the runtime atlas and `brutus-motion-contact-sheet.png`.
+
+| Row | State | Frames |
+| ---: | --- | --- |
+| 0–2 | Idle, sniff, bark | Two authored frames per state |
+| 3–5 | Charge, crash, stunned-open | Four charge, one crash, two open frames |
+| 6–7 | Hit, recovery | Three hit and two recovery frames |
+| 8–10 | Pool slide, shake, exit | Two frames per defeat beat |
+
+The same command writes `brutus-arena-trace.json`. That trace drives the pure
+state machine with fixed 0.1-second steps, verifies three hydrant-opened hits,
+records phase hazards, proves the arena unlock appears only on `complete`, and
+confirms ordinary population is zero at activation. It also records the manual
+feel boundary: browser/localhost access was prohibited for Task 7, so input
+cadence, camera feel, and audiovisual timing remain a later browser playtest.

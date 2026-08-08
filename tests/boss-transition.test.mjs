@@ -40,3 +40,11 @@ test("transition completion always lands exactly on the forward destination", ()
   assert.equal(result.complete, true);
   assert.equal(result.cameraX, 5640);
 });
+
+test("transition derives its target from active boss metadata", () => {
+  const boss = { triggerX: 5750, arenaStartX: 5700, arenaEndX: 6550 };
+  const start = createBossTransition(5300, boss);
+  const result = advanceBossTransition(start, BOSS_TRANSITION_DURATION, boss);
+  assert.equal(result.cameraX, 5700);
+  assert.equal(result.complete, true);
+});

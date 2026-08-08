@@ -1,0 +1,165 @@
+const animation = (row, frames, fps, loop = false) => Object.freeze({
+  row, frames, fps, loop, cellWidth: 256, cellHeight: 192,
+});
+
+export const BRUTUS_ANIMATIONS = Object.freeze({
+  idle: animation(0, 2, 3, true),
+  sniff: animation(1, 2, 4, true),
+  bark: animation(2, 2, 6),
+  charge: animation(3, 4, 10, true),
+  crash: animation(4, 1, 1),
+  "stunned-open": animation(5, 2, 4, true),
+  hit: animation(6, 3, 8),
+  recover: animation(7, 2, 5),
+  "defeat-slide": animation(8, 2, 6),
+  "defeat-shake": animation(9, 2, 8),
+  "defeat-exit": animation(10, 2, 7, true),
+});
+
+export const BRUTUS_DURATIONS = Object.freeze({
+  intro: 0.7,
+  sniff: 0.65,
+  bark: 0.52,
+  charge: Object.freeze({ 1: 1.25, 2: 1.05, 3: 0.9 }),
+  "stunned-open": 0.78,
+  hit: 0.45,
+  recover: 0.5,
+  "defeat-slide": 0.55,
+  "defeat-shake": 0.5,
+  "defeat-exit": 0.55,
+  sprinkler: 0.72,
+});
+
+const phaseFromHp = (hp) => Math.min(3, Math.max(1, 4 - hp));
+const timerFor = (mode, phase = 1) => (
+  mode === "charge" ? BRUTUS_DURATIONS.charge[phase] : BRUTUS_DURATIONS[mode] ?? 0
+);
+
+export function createBrutusState() {
+  return {
+    hp: 3,
+    phase: 1,
+    mode: "intro",
+    timer: BRUTUS_DURATIONS.intro,
+    arenaUnlocked: false,
+    rollingCanId: null,
+    sprinklerSide: "left",
+    sprinklerTimer: BRUTUS_DURATIONS.sprinkler,
+    visualState: null,
+    visualTimer: 0,
+  };
+}
+
+const tickSprinkler = (state, dt) => {
+  if (state.phase !== 3 || state.arenaUnlocked) return state;
+  const current = state.sprinklerTimer ?? BRUTUS_DURATIONS.sprinkler;
+  const elapsed = Math.max(0, dt);
+  if (elapsed < current) return { ...state, sprinklerTimer: current - elapsed };
+  const remainder = elapsed - current;
+  const changes = 1 + Math.floor(remainder / BRUTUS_DURATIONS.sprinkler);
+  return {
+    ...state,
+    sprinklerSide: changes % 2 === 0
+      ? state.sprinklerSide
+      : state.sprinklerSide === "left" ? "right" : "left",
+    sprinklerTimer: BRUTUS_DURATIONS.sprinkler - (remainder % BRUTUS_DURATIONS.sprinkler),
+  };
+};
+
+const advanceDefeat = (state, dt) => {
+  let next = state.mode === "defeat" ? { ...state, mode: "defeat-slide" } : { ...state };
+  let remaining = Math.max(0, dt);
+  const sequence = ["defeat-slide", "defeat-shake", "defeat-exit"];
+  while (sequence.includes(next.mode) && remaining >= 0) {
+    const timer = next.timer ?? timerFor(next.mode);
+    if (remaining < timer) return { ...next, timer: timer - remaining, arenaUnlocked: false };
+    remaining -= timer;
+    const index = sequence.indexOf(next.mode);
+    if (index === sequence.length - 1) {
+      return { ...next, mode: "complete", timer: 0, arenaUnlocked: true, rollingCanId: null };
+    }
+    const mode = sequence[index + 1];
+    next = { ...next, mode, timer: timerFor(mode), arenaUnlocked: false };
+  }
+  return next;
+};
+
+export function updateBrutus(state, input = {}) {
+  const dt = Math.max(0, input.dt ?? 0);
+  if (state.mode === "complete" || state.arenaUnlocked) {
+    return { ...state, mode: "complete", timer: 0, arenaUnlocked: true, rollingCanId: null };
+  }
+  if (state.mode === "defeat" || state.mode.startsWith("defeat-")) {
+    return advanceDefeat(state, dt);
+  }
+
+  let next = tickSprinkler({
+    ...state,
+    visualTimer: Math.max(0, (state.visualTimer ?? 0) - dt),
+    visualState: (state.visualTimer ?? 0) > dt ? state.visualState ?? null : null,
+  }, dt);
+
+  // The overturned bin stays closed in every other state. Neither a wall,
+  // ordinary prop, stomp, nor tail swipe can substitute for the hydrant.
+  if (next.mode === "charge" && input.hydrantHit === true) {
+    return {
+      ...next,
+      mode: "stunned-open",
+      timer: BRUTUS_DURATIONS["stunned-open"],
+      visualState: "crash",
+      visualTimer: 0.22,
+    };
+  }
+  if (next.mode === "stunned-open" && input.playerAttackHit === true) {
+    const hp = Math.max(0, next.hp - 1);
+    const phase = phaseFromHp(hp);
+    return {
+      ...next,
+      hp,
+      phase,
+      mode: "hit",
+      timer: BRUTUS_DURATIONS.hit,
+      rollingCanId: phase === 2 ? next.rollingCanId ?? "brutus-can" : null,
+      sprinklerTimer: phase === 3 ? BRUTUS_DURATIONS.sprinkler : next.sprinklerTimer,
+    };
+  }
+
+  const timer = Math.max(0, (next.timer ?? timerFor(next.mode, next.phase)) - dt);
+  if (timer > 0) return { ...next, timer };
+
+  if (next.mode === "intro") return { ...next, mode: "sniff", timer: BRUTUS_DURATIONS.sniff };
+  if (next.mode === "sniff") return { ...next, mode: "bark", timer: BRUTUS_DURATIONS.bark };
+  if (next.mode === "bark") return { ...next, mode: "charge", timer: timerFor("charge", next.phase) };
+  if (next.mode === "charge") return { ...next, mode: "recover", timer: BRUTUS_DURATIONS.recover };
+  if (next.mode === "stunned-open") return { ...next, mode: "recover", timer: BRUTUS_DURATIONS.recover };
+  if (next.mode === "hit") {
+    return next.hp === 0
+      ? { ...next, mode: "defeat-slide", timer: BRUTUS_DURATIONS["defeat-slide"], arenaUnlocked: false }
+      : { ...next, mode: "recover", timer: BRUTUS_DURATIONS.recover };
+  }
+  if (next.mode === "recover") return { ...next, mode: "sniff", timer: BRUTUS_DURATIONS.sniff };
+  return { ...next, timer: 0 };
+}
+
+export function brutusArenaHazards(state) {
+  if (state.hp <= 0 || state.arenaUnlocked || state.mode === "complete") return [];
+  const hazards = [];
+  if (state.phase === 2 && state.rollingCanId) {
+    hazards.push({ kind: "rolling-can", id: state.rollingCanId });
+  }
+  if (state.phase === 3) {
+    hazards.push({ kind: "sprinkler", side: state.sprinklerSide ?? "left" });
+  }
+  return hazards;
+}
+
+export function brutusAnimation(state) {
+  if (state.visualState === "crash" && state.visualTimer > 0) return BRUTUS_ANIMATIONS.crash;
+  const mode = state.mode === "intro" ? "idle" : state.mode;
+  return BRUTUS_ANIMATIONS[mode] ?? BRUTUS_ANIMATIONS.idle;
+}
+
+export function brutusAnimationFrame(animationState, elapsed) {
+  const raw = Math.floor(Math.max(0, elapsed) * animationState.fps);
+  return animationState.loop ? raw % animationState.frames : Math.min(animationState.frames - 1, raw);
+}
