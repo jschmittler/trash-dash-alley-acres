@@ -109,6 +109,7 @@ interface CampaignLevelDefinition {
   zones: Array<{ id: string; startX: number; endX: number; lighting: string }>;
   surfaces: Array<Platform & { id: string; hazard?: boolean }>;
   flightBands?: Array<{ id: string; startX: number; endX: number; minY: number; maxY: number }>;
+  backgroundSets: Array<{ zoneId: string; stage: string }>;
   encounters: Array<{ enemies: EnemySpawnDefinition[] }>;
   rewards: Array<{ kind: string; x: number; surfaceY: number }>;
   checkpoints: Array<{ id: string; x: number; respawnX: number; label: string }>;
@@ -969,6 +970,17 @@ export function TrashDashGame() {
         image.src = source;
       });
 
+    const backgroundAssetEntries = [...CAMPAIGN_LEVELS.values()].flatMap((activeLevel) => {
+      const assetPrefix = activeLevel.id.replace("level-", "level");
+      return activeLevel.backgroundSets.flatMap(({ zoneId, stage }) => (
+        ["far", "middle", "close"] as const
+      ).map((layer) => ({
+        zoneId,
+        layer,
+        source: assetUrl(`assets/backgrounds/${assetPrefix}-${stage}-${layer}.png`),
+      })));
+    });
+
     void Promise.all([
       loadImage(assetUrl("assets/raccoon-sprites.png")),
       loadImage(assetUrl(RACCOON_PROFILE.atlasSrc)),
@@ -987,11 +999,7 @@ export function TrashDashGame() {
       loadImage(assetUrl("assets/backgrounds/forest-near.png")),
       loadImage(assetUrl("assets/backgrounds/city-far.png")),
       loadImage(assetUrl("assets/backgrounds/city-near.png")),
-      ...["woodland", "creek", "highway", "industrial", "park"].flatMap((stage) => [
-        loadImage(assetUrl(`assets/backgrounds/level1-${stage}-far.png`)),
-        loadImage(assetUrl(`assets/backgrounds/level1-${stage}-middle.png`)),
-        loadImage(assetUrl(`assets/backgrounds/level1-${stage}-close.png`)),
-      ]),
+      ...backgroundAssetEntries.map(({ source }) => loadImage(source)),
     ])
       .then(([atlas, playerHeroAtlas, jimothyHeroAtlas, bossAtlas, enemyAtlas, varietyEnemyAtlas, trashPickupAtlas, tacoPowerAtlas, dumpsterAtlas, decorativeAtlas, branchPlatform, metalPlatform, groundTile, forestFar, forestNear, cityFar, cityNear, ...stageLayers]) => {
         if (cancelled) return;
@@ -1012,13 +1020,12 @@ export function TrashDashGame() {
         forestNearRef.current = forestNear;
         cityFarRef.current = cityFar;
         cityNearRef.current = cityNear;
-        levelBackgroundRefs.current = {
-          "deep-woodland": { far: stageLayers[0], middle: stageLayers[1], close: stageLayers[2] },
-          "creek-and-ruined-mill": { far: stageLayers[3], middle: stageLayers[4], close: stageLayers[5] },
-          "forest-edge-highway": { far: stageLayers[6], middle: stageLayers[7], close: stageLayers[8] },
-          "industrial-city-fringe": { far: stageLayers[9], middle: stageLayers[10], close: stageLayers[11] },
-          "urban-park-transition": { far: stageLayers[12], middle: stageLayers[13], close: stageLayers[14] },
-        };
+        const loadedBackgrounds: Record<string, { far: HTMLImageElement | null; middle: HTMLImageElement | null; close: HTMLImageElement | null }> = {};
+        backgroundAssetEntries.forEach(({ zoneId, layer }, index) => {
+          loadedBackgrounds[zoneId] ??= { far: null, middle: null, close: null };
+          loadedBackgrounds[zoneId][layer] = stageLayers[index];
+        });
+        levelBackgroundRefs.current = loadedBackgrounds;
         setLoaded(true);
       })
       .catch(() => {
@@ -1805,7 +1812,8 @@ export function TrashDashGame() {
       const backgroundDrawHeight = 514;
       const backgroundDrawY = GROUND_Y - backgroundDrawHeight;
       const stageCenterX = camera + WIDTH * 0.5;
-      const stageZone = campaignZoneAt(world.level, stageCenterX);
+      const activeLevel = world.level;
+      const stageZone = campaignZoneAt(activeLevel, stageCenterX);
       const stageBackground = levelBackgroundRefs.current[stageZone.id] ?? null;
       if (stageBackground) {
         const drawStageSet = (layers: { far: HTMLImageElement | null; middle: HTMLImageElement | null; close: HTMLImageElement | null }, alpha: number) => {
@@ -1813,7 +1821,7 @@ export function TrashDashGame() {
           drawTiledLayer(layers.middle, camera, PARALLAX_SPEEDS.middle, -46, 2048, 716, alpha);
           drawTiledLayer(layers.close, camera, PARALLAX_SPEEDS.close, -46, 2048, 716, alpha);
         };
-        const blendState = levelBackgroundBlendAt(stageCenterX, world.level.zones);
+        const blendState = levelBackgroundBlendAt(stageCenterX, activeLevel.zones);
         const leftBackground = levelBackgroundRefs.current[blendState.leftId] ?? null;
         const rightBackground = blendState.rightId ? levelBackgroundRefs.current[blendState.rightId] ?? null : null;
         if (leftBackground && rightBackground) {
