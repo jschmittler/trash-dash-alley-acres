@@ -6,6 +6,7 @@ import {
   createLevelRuntime,
   nextCampaignStart,
 } from "../app/level-runtime.mjs";
+import { LEVEL_TWO } from "../app/level-two.mjs";
 
 test("campaign transition carries character and all approved power state", () => {
   const carried = carryPlayerProgress({
@@ -62,4 +63,50 @@ test("active level runtime delegates declarative spawns and separates hazards", 
   assert.deepEqual(runtime.hazards, [{ id: "pool", hazard: true }]);
   assert.equal(runtime.checkpoints, level.checkpoints);
   assert.equal(runtime.boss, level.boss);
+});
+
+test("Level 2 runtime passes authored enemy metadata with active supports", () => {
+  const inspectedKinds = new Set(["squirrel", "terrier", "skunk", "moth"]);
+  const runtime = createLevelRuntime(LEVEL_TWO, {
+    makeEnemy: (spawn, supports) => ({
+      kind: spawn.kind,
+      movement: spawn.movement,
+      surfaceId: spawn.surfaceId,
+      flightBand: spawn.flightBand,
+      baseline: spawn.movement === "flying"
+        ? spawn.flightY
+        : supports.find(({ id }) => id === spawn.surfaceId)?.y,
+    }),
+    makePickup: (reward) => reward,
+  });
+  const enemies = runtime.enemies.filter(({ kind }) => inspectedKinds.has(kind));
+
+  assert.deepEqual(enemies.find(({ kind }) => kind === "squirrel"), {
+    kind: "squirrel",
+    movement: "platform",
+    surfaceId: "backyard-fence",
+    flightBand: undefined,
+    baseline: 332,
+  });
+  assert.deepEqual(enemies.find(({ kind }) => kind === "terrier"), {
+    kind: "terrier",
+    movement: "grounded",
+    surfaceId: "street-ground",
+    flightBand: undefined,
+    baseline: 468,
+  });
+  assert.deepEqual(enemies.find(({ kind }) => kind === "skunk"), {
+    kind: "skunk",
+    movement: "grounded",
+    surfaceId: "obstacle-lawn",
+    flightBand: undefined,
+    baseline: 468,
+  });
+  assert.deepEqual(enemies.find(({ kind }) => kind === "moth"), {
+    kind: "moth",
+    movement: "flying",
+    surfaceId: undefined,
+    flightBand: "porch-light-orbit",
+    baseline: 220,
+  });
 });

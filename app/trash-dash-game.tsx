@@ -88,7 +88,19 @@ type EnemyKind =
   | "snake" | "spider" | "rat" | "hedgehog"
   | "fox" | "crow" | "boar" | "frog"
   | "squirrel" | "terrier" | "skunk";
+type EnemyMovement = "grounded" | "platform" | "flying";
 type PowerupNoticeKind = "taco" | "cap";
+
+interface EnemySpawnDefinition {
+  kind: string;
+  movement?: EnemyMovement;
+  x: number;
+  y?: number;
+  flightY?: number;
+  patrol?: readonly [number, number];
+  surfaceId?: string;
+  flightBand?: string;
+}
 
 interface CampaignLevelDefinition {
   id: string;
@@ -96,10 +108,11 @@ interface CampaignLevelDefinition {
   worldWidth: number;
   zones: Array<{ id: string; startX: number; endX: number; lighting: string }>;
   surfaces: Array<Platform & { id: string; hazard?: boolean }>;
-  encounters: Array<{ enemies: Array<{ kind: string; x: number; y?: number; flightY?: number; patrol?: readonly [number, number] }> }>;
+  flightBands?: Array<{ id: string; startX: number; endX: number; minY: number; maxY: number }>;
+  encounters: Array<{ enemies: EnemySpawnDefinition[] }>;
   rewards: Array<{ kind: string; x: number; surfaceY: number }>;
   checkpoints: Array<{ id: string; x: number; respawnX: number; label: string }>;
-  boss: { kind: string; triggerX: number; arenaStartX: number; arenaEndX: number };
+  boss: { kind: string; triggerX: number; arenaStartX: number; arenaEndX: number; surfaceId?: string };
   exit: { nextLevelId: string | null; x: number };
 }
 
@@ -444,7 +457,12 @@ const scenery = [
   { x: 4480, groundY: GROUND_Y, prop: "tires" as const },
 ];
 
-const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y, patrolBounds?: readonly [number, number]): Enemy => {
+const makeEnemy = (
+  spawn: EnemySpawnDefinition,
+  supports: CampaignLevelDefinition["surfaces"],
+): Enemy => {
+  const kind = spawn.kind as EnemyKind;
+  const x = spawn.x;
   const sizes: Record<EnemyKind, [number, number]> = {
     pigeon: [46, 38],
     slime: [46, 38],
@@ -469,14 +487,22 @@ const makeEnemy = (kind: EnemyKind, x: number, y = GROUND_Y, patrolBounds?: read
   };
   const [w, h] = sizes[kind];
   const patrolRadius = kind === "boss" ? 360 : kind === "slime" ? 85 : 105;
+  const grounded = spawn.movement ? spawn.movement !== "flying" : !flyingEnemies.has(kind);
+  const authoredSupport = grounded && spawn.surfaceId
+    ? supports.find(({ id }) => id === spawn.surfaceId)
+    : null;
+  const surfaceY = grounded
+    ? authoredSupport?.y ?? spawn.y ?? GROUND_Y
+    : spawn.flightY ?? spawn.y ?? GROUND_Y;
   const patrol = createEnemyPatrol({
     x,
     width: w,
-    surfaceY: y,
+    surfaceY,
+    surfaceId: spawn.surfaceId,
     patrolRadius,
-    grounded: !flyingEnemies.has(kind),
-    patrolBounds,
-  }, platforms);
+    grounded,
+    patrolBounds: spawn.patrol,
+  }, supports);
   const patrolMinX = patrol.minX;
   const patrolMaxX = patrol.maxX;
   const spawnX = patrol.spawnX;
@@ -569,11 +595,8 @@ const makeWorld = (
   }
 
   const runtime = createLevelRuntime(level, {
-    makeEnemy: (spawn: CampaignLevelDefinition["encounters"][number]["enemies"][number]) => makeEnemy(
-      spawn.kind as EnemyKind,
-      spawn.x,
-      spawn.y ?? spawn.flightY ?? GROUND_Y,
-      spawn.patrol,
+    makeEnemy: (spawn: EnemySpawnDefinition, supports: CampaignLevelDefinition["surfaces"]) => (
+      makeEnemy(spawn, supports)
     ),
     makePickup: (reward: CampaignLevelDefinition["rewards"][number], index: number) => makeSurfacePickup(
       reward.kind as PickupKind,
@@ -593,7 +616,11 @@ const makeWorld = (
     hazards: runtime.hazards,
     selectedCharacterId: selectedProfile.id,
     player,
-    enemies: runtime.enemies.concat(makeEnemy("boss", worldBossSpawnX(level))),
+    enemies: runtime.enemies.concat(makeEnemy({
+      kind: "boss",
+      x: worldBossSpawnX(level),
+      surfaceId: level.boss.surfaceId,
+    }, runtime.surfaces)),
     pickups: runtime.pickups,
     particles: [],
     cameraX: 0,

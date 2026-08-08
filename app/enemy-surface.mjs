@@ -6,7 +6,7 @@ const horizontalDistance = (point, surface) => {
   return 0;
 };
 
-export function createEnemyPatrol({ x, width, surfaceY, patrolRadius, grounded, patrolBounds }, surfaces) {
+export function createEnemyPatrol({ x, width, surfaceY, surfaceId, patrolRadius, grounded, patrolBounds }, surfaces) {
   if (!grounded) {
     const requestedMin = patrolBounds?.[0] ?? (x - patrolRadius);
     const requestedMax = patrolBounds?.[1] ?? (x + patrolRadius);
@@ -19,10 +19,13 @@ export function createEnemyPatrol({ x, width, surfaceY, patrolRadius, grounded, 
   }
 
   const centerX = x + width / 2;
+  const authoredSupport = surfaceId
+    ? surfaces.find((surface) => surface.id === surfaceId && surface.w >= width)
+    : null;
   const matchingSurfaces = surfaces
     .filter((surface) => Math.abs(surface.y - surfaceY) < 1 && surface.w >= width)
     .sort((left, right) => horizontalDistance(centerX, left) - horizontalDistance(centerX, right));
-  const support = matchingSurfaces[0] ?? surfaces
+  const support = authoredSupport ?? matchingSurfaces[0] ?? surfaces
     .filter((surface) => surface.w >= width)
     .sort((left, right) => horizontalDistance(centerX, left) - horizontalDistance(centerX, right))[0];
 

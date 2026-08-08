@@ -80,6 +80,9 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.doesNotMatch(game, /LEVEL_ONE/);
   assert.doesNotMatch(worldSource, /makeEnemy\("(?:slime|bat|beetle|moth|rat|hedgehog|crow|boar|frog)"/);
   assert.match(game, /createEnemyPatrol/);
+  assert.match(game, /surfaceId\?: string/);
+  assert.match(game, /flightBand\?: string/);
+  assert.match(game, /makeEnemy:\s*\(spawn[\s\S]{0,300}supports/);
   assert.match(game, /patrolMinX,/);
   assert.match(game, /world\.level\.boss\.arenaStartX/);
   assert.doesNotMatch(game, /makeEnemy\("bottle"/);
