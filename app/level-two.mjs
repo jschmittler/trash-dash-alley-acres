@@ -43,6 +43,7 @@ const surfaces = [
   { id: "poolside-ledge", x: 3880, y: 370, w: 190, h: 22, kind: "branch" },
   { id: "drainage-entry-lawn", x: 4200, y: 468, w: 350, h: 90, kind: "ground" },
   { id: "culvert-route", x: 4470, y: 404, w: 430, h: 40, kind: "ground" },
+  { id: "utility-approach", x: 4520, y: 342, w: 120, h: 22, kind: "metal" },
   { id: "utility-route", x: 4560, y: 278, w: 520, h: 22, kind: "metal" },
   { id: "drainage-landing", x: 4920, y: 468, w: 630, h: 90, kind: "ground" },
   { id: "boss-runway", x: 5300, y: 468, w: 400, h: 90, kind: "ground" },
