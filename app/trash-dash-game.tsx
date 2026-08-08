@@ -76,10 +76,15 @@ import {
   createLevelRuntime,
   nextCampaignStart,
 } from "./level-runtime.mjs";
-import { levelBackgroundBlendAt, PARALLAX_SPEEDS } from "./level-background.mjs";
+import {
+  levelBackgroundAssetEntries,
+  levelBackgroundBlendAt,
+  PARALLAX_SPEEDS,
+} from "./level-background.mjs";
 
 type Screen = "title" | "characterSelect" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
+type BackgroundLayers = { far: HTMLImageElement | null; middle: HTMLImageElement | null; close: HTMLImageElement | null };
 type PlatformKind = "ground" | "branch" | "metal" | "crate";
 type PickupKind = "trash" | "taco" | "cap";
 type EnemyKind =
@@ -666,7 +671,8 @@ export function TrashDashGame() {
   const forestNearRef = useRef<HTMLImageElement | null>(null);
   const cityFarRef = useRef<HTMLImageElement | null>(null);
   const cityNearRef = useRef<HTMLImageElement | null>(null);
-  const levelBackgroundRefs = useRef<Record<string, { far: HTMLImageElement | null; middle: HTMLImageElement | null; close: HTMLImageElement | null }>>({});
+  const levelBackgroundRefs = useRef<Record<string, BackgroundLayers>>({});
+  const levelBackgroundLoadPromisesRef = useRef(new Map<string, Promise<void>>());
   const worldRef = useRef<World>(makeWorld());
   const keysRef = useRef(new Set<string>());
   const pressedRef = useRef(new Set<string>());
@@ -693,6 +699,40 @@ export function TrashDashGame() {
   const [hud, setHud] = useState({ trash: 0, score: 0, lives: 3, time: 0, glider: 0 });
   const [best, setBest] = useState({ score: 0, time: 0 });
   const [victoryRecord, setVictoryRecord] = useState({ score: false, time: false });
+
+  const loadLevelBackgrounds = useCallback((activeLevel: CampaignLevelDefinition) => {
+    const pending = levelBackgroundLoadPromisesRef.current.get(activeLevel.id);
+    if (pending) return pending;
+    const entries = levelBackgroundAssetEntries(activeLevel) as Array<{
+      zoneId: string;
+      layer: keyof BackgroundLayers;
+      source: string;
+    }>;
+    const loadImage = (source: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = assetUrl(source);
+    });
+    const request = Promise.all(entries.map(({ source }) => loadImage(source)))
+      .then((images) => {
+        const loadedBackgrounds: Record<string, BackgroundLayers> = {};
+        entries.forEach(({ zoneId, layer }, index) => {
+          loadedBackgrounds[zoneId] ??= { far: null, middle: null, close: null };
+          loadedBackgrounds[zoneId][layer] = images[index];
+        });
+        levelBackgroundRefs.current = {
+          ...levelBackgroundRefs.current,
+          ...loadedBackgrounds,
+        };
+      })
+      .catch((error) => {
+        levelBackgroundLoadPromisesRef.current.delete(activeLevel.id);
+        throw error;
+      });
+    levelBackgroundLoadPromisesRef.current.set(activeLevel.id, request);
+    return request;
+  }, []);
   const [powerupNotice, setPowerupNotice] = useState<PowerupNotice | null>(null);
   const [campaignContinuationAvailable, setCampaignContinuationAvailable] = useState(false);
 
@@ -889,15 +929,19 @@ export function TrashDashGame() {
       nextWorld.cameraX = 5640;
       setVictoryRecord({ score: true, time: true });
     }
-    worldRef.current = nextWorld;
-    setCampaignContinuationAvailable(Boolean(
-      nextWorld.level.exit?.nextLevelId && CAMPAIGN_LEVELS.has(nextWorld.level.exit.nextLevelId),
-    ));
-    lastFrameRef.current = performance.now();
-    changeScreen("playing");
-    tone(520, 0.08);
-    window.setTimeout(() => tone(720, 0.12), 80);
-  }, [changeScreen, clearHeldInput, dismissPowerupNotice, tone]);
+    void loadLevelBackgrounds(nextWorld.level)
+      .then(() => {
+        worldRef.current = nextWorld;
+        setCampaignContinuationAvailable(Boolean(
+          nextWorld.level.exit?.nextLevelId && CAMPAIGN_LEVELS.has(nextWorld.level.exit.nextLevelId),
+        ));
+        lastFrameRef.current = performance.now();
+        changeScreen("playing");
+        tone(520, 0.08);
+        window.setTimeout(() => tone(720, 0.12), 80);
+      })
+      .catch(() => setLoaded(false));
+  }, [changeScreen, clearHeldInput, dismissPowerupNotice, loadLevelBackgrounds, tone]);
 
   const continueCampaign = useCallback(() => {
     const transition = nextCampaignStart(worldRef.current) as {
@@ -970,17 +1014,6 @@ export function TrashDashGame() {
         image.src = source;
       });
 
-    const backgroundAssetEntries = [...CAMPAIGN_LEVELS.values()].flatMap((activeLevel) => {
-      const assetPrefix = activeLevel.id.replace("level-", "level");
-      return activeLevel.backgroundSets.flatMap(({ zoneId, stage }) => (
-        ["far", "middle", "close"] as const
-      ).map((layer) => ({
-        zoneId,
-        layer,
-        source: assetUrl(`assets/backgrounds/${assetPrefix}-${stage}-${layer}.png`),
-      })));
-    });
-
     void Promise.all([
       loadImage(assetUrl("assets/raccoon-sprites.png")),
       loadImage(assetUrl(RACCOON_PROFILE.atlasSrc)),
@@ -999,9 +1032,8 @@ export function TrashDashGame() {
       loadImage(assetUrl("assets/backgrounds/forest-near.png")),
       loadImage(assetUrl("assets/backgrounds/city-far.png")),
       loadImage(assetUrl("assets/backgrounds/city-near.png")),
-      ...backgroundAssetEntries.map(({ source }) => loadImage(source)),
     ])
-      .then(([atlas, playerHeroAtlas, jimothyHeroAtlas, bossAtlas, enemyAtlas, varietyEnemyAtlas, trashPickupAtlas, tacoPowerAtlas, dumpsterAtlas, decorativeAtlas, branchPlatform, metalPlatform, groundTile, forestFar, forestNear, cityFar, cityNear, ...stageLayers]) => {
+      .then(async ([atlas, playerHeroAtlas, jimothyHeroAtlas, bossAtlas, enemyAtlas, varietyEnemyAtlas, trashPickupAtlas, tacoPowerAtlas, dumpsterAtlas, decorativeAtlas, branchPlatform, metalPlatform, groundTile, forestFar, forestNear, cityFar, cityNear]) => {
         if (cancelled) return;
         atlasRef.current = atlas;
         playerHeroMotionRef.current = playerHeroAtlas;
@@ -1020,12 +1052,8 @@ export function TrashDashGame() {
         forestNearRef.current = forestNear;
         cityFarRef.current = cityFar;
         cityNearRef.current = cityNear;
-        const loadedBackgrounds: Record<string, { far: HTMLImageElement | null; middle: HTMLImageElement | null; close: HTMLImageElement | null }> = {};
-        backgroundAssetEntries.forEach(({ zoneId, layer }, index) => {
-          loadedBackgrounds[zoneId] ??= { far: null, middle: null, close: null };
-          loadedBackgrounds[zoneId][layer] = stageLayers[index];
-        });
-        levelBackgroundRefs.current = loadedBackgrounds;
+        await loadLevelBackgrounds(worldRef.current.level);
+        if (cancelled) return;
         setLoaded(true);
       })
       .catch(() => {
@@ -1035,7 +1063,7 @@ export function TrashDashGame() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadLevelBackgrounds]);
 
   useEffect(() => {
     return () => {

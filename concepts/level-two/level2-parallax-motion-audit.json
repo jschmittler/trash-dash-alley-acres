@@ -1,0 +1,574 @@
+{
+  "viewport": {
+    "width": 960,
+    "height": 540
+  },
+  "parallaxSpeeds": {
+    "far": 0.018,
+    "middle": 0.055,
+    "close": 0.13
+  },
+  "rows": [
+    {
+      "kind": "chapter",
+      "id": "moonlit-backyard",
+      "forward": [
+        0,
+        480,
+        960
+      ],
+      "reverse": [
+        960,
+        480,
+        0
+      ]
+    },
+    {
+      "kind": "chapter",
+      "id": "garbage-night-street",
+      "forward": [
+        770,
+        1250,
+        1730
+      ],
+      "reverse": [
+        1730,
+        1250,
+        770
+      ]
+    },
+    {
+      "kind": "chapter",
+      "id": "backyard-obstacle-course",
+      "forward": [
+        2220,
+        2700,
+        3180
+      ],
+      "reverse": [
+        3180,
+        2700,
+        2220
+      ]
+    },
+    {
+      "kind": "chapter",
+      "id": "drainage-ditch",
+      "forward": [
+        3720,
+        4200,
+        4680
+      ],
+      "reverse": [
+        4680,
+        4200,
+        3720
+      ]
+    },
+    {
+      "kind": "chapter",
+      "id": "suburban-main-street",
+      "forward": [
+        5070,
+        5550,
+        6030
+      ],
+      "reverse": [
+        6030,
+        5550,
+        5070
+      ]
+    },
+    {
+      "kind": "boundary",
+      "id": "moonlit-backyard-to-next",
+      "centers": [
+        1140,
+        1250,
+        1360
+      ],
+      "cameras": [
+        660,
+        770,
+        880
+      ],
+      "blends": [
+        0.15625,
+        0.5,
+        0.84375
+      ]
+    },
+    {
+      "kind": "boundary",
+      "id": "garbage-night-street-to-next",
+      "centers": [
+        2590,
+        2700,
+        2810
+      ],
+      "cameras": [
+        2110,
+        2220,
+        2330
+      ],
+      "blends": [
+        0.15625,
+        0.5,
+        0.84375
+      ]
+    },
+    {
+      "kind": "boundary",
+      "id": "backyard-obstacle-course-to-next",
+      "centers": [
+        4090,
+        4200,
+        4310
+      ],
+      "cameras": [
+        3610,
+        3720,
+        3830
+      ],
+      "blends": [
+        0.15625,
+        0.5,
+        0.84375
+      ]
+    },
+    {
+      "kind": "boundary",
+      "id": "drainage-ditch-to-next",
+      "centers": [
+        5440,
+        5550,
+        5660
+      ],
+      "cameras": [
+        4960,
+        5070,
+        5180
+      ],
+      "blends": [
+        0.15625,
+        0.5,
+        0.84375
+      ]
+    }
+  ],
+  "frames": [
+    {
+      "row": "moonlit-backyard",
+      "camera": 0,
+      "offsets": {
+        "far": 0,
+        "middle": 0,
+        "close": 0
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0.04160786290322581
+    },
+    {
+      "row": "moonlit-backyard",
+      "camera": 480,
+      "offsets": {
+        "far": -9,
+        "middle": -26,
+        "close": -62
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0.002116935483870968
+    },
+    {
+      "row": "moonlit-backyard",
+      "camera": 960,
+      "offsets": {
+        "far": -17,
+        "middle": -53,
+        "close": -125
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    },
+    {
+      "row": "garbage-night-street",
+      "camera": 770,
+      "offsets": {
+        "far": -14,
+        "middle": -42,
+        "close": -100
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    },
+    {
+      "row": "garbage-night-street",
+      "camera": 1250,
+      "offsets": {
+        "far": -23,
+        "middle": -69,
+        "close": -163
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    },
+    {
+      "row": "garbage-night-street",
+      "camera": 1730,
+      "offsets": {
+        "far": -31,
+        "middle": -95,
+        "close": -225
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    },
+    {
+      "row": "backyard-obstacle-course",
+      "camera": 2220,
+      "offsets": {
+        "far": -40,
+        "middle": -122,
+        "close": -289
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0.0025789650537634407
+    },
+    {
+      "row": "backyard-obstacle-course",
+      "camera": 2700,
+      "offsets": {
+        "far": -49,
+        "middle": -149,
+        "close": -351
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0.0012012768817204302
+    },
+    {
+      "row": "backyard-obstacle-course",
+      "camera": 3180,
+      "offsets": {
+        "far": -57,
+        "middle": -175,
+        "close": -413
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0.0003024193548387097
+    },
+    {
+      "row": "drainage-ditch",
+      "camera": 3720,
+      "offsets": {
+        "far": -67,
+        "middle": -205,
+        "close": -484
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    },
+    {
+      "row": "drainage-ditch",
+      "camera": 4200,
+      "offsets": {
+        "far": -76,
+        "middle": -231,
+        "close": -546
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    },
+    {
+      "row": "drainage-ditch",
+      "camera": 4680,
+      "offsets": {
+        "far": -84,
+        "middle": -257,
+        "close": -608
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    },
+    {
+      "row": "suburban-main-street",
+      "camera": 5070,
+      "offsets": {
+        "far": -91,
+        "middle": -279,
+        "close": -659
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    },
+    {
+      "row": "suburban-main-street",
+      "camera": 5550,
+      "offsets": {
+        "far": -100,
+        "middle": -305,
+        "close": -722
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    },
+    {
+      "row": "suburban-main-street",
+      "camera": 6030,
+      "offsets": {
+        "far": -109,
+        "middle": -332,
+        "close": -784
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    },
+    {
+      "row": "moonlit-backyard-to-next",
+      "camera": 660,
+      "offsets": {
+        "far": -12,
+        "middle": -36,
+        "close": -86
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0.00022681451612903227
+    },
+    {
+      "row": "moonlit-backyard-to-next",
+      "camera": 770,
+      "offsets": {
+        "far": -14,
+        "middle": -42,
+        "close": -100
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    },
+    {
+      "row": "moonlit-backyard-to-next",
+      "camera": 880,
+      "offsets": {
+        "far": -16,
+        "middle": -48,
+        "close": -114
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    },
+    {
+      "row": "garbage-night-street-to-next",
+      "camera": 2110,
+      "offsets": {
+        "far": -38,
+        "middle": -116,
+        "close": -274
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    },
+    {
+      "row": "garbage-night-street-to-next",
+      "camera": 2220,
+      "offsets": {
+        "far": -40,
+        "middle": -122,
+        "close": -289
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0.0025789650537634407
+    },
+    {
+      "row": "garbage-night-street-to-next",
+      "camera": 2330,
+      "offsets": {
+        "far": -42,
+        "middle": -128,
+        "close": -303
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0.0025369623655913977
+    },
+    {
+      "row": "backyard-obstacle-course-to-next",
+      "camera": 3610,
+      "offsets": {
+        "far": -65,
+        "middle": -199,
+        "close": -469
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    },
+    {
+      "row": "backyard-obstacle-course-to-next",
+      "camera": 3720,
+      "offsets": {
+        "far": -67,
+        "middle": -205,
+        "close": -484
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    },
+    {
+      "row": "backyard-obstacle-course-to-next",
+      "camera": 3830,
+      "offsets": {
+        "far": -69,
+        "middle": -211,
+        "close": -498
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    },
+    {
+      "row": "drainage-ditch-to-next",
+      "camera": 4960,
+      "offsets": {
+        "far": -89,
+        "middle": -273,
+        "close": -645
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    },
+    {
+      "row": "drainage-ditch-to-next",
+      "camera": 5070,
+      "offsets": {
+        "far": -91,
+        "middle": -279,
+        "close": -659
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    },
+    {
+      "row": "drainage-ditch-to-next",
+      "camera": 5180,
+      "offsets": {
+        "far": -93,
+        "middle": -285,
+        "close": -673
+      },
+      "visibleSeams": {
+        "far": [],
+        "middle": [],
+        "close": []
+      },
+      "closeCenterCoverage": 0
+    }
+  ],
+  "summary": {
+    "chapterSweeps": 5,
+    "boundarySweeps": 4,
+    "maxCloseCenterCoverage": 0.04160786290322581,
+    "visibleTileSeams": 0,
+    "tallObjectMotion": "whole middle plates use one offset per frame and reverse with the same samples",
+    "landingTargets": "yellow overlays use active Level 2 surface tops and remain above close scenery"
+  }
+}

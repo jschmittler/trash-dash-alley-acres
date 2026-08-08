@@ -8,6 +8,7 @@ const LAYERS = ["far", "middle", "close"];
 const WIDTH = 2048;
 const HEIGHT = 716;
 const RUNTIME_BASELINE = 603;
+const FAR_VALUE_STEP = 32;
 const KEY = Object.freeze({ red: 255, green: 0, blue: 255 });
 const TRANSPARENT_KEY_DISTANCE = 118;
 
@@ -51,10 +52,59 @@ function removeMagentaKey(data, info) {
   return data;
 }
 
+function quantizeRgbValues(data, info) {
+  for (let offset = 0; offset < data.length; offset += info.channels) {
+    for (let channel = 0; channel < 3; channel += 1) {
+      data[offset + channel] = Math.min(
+        255,
+        Math.round(data[offset + channel] / FAR_VALUE_STEP) * FAR_VALUE_STEP,
+      );
+    }
+  }
+  return data;
+}
+
+function despillMagentaBoundary(data, info, radius = 2) {
+  const output = Buffer.from(data);
+  for (let y = 0; y < info.height; y += 1) {
+    for (let x = 0; x < info.width; x += 1) {
+      const offset = (y * info.width + x) * info.channels;
+      if (data[offset + 3] === 0) continue;
+      let nearTransparency = false;
+      for (let dy = -radius; dy <= radius && !nearTransparency; dy += 1) {
+        for (let dx = -radius; dx <= radius; dx += 1) {
+          const nextX = x + dx;
+          const nextY = y + dy;
+          if (nextX < 0 || nextX >= info.width || nextY < 0 || nextY >= info.height) {
+            nearTransparency = true;
+            break;
+          }
+          if (data[(nextY * info.width + nextX) * info.channels + 3] === 0) {
+            nearTransparency = true;
+            break;
+          }
+        }
+      }
+      if (!nearTransparency) continue;
+      const magentaSpill = Math.max(
+        0,
+        Math.min(data[offset], data[offset + 2]) - data[offset + 1],
+      );
+      output[offset] = Math.max(0, data[offset] - magentaSpill);
+      output[offset + 2] = Math.max(0, data[offset + 2] - magentaSpill);
+    }
+  }
+  return output;
+}
+
 async function buildFar(stage) {
-  await sharp(sourcePath(stage, "far"))
+  const resized = await sharp(sourcePath(stage, "far"))
     .removeAlpha()
     .resize(WIDTH, HEIGHT, { fit: "fill", kernel: sharp.kernel.nearest })
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const quantized = quantizeRgbValues(resized.data, resized.info);
+  await sharp(quantized, { raw: resized.info })
     .png({ palette: false })
     .toFile(outputPath(stage, "far"));
 }
@@ -70,10 +120,15 @@ async function keyedRuntimeImage(stage, layer) {
     .raw()
     .toBuffer({ resolveWithObject: true });
 
-  if (layer !== "middle") return resized;
-  return normalizeGroundedComponents(resized.data, resized.info, {
+  const normalized = layer === "middle"
+    ? normalizeGroundedComponents(resized.data, resized.info, {
     baseline: RUNTIME_BASELINE,
-  });
+    })
+    : resized;
+  return {
+    data: despillMagentaBoundary(normalized.data, normalized.info),
+    info: normalized.info,
+  };
 }
 
 async function buildMovingPlate(stage, layer) {

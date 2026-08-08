@@ -16,6 +16,10 @@ plate is cut from or flattened from a concept image.
 - Every substantial middle component ends within two pixels of row 603.
 - Close plates retain their authored framing and are not normalized as a strip.
 - All resizing uses nearest-neighbor sampling.
+- Far runtime RGB uses a deterministic 32-step value ladder (at most nine
+  values per channel) so generated sky ramps cannot survive as gradients.
+- Final middle/close alpha boundaries receive a two-pixel magenta despill pass
+  after resize and middle normalization.
 
 ## Semantic ownership
 
@@ -31,3 +35,10 @@ Generated sources live under `concepts/level-two/source/`. Run
 `npm run build:level-two-backgrounds` to remove the chroma key, normalize only
 substantial middle silhouettes, resize with nearest-neighbor sampling, and
 install the 15 runtime plates under `public/assets/backgrounds/`.
+
+The same command also runs `audit-background-motion.mjs`. It renders five
+one-viewport forward/reverse camera sweeps and four boundary-stop sequences
+with the production parallax rates, tiling, blend math, and Level 2 surface
+tops. Review `level2-parallax-motion-audit.png`; its measured offsets, blend
+samples, seam visibility, and close-center coverage are recorded in
+`level2-parallax-motion-audit.json`.

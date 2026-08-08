@@ -73,6 +73,9 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /\| "snake" \| "spider" \| "rat" \| "hedgehog"/);
   assert.match(game, /from "\.\/campaign\.mjs"/);
   assert.match(game, /from "\.\/level-runtime\.mjs"/);
+  assert.doesNotMatch(game, /\[\.\.\.CAMPAIGN_LEVELS\.values\(\)\]\.flatMap/);
+  assert.match(game, /levelBackgroundAssetEntries\(activeLevel\)/);
+  assert.match(game, /loadLevelBackgrounds\(nextWorld\.level\)/);
   assert.match(worldSource, /createLevelRuntime/);
   assert.match(worldSource, /campaignLevelById/);
   assert.match(worldSource, /campaignProgress:/);

@@ -53,6 +53,52 @@ test("far plates are opaque while middle and close plates mix visible and transp
   }
 });
 
+test("far plates use a bounded hard value ladder instead of smooth sky gradients", async () => {
+  for (const stage of stages) {
+    const { data, info } = await sharp(runtimePath(stage, "far"))
+      .removeAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const channelValues = [new Set(), new Set(), new Set()];
+    for (let offset = 0; offset < data.length; offset += info.channels) {
+      channelValues[0].add(data[offset]);
+      channelValues[1].add(data[offset + 1]);
+      channelValues[2].add(data[offset + 2]);
+    }
+    for (const [channel, values] of channelValues.entries()) {
+      assert.ok(values.size <= 9, `${stage}-far channel ${channel} has ${values.size} values`);
+    }
+  }
+});
+
+test("visible moving-plate boundaries contain no magenta key contamination", async () => {
+  for (const stage of stages) {
+    for (const layer of ["middle", "close"]) {
+      const { data, info } = await sharp(runtimePath(stage, layer))
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      let contaminated = 0;
+      for (let y = 0; y < info.height; y += 1) {
+        for (let x = 0; x < info.width; x += 1) {
+          const offset = (y * info.width + x) * info.channels;
+          if (data[offset + 3] === 0) continue;
+          const touchesTransparency = [[-1, 0], [1, 0], [0, -1], [0, 1]].some(([dx, dy]) => {
+            const nextX = x + dx;
+            const nextY = y + dy;
+            if (nextX < 0 || nextX >= info.width || nextY < 0 || nextY >= info.height) return true;
+            return data[(nextY * info.width + nextX) * info.channels + 3] === 0;
+          });
+          if (!touchesTransparency) continue;
+          const magentaDominance = Math.min(data[offset], data[offset + 2]) - data[offset + 1];
+          if (magentaDominance > 12) contaminated += 1;
+        }
+      }
+      assert.equal(contaminated, 0, `${stage}-${layer} has ${contaminated} contaminated edge pixels`);
+    }
+  }
+});
+
 test("moving plates use object-shaped transparency instead of row-wide alpha masks", async () => {
   for (const stage of stages) {
     for (const layer of ["middle", "close"]) {
@@ -128,4 +174,33 @@ test("Level 2 maps its five zones to five asset sets with four monotonic transit
 
 test("Level 2 preserves the required parallax rates", () => {
   assert.deepEqual(PARALLAX_SPEEDS, { far: 0.018, middle: 0.055, close: 0.13 });
+});
+
+test("offline motion audit covers five forward/reverse sweeps and four boundaries", async () => {
+  const artifact = fileURLToPath(
+    new URL("../concepts/level-two/level2-parallax-motion-audit.png", import.meta.url),
+  );
+  const auditPath = fileURLToPath(
+    new URL("../concepts/level-two/level2-parallax-motion-audit.json", import.meta.url),
+  );
+  await access(artifact);
+  const metadata = await sharp(artifact).metadata();
+  assert.equal(metadata.width, 960);
+  assert.equal(metadata.height, 1620);
+  const audit = JSON.parse(await readFile(auditPath, "utf8"));
+  const chapters = audit.rows.filter(({ kind }) => kind === "chapter");
+  const boundaries = audit.rows.filter(({ kind }) => kind === "boundary");
+  assert.equal(chapters.length, 5);
+  assert.equal(boundaries.length, 4);
+  for (const chapter of chapters) {
+    assert.deepEqual(chapter.reverse, [...chapter.forward].reverse());
+    assert.equal(chapter.forward.at(-1) - chapter.forward[0], 960);
+  }
+  for (const boundary of boundaries) {
+    for (let index = 1; index < boundary.blends.length; index += 1) {
+      assert.ok(boundary.blends[index] >= boundary.blends[index - 1]);
+    }
+  }
+  assert.equal(audit.summary.visibleTileSeams, 0);
+  assert.ok(audit.summary.maxCloseCenterCoverage < 0.2);
 });

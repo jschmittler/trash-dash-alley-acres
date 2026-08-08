@@ -6,6 +6,17 @@ export const PARALLAX_SPEEDS = Object.freeze({
 
 const clamp01 = (value) => Math.max(0, Math.min(1, value));
 
+export function levelBackgroundAssetEntries(activeLevel) {
+  const assetPrefix = activeLevel.id.replace("level-", "level");
+  return activeLevel.backgroundSets.flatMap(({ zoneId, stage }) => (
+    ["far", "middle", "close"].map((layer) => ({
+      zoneId,
+      layer,
+      source: `assets/backgrounds/${assetPrefix}-${stage}-${layer}.png`,
+    }))
+  ));
+}
+
 export function levelBackgroundBlendAt(x, zones, blendDistance = 220) {
   const coordinate = Number.isFinite(x) ? x : 0;
   for (let index = 0; index < zones.length - 1; index += 1) {

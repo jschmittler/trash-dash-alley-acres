@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { LEVEL_ONE } from "../app/level-one.mjs";
-import { levelBackgroundBlendAt, PARALLAX_SPEEDS } from "../app/level-background.mjs";
+import { LEVEL_TWO } from "../app/level-two.mjs";
+import {
+  levelBackgroundAssetEntries,
+  levelBackgroundBlendAt,
+  PARALLAX_SPEEDS,
+} from "../app/level-background.mjs";
 
 test("background transition crosses each boundary once without resetting", () => {
   const boundary = LEVEL_ONE.zones[0].endX;
@@ -19,4 +24,15 @@ test("far, middle and close layers have visibly distinct parallax speeds", () =>
   assert.ok(PARALLAX_SPEEDS.far < PARALLAX_SPEEDS.middle);
   assert.ok(PARALLAX_SPEEDS.middle < PARALLAX_SPEEDS.close);
   assert.ok(PARALLAX_SPEEDS.close / PARALLAX_SPEEDS.far > 5);
+});
+
+test("background asset entries are scoped to only the selected active level", () => {
+  const levelOne = levelBackgroundAssetEntries(LEVEL_ONE);
+  const levelTwo = levelBackgroundAssetEntries(LEVEL_TWO);
+  assert.equal(levelOne.length, 15);
+  assert.equal(levelTwo.length, 15);
+  assert.equal(levelOne.every(({ source }) => source.includes("/level1-")), true);
+  assert.equal(levelTwo.every(({ source }) => source.includes("/level2-")), true);
+  assert.equal(levelOne.some(({ source }) => source.includes("/level2-")), false);
+  assert.equal(levelTwo.some(({ source }) => source.includes("/level1-")), false);
 });
