@@ -3,7 +3,13 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
-import { BRUTUS_ANIMATIONS } from "../app/brutus-boss.mjs";
+import {
+  BRUTUS_ANIMATIONS,
+  brutusAnimation,
+  brutusAnimationFrame,
+  brutusTopHitRegion,
+  createBrutusState,
+} from "../app/brutus-boss.mjs";
 
 const atlasPath = fileURLToPath(new URL("../public/assets/generated/brutus-motion.png", import.meta.url));
 
@@ -137,6 +143,42 @@ test("every required Brutus frame is populated, clear of cell edges, and baselin
       assert.ok(opaque > 1000, `${name} frame ${frame} is populated`);
       assert.ok(left >= 4 && top >= 4 && right <= 251 && bottom <= 187, `${name} frame ${frame} clears its cell`);
       assert.equal(bottom, 175, `${name} frame ${frame} keeps the authored foot/pool baseline`);
+    }
+  }
+});
+
+test("active Brutus top-hit bands follow the atlas-audited centered silhouette", async () => {
+  const { data, info } = await sharp(atlasPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const boss = { x: 6100, y: 372, w: 96, h: 96 };
+  const states = [
+    { mode: "intro" }, { mode: "sniff" }, { mode: "bark" }, { mode: "charge" },
+    { mode: "stunned-open" }, { mode: "hit" }, { mode: "recover" },
+    { mode: "stunned-open", visualState: "crash", visualTimer: 1 },
+  ];
+  for (const overrides of states) {
+    const state = { ...createBrutusState(), ...overrides };
+    const animation = brutusAnimation(state);
+    for (let frame = 0; frame < animation.frames; frame += 1) {
+      const elapsed = animation.fps > 0 ? (frame + 0.01) / animation.fps : 0;
+      assert.equal(brutusAnimationFrame(animation, elapsed), frame);
+      const columnTops = [];
+      for (let x = 93; x <= 163; x += 1) {
+        let top = 192;
+        for (let y = 0; y < 192; y += 1) {
+          const offset = ((animation.row * 192 + y) * info.width + frame * 256 + x) * 4;
+          if (data[offset + 3] > 0) top = Math.min(top, y);
+        }
+        if (top < 192) columnTops.push(top);
+      }
+      columnTops.sort((left, right) => left - right);
+      const auditedSourceTop = columnTops[Math.floor(columnTops.length * 0.25)];
+      const drawTop = boss.y + boss.h - 165 + 165 * (16 / 192);
+      const expectedWorldTop = drawTop + auditedSourceTop * (165 / 192);
+      const region = brutusTopHitRegion(boss, state, elapsed);
+      assert.ok(Math.abs(region.y - expectedWorldTop) < 0.01, `${overrides.mode} frame ${frame} top drift`);
+      assert.equal(region.x, boss.x + 18);
+      assert.equal(region.w, 60);
+      assert.equal(region.h, 14);
     }
   }
 });

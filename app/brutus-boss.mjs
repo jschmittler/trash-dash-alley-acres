@@ -58,18 +58,63 @@ export const BRUTUS_CHARGE_SPEED = Object.freeze({ 1: 310, 2: 360, 3: 420 });
 export const BRUTUS_RECOVERY_SPEED = 760;
 export const BRUTUS_EXIT_SPEED = 360;
 
-export function brutusTopHitRegion(boss) {
-  const inset = 18;
+export const BRUTUS_RENDER_METRICS = Object.freeze({
+  sourceWidth: 256,
+  sourceHeight: 192,
+  baselineInset: 16,
+  drawWidth: 220,
+  drawHeight: 165,
+});
+
+// For the centered 60px world-space band, each row is the first quartile of
+// opaque column tops across source x=93..163. The atlas test derives these
+// values again from the shipped bytes so art and collision cannot drift.
+export const BRUTUS_TOP_SURFACE_ROWS = Object.freeze({
+  idle: Object.freeze([24, 24]),
+  sniff: Object.freeze([40, 48]),
+  bark: Object.freeze([29, 21]),
+  charge: Object.freeze([26, 23, 32, 32]),
+  crash: Object.freeze([65]),
+  "stunned-open": Object.freeze([11, 7]),
+  hit: Object.freeze([25, 26, 26]),
+  recover: Object.freeze([15, 15]),
+});
+
+const brutusAnimationName = (state) => {
+  if (state?.visualState === "crash" && state.visualTimer > 0) return "crash";
+  const name = state?.mode === "intro" ? "idle" : state?.mode ?? "idle";
+  return Object.hasOwn(BRUTUS_TOP_SURFACE_ROWS, name) ? name : null;
+};
+
+export function brutusDrawRect(boss) {
+  const { sourceHeight, baselineInset, drawWidth, drawHeight } = BRUTUS_RENDER_METRICS;
   return {
-    x: boss.x + inset,
-    y: boss.y,
-    w: Math.max(0, boss.w - inset * 2),
-    h: 18,
+    x: boss.x + boss.w / 2 - drawWidth / 2,
+    y: boss.y + boss.h - drawHeight + drawHeight * (baselineInset / sourceHeight),
+    w: drawWidth,
+    h: drawHeight,
   };
 }
 
-export function isBrutusTopHit(player, boss, previousBottom) {
-  const region = brutusTopHitRegion(boss);
+export function brutusTopHitRegion(boss, state = createBrutusState(), elapsed = 0) {
+  const animationName = brutusAnimationName(state);
+  if (!animationName) return null;
+  const animation = BRUTUS_ANIMATIONS[animationName];
+  const frame = brutusAnimationFrame(animation, elapsed);
+  const sourceTop = BRUTUS_TOP_SURFACE_ROWS[animationName][frame];
+  const draw = brutusDrawRect(boss);
+  const inset = 18;
+  return {
+    x: boss.x + inset,
+    y: draw.y + sourceTop * (draw.h / BRUTUS_RENDER_METRICS.sourceHeight),
+    w: Math.max(0, boss.w - inset * 2),
+    h: 14,
+  };
+}
+
+export function isBrutusTopHit(player, boss, previousBottom, state = createBrutusState(), elapsed = 0) {
+  const region = brutusTopHitRegion(boss, state, elapsed);
+  if (!region) return false;
   const currentBottom = player.y + player.h;
   return player.vy > 80
     && previousBottom <= region.y

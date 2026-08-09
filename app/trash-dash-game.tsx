@@ -60,6 +60,7 @@ import {
   brutusAnimation,
   brutusAnimationFrame,
   brutusArenaHazards,
+  brutusDrawRect,
   createBrutusState,
   isBrutusTopHit,
   moveBrutusInArena,
@@ -2019,6 +2020,15 @@ export function TrashDashGame() {
           if (intersects(attackRect, enemy)) damageEnemy(world, enemy);
         }
 
+        const brutusStomped = enemy.brutusState
+          ? isBrutusTopHit(player, enemy, previousBottom, enemy.brutusState, enemy.stateElapsed)
+          : false;
+        if (brutusStomped) {
+          player.vy = -360;
+          damageEnemy(world, enemy, true);
+          continue;
+        }
+
         if (!intersects(player, enemy)) continue;
         const bossAnimation = enemy.kind === "boss" && !enemy.brutusState
           ? BOSS_ANIMATIONS[enemy.animationState as keyof typeof BOSS_ANIMATIONS]
@@ -2031,9 +2041,7 @@ export function TrashDashGame() {
               || (enemy.animationState === "charge" && isBossChargeActive(bossFrame))
           : !levelTwoEnemyKinds.has(enemy.kind)
             || levelTwoEnemyCanContactDamage(enemy.kind, enemy.behaviorState);
-        const stomped = enemy.brutusState
-          ? isBrutusTopHit(player, enemy, previousBottom)
-          : player.vy > 80 && previousBottom <= enemy.y + 16;
+        const stomped = !enemy.brutusState && player.vy > 80 && previousBottom <= enemy.y + 16;
         if (stomped) {
           player.vy = -360;
           damageEnemy(world, enemy, true);
@@ -2485,7 +2493,7 @@ export function TrashDashGame() {
             drawSprite(
               levelTwoPropFrame("sprinkler-spray", world.elapsed) as Frame,
               direction > 0 ? x + item.w / 2 - 8 : x + item.w / 2 - 112,
-              item.y - 84,
+              item.y - 72,
               120,
               96,
               direction < 0,
@@ -2640,14 +2648,13 @@ export function TrashDashGame() {
             const animation = brutusAnimation(enemy.brutusState);
             const stateFrame = brutusAnimationFrame(animation, enemy.stateElapsed);
             const frame = [stateFrame * 256, animation.row * 192, 256, 192] as Frame;
-            const drawWidth = 220;
-            const drawHeight = 165;
+            const draw = brutusDrawRect(enemy);
             drawSprite(
               frame,
-              x + enemy.w / 2 - drawWidth / 2,
-              enemy.y + enemy.h - drawHeight + drawHeight * (16 / 192),
-              drawWidth,
-              drawHeight,
+              draw.x - camera,
+              draw.y,
+              draw.w,
+              draw.h,
               flip,
               1,
               brutusMotionRef.current,

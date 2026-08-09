@@ -49,11 +49,27 @@ test("ordinary collisions and attacks against closed armor cannot damage Brutus"
 
 test("Brutus stomp requires a downward crossing of the narrow authored top band", () => {
   const boss = { x: 6100, y: 372, w: 96, h: 96 };
-  assert.deepEqual(brutusTopHitRegion(boss), { x: 6118, y: 372, w: 60, h: 18 });
-  assert.equal(isBrutusTopHit({ x: 6130, y: 340, w: 38, h: 58, vy: 220 }, boss, 370), true);
-  assert.equal(isBrutusTopHit({ x: 6130, y: 340, w: 38, h: 58, vy: -20 }, boss, 370), false);
-  assert.equal(isBrutusTopHit({ x: 6130, y: 390, w: 38, h: 58, vy: 220 }, boss, 400), false);
-  assert.equal(isBrutusTopHit({ x: 6090, y: 340, w: 20, h: 58, vy: 220 }, boss, 370), false);
+  const state = createBrutusState();
+  const region = brutusTopHitRegion(boss, state, 0);
+  assert.ok(region.y < boss.y - 30, `idle rendered top stayed at collider y=${region.y}`);
+  assert.deepEqual({ x: region.x, w: region.w, h: region.h }, { x: 6118, w: 60, h: 14 });
+
+  // This crossing finishes above the 96x96 physics collider. It proves the
+  // rendered head/back is reachable without broadening the whole draw rect.
+  const visibleTopCrossing = { x: 6130, y: region.y - 50, w: 38, h: 58, vy: 220 };
+  assert.ok(visibleTopCrossing.y + visibleTopCrossing.h < boss.y);
+  assert.equal(isBrutusTopHit(visibleTopCrossing, boss, region.y - 2, state, 0), true);
+  assert.equal(isBrutusTopHit({ ...visibleTopCrossing, vy: -20 }, boss, region.y - 2, state, 0), false);
+  assert.equal(isBrutusTopHit({ ...visibleTopCrossing, y: region.y + 20 }, boss, region.y + 18, state, 0), false);
+  assert.equal(isBrutusTopHit({ ...visibleTopCrossing, x: 6090, w: 20 }, boss, region.y - 2, state, 0), false);
+});
+
+test("runtime resolves Brutus visible-top contact before generic collider rejection", async () => {
+  const source = await readFile(new URL("../app/trash-dash-game.tsx", import.meta.url), "utf8");
+  const topContact = source.indexOf("const brutusStomped");
+  const colliderRejection = source.indexOf("if (!intersects(player, enemy)) continue;", topContact);
+  assert.ok(topContact >= 0, "missing pre-collider Brutus stomp resolution");
+  assert.ok(colliderRejection > topContact, "generic collider still rejects visible-top contact first");
 });
 
 test("each damage reaction completes before advancing to the next phase", () => {

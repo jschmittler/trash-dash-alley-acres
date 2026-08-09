@@ -20,10 +20,10 @@ const slots = [
   { name: "boss-platform-right", col: 2, row: 1, crop: [540, 246, 174, 161], fit: [96, 88] },
   { name: "rolling-can", col: 3, row: 1, crop: [902, 798, 130, 163], fit: [84, 104] },
   { name: "sprinkler-idle", col: 0, row: 2, crop: [38, 502, 120, 102], fit: [82, 88] },
-  { name: "sprinkler-spray-0", col: 1, row: 2, crop: [253, 448, 92, 90], fit: [86, 76], align: "left" },
-  { name: "sprinkler-spray-1", col: 2, row: 2, crop: [413, 432, 102, 105], fit: [92, 82], align: "left" },
-  { name: "sprinkler-spray-2", col: 3, row: 2, crop: [585, 420, 100, 116], fit: [98, 88], align: "left" },
-  { name: "sprinkler-spray-3", col: 0, row: 3, crop: [755, 405, 245, 135], fit: [120, 96], align: "left" },
+  { name: "sprinkler-spray-0", col: 1, row: 2, crop: [253, 448, 92, 90], fit: [86, 76], align: "left", anchorBottom: 96 },
+  { name: "sprinkler-spray-1", col: 2, row: 2, crop: [413, 432, 102, 105], fit: [92, 82], align: "left", anchorBottom: 96 },
+  { name: "sprinkler-spray-2", col: 3, row: 2, crop: [585, 420, 100, 116], fit: [98, 88], align: "left", anchorBottom: 96 },
+  { name: "sprinkler-spray-3", col: 0, row: 3, crop: [755, 405, 245, 135], fit: [120, 96], align: "left", anchorBottom: 96 },
   { name: "hydrant", col: 1, row: 3, crop: [14, 774, 139, 226], fit: [72, 108] },
 ];
 
@@ -34,6 +34,24 @@ function despill(raw, slot) {
     const blue = raw[index + 2];
     const alpha = raw[index + 3];
     raw[index + 3] = alpha === 0 ? 0 : 255;
+    if (slot.name.startsWith("sprinkler-spray")) {
+      const water = alpha > 0 && blue > 85 && green > 65 && blue > red * 1.12 && green > red * 1.03;
+      raw[index + 3] = water ? 255 : 0;
+      if (water) {
+        const value = (red + green + blue) / 3;
+        const color = value > 200
+          ? [168, 239, 243]
+          : value > 150
+            ? [74, 192, 218]
+            : value > 100
+              ? [37, 135, 177]
+              : [20, 82, 126];
+        raw[index] = color[0];
+        raw[index + 1] = color[1];
+        raw[index + 2] = color[2];
+      }
+      continue;
+    }
     if (alpha > 0 && red < 6 && green < 6 && blue < 6) {
       raw[index + 3] = 0;
       continue;
@@ -64,7 +82,7 @@ async function normalizedSprite(slot) {
     .toBuffer();
   const metadata = await sharp(resized).metadata();
   const x = slot.align === "left" ? 4 : Math.round((cell - metadata.width) / 2);
-  const y = baseline - metadata.height + 1;
+  const y = (slot.anchorBottom ?? baseline) - metadata.height + 1;
   return { input: resized, left: slot.col * cell + x, top: slot.row * cell + y };
 }
 

@@ -76,6 +76,85 @@ test("boss platform opaque tops align with their authored one-way surfaces", asy
   }
 });
 
+test("sprinkler spray cells contain water only, never a second grounded body", async () => {
+  const { data, info } = await sharp(fileURLToPath(atlasUrl)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  for (const [index, [sourceX, sourceY, width, height]] of LEVEL_TWO_PROP_FRAMES["sprinkler-spray"].frames.entries()) {
+    let waterPixels = 0;
+    let nonWaterPixels = 0;
+    let bottom = -1;
+    const waterColors = new Set();
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const offset = ((sourceY + y) * info.width + sourceX + x) * 4;
+        if (data[offset + 3] === 0) continue;
+        bottom = Math.max(bottom, y);
+        const [red, green, blue] = [data[offset], data[offset + 1], data[offset + 2]];
+        const water = blue > 85 && green > 65 && blue > red * 1.12 && green > red * 1.03;
+        if (water) {
+          waterPixels += 1;
+          waterColors.add(`${red},${green},${blue}`);
+        } else {
+          nonWaterPixels += 1;
+        }
+      }
+    }
+    assert.ok(waterPixels >= 300, `spray ${index} is not readable water`);
+    assert.ok(waterColors.size >= 3, `spray ${index} lost its water value clusters`);
+    assert.equal(nonWaterPixels, 0, `spray ${index} still contains head/base colors`);
+    assert.ok(bottom <= 96, `spray ${index} still owns a grounded baseline object at ${bottom}`);
+  }
+});
+
+test("active left and right sprinkler composition owns exactly one idle body", async () => {
+  const source = await readFile(new URL("../app/trash-dash-game.tsx", import.meta.url), "utf8");
+  const start = source.indexOf('if (item.kind === "sprinkler")');
+  const end = source.indexOf('item.kind === "charge-obstacle"', start);
+  const branch = source.slice(start, end);
+  assert.equal(branch.match(/levelTwoPropFrame\("sprinkler-idle"/g)?.length, 1);
+  assert.equal(branch.match(/levelTwoPropFrame\("sprinkler-spray"/g)?.length, 1);
+  assert.match(branch, /direction < 0/g);
+
+  const atlasPath = fileURLToPath(atlasUrl);
+  const bodyFrame = LEVEL_TWO_PROP_FRAMES["sprinkler-idle"].frames[0];
+  const sprayFrame = LEVEL_TWO_PROP_FRAMES["sprinkler-spray"].frames[3];
+  const sprite = async (frame, width, height, flip) => {
+    const [left, top, sourceWidth, sourceHeight] = frame;
+    const image = sharp(atlasPath)
+      .extract({ left, top, width: sourceWidth, height: sourceHeight })
+      .resize(width, height, { kernel: "nearest" });
+    return (flip ? image.flop() : image).png().toBuffer();
+  };
+  for (const direction of [1, -1]) {
+    const flip = direction < 0;
+    const bodyRect = { left: 76, top: 52, width: 82, height: 82 };
+    const sprayRect = { left: direction > 0 ? 109 : 5, top: 28, width: 120, height: 96 };
+    const active = await sharp({ create: { width: 256, height: 140, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+      .composite([
+        { input: await sprite(bodyFrame, bodyRect.width, bodyRect.height, flip), left: bodyRect.left, top: bodyRect.top },
+        { input: await sprite(sprayFrame, sprayRect.width, sprayRect.height, flip), left: sprayRect.left, top: sprayRect.top },
+      ])
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    let groundedBodyPixels = 0;
+    for (let y = 0; y < active.info.height; y += 1) {
+      for (let x = 0; x < active.info.width; x += 1) {
+        const offset = (y * active.info.width + x) * 4;
+        if (active.data[offset + 3] === 0) continue;
+        const [red, green, blue] = [active.data[offset], active.data[offset + 1], active.data[offset + 2]];
+        const water = blue > 85 && green > 65 && blue > red * 1.12 && green > red * 1.03;
+        if (water) continue;
+        assert.ok(
+          x >= bodyRect.left && x < bodyRect.left + bodyRect.width
+            && y >= bodyRect.top && y < bodyRect.top + bodyRect.height,
+          `${direction > 0 ? "left" : "right"} spray introduced a second body pixel at ${x},${y}`,
+        );
+        if (y >= 100) groundedBodyPixels += 1;
+      }
+    }
+    assert.ok(groundedBodyPixels > 100, `${direction > 0 ? "left" : "right"} composition lost its single grounded body`);
+  }
+});
+
 test("Level 2 render source has no primitive fallback for the five replaced props", async () => {
   const source = await readFile(new URL("../app/trash-dash-game.tsx", import.meta.url), "utf8");
   assert.match(source, /levelTwoPropMotionRef/);
