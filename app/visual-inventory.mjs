@@ -1,0 +1,357 @@
+import { DECORATIVE_PROPS } from "../concepts/decorative/decorative-manifest.mjs";
+import { BOSS_ANIMATIONS } from "./boss-animation.mjs";
+import { BRUTUS_ANIMATIONS, BRUTUS_RENDER_METRICS } from "./brutus-boss.mjs";
+import { LEVEL_ONE, LEVEL_ONE_ENEMY_KINDS } from "./level-one.mjs";
+import { LEVEL_TWO, LEVEL_TWO_ENEMY_KINDS } from "./level-two.mjs";
+import { LEVEL_TWO_ENEMY_ANIMATIONS, LEVEL_TWO_ENEMY_COLLISION, LEVEL_TWO_ENEMY_RENDER } from "./level-two-enemies.mjs";
+import { LEVEL_TWO_LAMP_POST_ASSET, LEVEL_TWO_PROP_ASSET, LEVEL_TWO_PROP_ATLAS, LEVEL_TWO_PROP_FRAMES } from "./level-two-props.mjs";
+import { PLAYER_FORM_STATES } from "./player-animation.mjs";
+import { PLAYABLE_CHARACTERS } from "./playable-character.mjs";
+import {
+  COMPOSITION_GAPS,
+  PLACEMENT_SIZE_CLASSES,
+  SCALE_POLICIES,
+  VIEWPORT_BEHAVIORS,
+  createVisualContract,
+  motionEnvelope,
+  validateAnimationManifest,
+  validateVisualContract,
+} from "./visual-contract.mjs";
+
+const rect = (x, y, w, h) => ({ x, y, w, h });
+const clearance = (all = 0) => ({ left: all, right: all, top: all, bottom: all });
+const canonicalScale = (min = 1, max = 1) => ({
+  kind: SCALE_POLICIES.CANONICAL_WORLD_SIZE,
+  min,
+  max,
+  preserveAspectRatio: true,
+});
+
+const placementCategoryFor = (record) => {
+  if (record.category === "boss") return PLACEMENT_SIZE_CLASSES.BOSS_ARENA;
+  if (record.category === "interactive-prop" || record.category === "hazard") return PLACEMENT_SIZE_CLASSES.INTERACTIVE;
+  if (["tree", "bin", "crate"].includes(record.id)) return PLACEMENT_SIZE_CLASSES.HERO;
+  if (record.category === "decorative-prop") return PLACEMENT_SIZE_CLASSES.MEDIUM;
+  if (record.category === "player" || record.category === "enemy") return PLACEMENT_SIZE_CLASSES.MEDIUM;
+  return PLACEMENT_SIZE_CLASSES.SMALL;
+};
+
+const nativePixelSizeFor = (record) => {
+  if (!record.nativeSize) return null;
+  const w = record.nativeSize.cellW ?? record.nativeSize.w;
+  const h = record.nativeSize.cellH ?? record.nativeSize.h;
+  return Number.isFinite(w) && Number.isFinite(h) ? { w, h } : null;
+};
+
+const referenceWorldHeightFor = (record, geometry) => {
+  if (Number.isFinite(record.renderedSize?.h)) return record.renderedSize.h;
+  if (Array.isArray(record.renderedSize?.maximum)) return record.renderedSize.maximum[1];
+  return Number.isFinite(geometry.visualBounds?.h) && geometry.visualBounds.h > 0 ? geometry.visualBounds.h : null;
+};
+
+const makeRecord = (record, geometry) => {
+  const placementCategory = geometry.placementCategory ?? placementCategoryFor(record);
+  const gap = COMPOSITION_GAPS[placementCategory] ?? 0;
+  return Object.freeze({
+  ...record,
+  contract: createVisualContract({
+    id: record.id,
+    category: record.category,
+    visualBounds: geometry.visualBounds,
+    collisionBounds: geometry.collisionBounds ?? geometry.visualBounds,
+    placementFootprint: geometry.placementFootprint ?? motionEnvelope([geometry.visualBounds, geometry.collisionBounds ?? geometry.visualBounds]),
+    groundAnchor: geometry.groundAnchor ?? { x: 0, y: 0 },
+    renderLayer: geometry.renderLayer,
+    allowedZones: geometry.allowedZones,
+    forbiddenZones: geometry.forbiddenZones ?? [],
+    minimumClearance: geometry.minimumClearance ?? clearance(0),
+    scalePolicy: geometry.scalePolicy ?? canonicalScale(),
+    viewportBehavior: geometry.viewportBehavior ?? VIEWPORT_BEHAVIORS.WORLD_SPACE_CULL,
+    compositionPadding: geometry.compositionPadding ?? { left: gap, right: gap, top: Math.round(gap * 0.35), bottom: 0 },
+    placementCategory,
+    nativePixelSize: geometry.nativePixelSize ?? nativePixelSizeFor(record),
+    referenceWorldHeight: geometry.referenceWorldHeight ?? referenceWorldHeightFor(record, geometry),
+    preferredScale: geometry.preferredScale ?? 1,
+    effectOrigin: geometry.effectOrigin ?? null,
+  }),
+  });
+};
+
+const grounded = (drawW, drawH, collisionW, collisionH, extraX = 0, extraTop = 0) => ({
+  visualBounds: rect(-drawW / 2, -drawH, drawW, drawH),
+  collisionBounds: rect(-collisionW / 2, -collisionH, collisionW, collisionH),
+  placementFootprint: rect(-drawW / 2 - extraX, -drawH - extraTop, drawW + extraX * 2, drawH + extraTop),
+  groundAnchor: { x: 0, y: 0 },
+  renderLayer: "GAMEPLAY",
+  allowedZones: ["walkable-surface"],
+  forbiddenZones: ["solid-platform-interior", "hazard", "exit-clearance", "other-entity-footprint"],
+  minimumClearance: clearance(6),
+  scalePolicy: canonicalScale(1, 1),
+});
+
+const flying = (drawW, drawH, collisionW, collisionH) => ({
+  visualBounds: rect(-drawW / 2, -drawH / 2, drawW, drawH),
+  collisionBounds: rect(-collisionW / 2, -collisionH / 2, collisionW, collisionH),
+  placementFootprint: rect(-drawW / 2 - 12, -drawH / 2 - 20, drawW + 24, drawH + 40),
+  groundAnchor: { x: 0, y: drawH / 2 },
+  renderLayer: "GAMEPLAY",
+  allowedZones: ["authored-flight-band"],
+  forbiddenZones: ["terrain", "platform-interior", "viewport-edge", "other-entity-footprint"],
+  minimumClearance: clearance(8),
+  scalePolicy: canonicalScale(1, 1),
+});
+
+const playerRecords = Object.values(PLAYABLE_CHARACTERS).map((profile) => {
+  const animations = profile.animations;
+  const frameBounds = Object.values(animations).map(({ drawWidth, drawHeight, offsetY = 0 }) => (
+    rect(-drawWidth / 2, -drawHeight + offsetY, drawWidth, drawHeight)
+  ));
+  const envelope = motionEnvelope(frameBounds);
+  return makeRecord({
+    id: profile.id,
+    category: "player",
+    assetSource: profile.atlasSrc,
+    nativeSize: { w: 1152, h: 4224, cellW: 192, cellH: 192 },
+    renderedSize: { small: [84, 84], large: [110, 110], maximum: [envelope.w, envelope.h] },
+    origin: "destination center-bottom",
+    facing: "right-authored; horizontal flip around destination center",
+    animations,
+    requiredStates: Object.freeze([...PLAYER_FORM_STATES.small.map((state) => `small_${state}`), ...PLAYER_FORM_STATES.large.map((state) => `large_${state}`)]),
+  }, {
+    visualBounds: envelope,
+    collisionBounds: rect(-profile.large.width / 2, -profile.large.height, profile.large.width, profile.large.height),
+    placementFootprint: motionEnvelope([envelope, rect(-71, -140, 142, 140)]),
+    groundAnchor: { x: 0, y: 0 },
+    renderLayer: "GAMEPLAY",
+    allowedZones: ["walkable-surface", "authored-airspace"],
+    forbiddenZones: ["solid-platform-interior", "out-of-world"],
+    minimumClearance: clearance(0),
+    scalePolicy: canonicalScale(1, 1),
+  });
+});
+
+const levelOneDraw = Object.freeze({
+  snake: [74, 64], pigeon: [66, 66], wasp: [66, 66], mosquito: [64, 64],
+  possum: [78, 78], spider: [70, 64], fox: [82, 72],
+});
+const levelOneCollision = Object.freeze({
+  snake: [58, 28], pigeon: [46, 38], wasp: [48, 32], mosquito: [46, 30],
+  possum: [58, 38], spider: [52, 30], fox: [62, 40],
+});
+const levelOneEnemyRecords = LEVEL_ONE_ENEMY_KINDS.map((kind) => {
+  const [drawW, drawH] = levelOneDraw[kind];
+  const [collisionW, collisionH] = levelOneCollision[kind];
+  const isFlying = kind === "wasp" || kind === "mosquito";
+  return makeRecord({
+    id: kind,
+    category: "enemy",
+    levelIds: ["level-1"],
+    assetSource: kind === "pigeon" || kind === "possum" ? "assets/enemy-motion.png" : "assets/generated/enemy-variety-motion.png",
+    nativeSize: { cellW: 192, cellH: 192, frames: 4 },
+    renderedSize: { w: drawW, h: drawH },
+    origin: isFlying ? "destination center" : "destination center-bottom",
+    facing: "right-authored; horizontal flip around destination center",
+    animations: { move: { row: 0, frames: 4, fps: 7, loop: true } },
+    requiredStates: ["move"],
+  }, isFlying ? flying(drawW, drawH, collisionW, collisionH) : grounded(drawW, drawH, collisionW, collisionH, 8, 4));
+});
+
+const levelTwoRequired = Object.freeze({
+  squirrel: ["locomotion", "anticipation", "release", "followThrough", "recover", "hit", "defeat"],
+  terrier: ["locomotion", "sleep", "telegraph", "attack", "stunned", "recover", "hit", "defeat"],
+  skunk: ["locomotion", "telegraph", "attack", "hit", "defeat"],
+  moth: ["locomotion", "telegraph", "attack", "hit", "defeat"],
+});
+const levelTwoEnemyRecords = LEVEL_TWO_ENEMY_KINDS.map((kind) => {
+  const { drawWidth: drawW, drawHeight: drawH } = LEVEL_TWO_ENEMY_RENDER[kind];
+  const [collisionW, collisionH] = LEVEL_TWO_ENEMY_COLLISION[kind];
+  return makeRecord({
+    id: kind,
+    category: "enemy",
+    levelIds: ["level-2"],
+    assetSource: "assets/generated/level2-enemy-motion.png",
+    nativeSize: { w: 768, h: 3840, cellW: 192, cellH: 192, rows: 20, columns: 4 },
+    renderedSize: { w: drawW, h: drawH },
+    origin: kind === "moth" ? "destination center" : "source baseline row 176 to destination ground",
+    facing: "right-authored; horizontal flip around destination center with dead-zone facing",
+    animations: LEVEL_TWO_ENEMY_ANIMATIONS[kind],
+    requiredStates: levelTwoRequired[kind],
+  }, kind === "moth" ? flying(drawW, drawH, collisionW, collisionH) : grounded(drawW, drawH, collisionW, collisionH, kind === "terrier" ? 26 : 16, 8));
+});
+
+const bossRecords = [
+  makeRecord({
+    id: "trash-heap-tyrant", category: "boss", levelIds: ["level-1"],
+    assetSource: "assets/generated/boss-motion.png", nativeSize: { cellW: 256, cellH: 256, rows: 8, columns: 6 },
+    renderedSize: { maximum: [184, 170] }, origin: "destination center-bottom",
+    facing: "right-authored; centered horizontal flip", animations: BOSS_ANIMATIONS,
+    requiredStates: ["idle", "walk", "windup", "charge", "recover", "hit", "rage", "defeat"],
+  }, grounded(184, 170, 96, 96, 64, 16)),
+  makeRecord({
+    id: "brutus-bin-hound", category: "boss", levelIds: ["level-2"],
+    assetSource: "assets/generated/brutus-motion.png", nativeSize: { w: 1024, h: 2112, cellW: 256, cellH: 192 },
+    renderedSize: { w: BRUTUS_RENDER_METRICS.drawWidth, h: BRUTUS_RENDER_METRICS.drawHeight },
+    origin: "audited source baseline inset to destination ground", facing: "right-authored; centered horizontal flip",
+    animations: BRUTUS_ANIMATIONS, requiredStates: Object.keys(BRUTUS_ANIMATIONS),
+  }, grounded(220, 165, 96, 96, 86, 28)),
+];
+
+const backgroundRecords = [LEVEL_ONE, LEVEL_TWO].flatMap((level) => level.backgroundSets.flatMap(({ zoneId, stage }) => (
+  ["far", "middle", "close"].map((layerName) => makeRecord({
+    id: `${level.id}-${stage}-${layerName}`,
+    category: "background",
+    levelIds: [level.id],
+    assetSource: `assets/backgrounds/${level.id.replace("level-", "level")}-${stage}-${layerName}.png`,
+    nativeSize: { w: 2048, h: 716 }, renderedSize: { w: 2048, h: 716 },
+    origin: "viewport tile top-left", facing: "not applicable", animations: null, requiredStates: [],
+  }, {
+    visualBounds: rect(0, 0, 2048, 716), collisionBounds: rect(0, 0, 0, 0), placementFootprint: rect(0, 0, 2048, 716),
+    groundAnchor: { x: 0, y: 603 }, renderLayer: layerName === "far" ? "FAR_BACKGROUND" : "BACKGROUND_SCENERY",
+    allowedZones: [zoneId], forbiddenZones: ["gameplay-layer"], minimumClearance: clearance(0),
+    scalePolicy: { kind: SCALE_POLICIES.VIEWPORT_COVER, min: 1, max: 1, preserveAspectRatio: true },
+    viewportBehavior: VIEWPORT_BEHAVIORS.PARALLAX_TILE,
+  }))
+)));
+
+const surfaceRecords = [LEVEL_ONE, LEVEL_TWO].flatMap((level) => level.surfaces.map((surface) => makeRecord({
+  id: `${level.id}-${surface.id}`,
+  entityId: surface.id,
+  category: surface.kind === "ground" ? "terrain" : "platform",
+  levelIds: [level.id], assetSource: surface.visual ? LEVEL_TWO_PROP_ASSET : surface.kind === "ground" ? "assets/ground-seamless.png" : surface.kind === "box" ? "assets/generated/decorative-atlas.png" : `assets/generated/${surface.kind}-platform-strip.png`,
+  nativeSize: surface.visual ? { cellW: 128, cellH: 128 } : null, renderedSize: { w: surface.w, h: surface.h },
+  origin: "world rectangle top-left", facing: "not applicable", animations: null, requiredStates: [],
+}, {
+  visualBounds: rect(0, 0, surface.w, surface.h), collisionBounds: rect(0, 0, surface.w, surface.h), placementFootprint: rect(0, 0, surface.w, surface.h),
+  groundAnchor: { x: 0, y: 0 }, renderLayer: "TERRAIN", allowedZones: ["authored-world-geometry"], forbiddenZones: [],
+  minimumClearance: clearance(0), scalePolicy: { kind: SCALE_POLICIES.NINE_SLICE_OR_TILE, min: 1, max: 1, preserveAspectRatio: true },
+})));
+
+const decorativeRecords = Object.entries(DECORATIVE_PROPS).map(([id, meta]) => makeRecord({
+  id, category: id === "checkpoint" ? "interactive-prop" : "decorative-prop", levelIds: ["level-1", "level-2"],
+  assetSource: "assets/generated/decorative-atlas.png", nativeSize: { w: 768, h: 512, cellW: 256, cellH: 256 },
+  visibleSourceSize: { w: meta.sourceWidth, h: meta.sourceHeight },
+  renderedSize: { w: Math.round(meta.sourceWidth * 0.5), h: Math.round(meta.sourceHeight * 0.5) },
+  origin: "audited source baseline to destination ground", facing: "not applicable", animations: null, requiredStates: [],
+}, {
+  ...grounded(Math.round(meta.sourceWidth * 0.5), Math.round(meta.sourceHeight * 0.5), Math.round(meta.sourceWidth * 0.5), Math.round(meta.sourceHeight * 0.5)),
+  renderLayer: id === "checkpoint" ? "GAMEPLAY" : "GROUND_DECOR",
+  allowedZones: ["walkable-surface"], forbiddenZones: ["platform-interior", "hazard", "pickup-clearance", "enemy-footprint"], minimumClearance: clearance(6),
+}));
+
+const propRecords = [
+  ["charge-obstacle", "interactive-prop", 84, 112, "GAMEPLAY"],
+  ["sprinkler", "hazard", 132, 96, "GAMEPLAY_EFFECTS"],
+  ["hydrant", "interactive-prop", 144, 96, "GAMEPLAY_EFFECTS"],
+  ["lamp-post", "interactive-prop", 96, 208, "REAR_ENVIRONMENT"],
+].map(([id, category, w, h, renderLayer]) => makeRecord({
+  id, category, levelIds: ["level-2"], assetSource: id === "lamp-post" ? LEVEL_TWO_LAMP_POST_ASSET : LEVEL_TWO_PROP_ASSET,
+  nativeSize: id === "lamp-post" ? { w: 192, h: 256 } : { cellW: LEVEL_TWO_PROP_ATLAS.cell, cellH: LEVEL_TWO_PROP_ATLAS.cell }, renderedSize: { w, h },
+  origin: "named source baseline or attachment origin", facing: "mirrored around named attachment origin",
+  animations: id === "sprinkler" ? { idle: LEVEL_TWO_PROP_FRAMES["sprinkler-idle"], start: LEVEL_TWO_PROP_FRAMES["sprinkler-start"], spray: LEVEL_TWO_PROP_FRAMES["sprinkler-spray"], stop: LEVEL_TWO_PROP_FRAMES["sprinkler-stop"] }
+    : id === "hydrant" ? { idle: LEVEL_TWO_PROP_FRAMES["hydrant-idle"], build: LEVEL_TWO_PROP_FRAMES["hydrant-build"], spray: LEVEL_TWO_PROP_FRAMES["hydrant-spray"], recover: LEVEL_TWO_PROP_FRAMES["hydrant-recover"] }
+      : null,
+  requiredStates: id === "sprinkler" ? ["idle", "start", "spray", "stop"] : id === "hydrant" ? ["idle", "build", "spray", "recover"] : [],
+}, {
+  ...grounded(w, h, Math.min(w, 84), Math.min(h, 68), id === "hydrant" ? 144 : 8), renderLayer,
+  allowedZones: ["walkable-surface"],
+  forbiddenZones: ["unrelated-platform-interior", "player-spawn"], minimumClearance: clearance(4),
+  effectOrigin: id === "sprinkler" ? { x: 6, y: -50 } : id === "hydrant" ? { x: 18, y: -56 } : id === "lamp-post" ? { x: 20, y: -150 } : null,
+}));
+
+const pickupRecords = [["trash", 46, 46], ["taco", 58, 58], ["cap", 50, 42]].map(([id, w, h]) => makeRecord({
+  id, category: "pickup", levelIds: ["level-1", "level-2"],
+  assetSource: id === "trash" ? "assets/generated/trash-pickups-motion.png" : id === "taco" ? "assets/generated/taco-power-motion.png" : "assets/raccoon-sprites.png",
+  nativeSize: id === "cap" ? null : { cellW: 192, cellH: 192 }, renderedSize: { w, h }, origin: "destination center", facing: "not applicable",
+  animations: id === "cap" ? null : { idle: { row: 0, frames: 4, fps: 5, loop: true } }, requiredStates: id === "cap" ? [] : ["idle"],
+}, {
+  visualBounds: rect(-w / 2, -h / 2 - 2, w, h + 4), collisionBounds: rect(-14, -14, 28, 28), placementFootprint: rect(-w / 2 - 4, -h / 2 - 8, w + 8, h + 16),
+  groundAnchor: { x: 0, y: h / 2 + 4 }, renderLayer: "GAMEPLAY", allowedZones: ["authored-reward-zone"],
+  forbiddenZones: ["solid-platform-interior", "hazard", "enemy-footprint"], minimumClearance: clearance(4), scalePolicy: canonicalScale(1, 1),
+}));
+
+const miscRecords = [
+  makeRecord({ id: "acorn", category: "projectile", levelIds: ["level-2"], assetSource: LEVEL_TWO_PROP_ASSET, nativeSize: { cellW: 128, cellH: 128 }, renderedSize: { w: 28, h: 28 }, origin: "center", facing: "velocity-controlled rotation", animations: { active: LEVEL_TWO_PROP_FRAMES.acorn }, requiredStates: ["active"] }, {
+    visualBounds: rect(-17, -17, 34, 34), collisionBounds: rect(-8, -8, 16, 16), placementFootprint: rect(-22, -22, 44, 44), groundAnchor: { x: 0, y: 17 }, renderLayer: "GAMEPLAY_EFFECTS", allowedZones: ["authored-projectile-lane"], forbiddenZones: ["source-owner-footprint"], minimumClearance: clearance(0), scalePolicy: canonicalScale(1, 1),
+  }),
+  makeRecord({ id: "rolling-can", category: "projectile", levelIds: ["level-2"], assetSource: LEVEL_TWO_PROP_ASSET, nativeSize: { cellW: 128, cellH: 128 }, renderedSize: { w: 34, h: 34 }, origin: "center", facing: "velocity-controlled rotation", animations: { active: LEVEL_TWO_PROP_FRAMES["rolling-can"] }, requiredStates: ["active"] }, {
+    ...grounded(34, 34, 22, 22, 6), renderLayer: "GAMEPLAY_EFFECTS", allowedZones: ["boss-arena-floor"], forbiddenZones: ["boss-platform-interior"], minimumClearance: clearance(0),
+  }),
+  makeRecord({ id: "pit-and-drainage-gap", category: "hazard", levelIds: ["level-1", "level-2"], assetSource: null, nativeSize: null, renderedSize: null, origin: "authored gap rectangle", facing: "not applicable", animations: null, requiredStates: [] }, {
+    visualBounds: rect(0, 0, 1, 1), collisionBounds: rect(0, 0, 1, 1), placementFootprint: rect(0, 0, 1, 1), groundAnchor: { x: 0, y: 0 }, renderLayer: "TERRAIN", allowedZones: ["gap-between-surfaces"], forbiddenZones: ["walkable-surface"], minimumClearance: clearance(0), scalePolicy: canonicalScale(1, 1),
+  }),
+  makeRecord({ id: "impact-particles", category: "effect", levelIds: ["level-1", "level-2"], assetSource: null, nativeSize: null, renderedSize: { min: 2, max: 8 }, origin: "particle center", facing: "velocity vector", animations: { active: { row: 0, frames: 1, fps: 1, loop: false } }, requiredStates: ["active"] }, {
+    visualBounds: rect(-4, -4, 8, 8), collisionBounds: rect(0, 0, 0, 0), placementFootprint: rect(-8, -8, 16, 16), groundAnchor: { x: 0, y: 4 }, renderLayer: "GAMEPLAY_EFFECTS", allowedZones: ["gameplay-viewport"], forbiddenZones: [], minimumClearance: clearance(0), scalePolicy: canonicalScale(0.25, 1),
+  }),
+  makeRecord({ id: "gameplay-hud", category: "viewport-ui", levelIds: ["level-1", "level-2"], assetSource: null, nativeSize: null, renderedSize: "responsive safe-area", origin: "screen-space", facing: "not applicable", animations: null, requiredStates: [] }, {
+    visualBounds: rect(0, 0, 960, 96), collisionBounds: rect(0, 0, 0, 0), placementFootprint: rect(0, 0, 960, 96), groundAnchor: { x: 0, y: 96 }, renderLayer: "HUD", allowedZones: ["viewport-safe-area"], forbiddenZones: ["touch-controls"], minimumClearance: clearance(0), scalePolicy: { kind: SCALE_POLICIES.VIEWPORT_COVER, min: 0.5, max: 2, preserveAspectRatio: true }, viewportBehavior: VIEWPORT_BEHAVIORS.SCREEN_SPACE_SAFE_AREA,
+  }),
+];
+
+export const IMPLEMENTED_VISUAL_INVENTORY = Object.freeze([
+  ...backgroundRecords, ...surfaceRecords, ...decorativeRecords, ...propRecords, ...pickupRecords,
+  ...miscRecords, ...playerRecords, ...levelOneEnemyRecords, ...levelTwoEnemyRecords, ...bossRecords,
+]);
+
+export const VISUAL_QA_ROUTES = Object.freeze([
+  { id: "l1-start", levelId: "level-1", checkpoint: "start", viewport: "desktop", url: "/?backgroundTest=woodland&visualQa=l1-start" },
+  { id: "l1-creek", levelId: "level-1", checkpoint: "creek", viewport: "desktop", url: "/?backgroundTest=creek&visualQa=l1-creek" },
+  { id: "l1-highway", levelId: "level-1", checkpoint: "highway", viewport: "desktop", url: "/?backgroundTest=highway&visualQa=l1-highway" },
+  { id: "l1-industrial", levelId: "level-1", checkpoint: "industrial", viewport: "desktop", url: "/?backgroundTest=industrial&visualQa=l1-industrial" },
+  { id: "l1-park", levelId: "level-1", checkpoint: "park", viewport: "mobile-landscape", url: "/?backgroundTest=park&visualQa=l1-park" },
+  { id: "l1-middle", levelId: "level-1", checkpoint: "middle", viewport: "desktop", url: "/?backgroundTest=highway&visualQa=l1-middle" },
+  { id: "l1-end", levelId: "level-1", checkpoint: "end", viewport: "mobile-landscape", url: "/?backgroundTest=park&visualQa=l1-end" },
+  { id: "l1-boss", levelId: "level-1", checkpoint: "boss", bossId: "trash-heap-tyrant", viewport: "desktop", url: "/?bossTest=1&visualQa=l1-boss" },
+  { id: "l1-victory", levelId: "level-1", checkpoint: "victory", viewport: "desktop", url: "/?victoryTest=1&visualQa=l1-victory" },
+  { id: "l2-backyard", levelId: "level-2", checkpoint: "backyard", viewport: "desktop", url: "/?level=2&levelTest=backyard&visualQa=l2-backyard" },
+  { id: "l2-street", levelId: "level-2", checkpoint: "street", viewport: "desktop", url: "/?level=2&levelTest=street&visualQa=l2-street" },
+  { id: "l2-obstacle", levelId: "level-2", checkpoint: "obstacle", viewport: "desktop", url: "/?level=2&levelTest=obstacle&visualQa=l2-obstacle" },
+  { id: "l2-drainage", levelId: "level-2", checkpoint: "drainage", viewport: "desktop", url: "/?level=2&levelTest=drainage&visualQa=l2-drainage" },
+  { id: "l2-runway", levelId: "level-2", checkpoint: "runway", viewport: "desktop", url: "/?level=2&levelTest=runway&visualQa=l2-runway" },
+  { id: "l2-main-street", levelId: "level-2", checkpoint: "main-street", viewport: "mobile-landscape", url: "/?level=2&levelTest=main-street&visualQa=l2-main-street" },
+  { id: "l2-start", levelId: "level-2", checkpoint: "start", viewport: "mobile-portrait", url: "/?level=2&levelTest=backyard&visualQa=l2-start" },
+  { id: "l2-middle", levelId: "level-2", checkpoint: "middle", viewport: "desktop", url: "/?level=2&levelTest=obstacle&visualQa=l2-middle" },
+  { id: "l2-end", levelId: "level-2", checkpoint: "end", viewport: "mobile-landscape", url: "/?level=2&levelTest=main-street&visualQa=l2-end" },
+  { id: "l2-squirrel", levelId: "level-2", checkpoint: "squirrel", viewport: "desktop", url: "/?encounterTest=squirrel&visualQa=l2-squirrel" },
+  { id: "l2-terrier", levelId: "level-2", checkpoint: "terrier", viewport: "desktop", url: "/?encounterTest=terrier&visualQa=l2-terrier" },
+  { id: "l2-skunk", levelId: "level-2", checkpoint: "skunk", viewport: "desktop", url: "/?encounterTest=skunk&visualQa=l2-skunk" },
+  { id: "l2-moth", levelId: "level-2", checkpoint: "moth", viewport: "desktop", url: "/?encounterTest=moth&visualQa=l2-moth" },
+  { id: "l2-interaction", levelId: "level-2", checkpoint: "interaction", viewport: "desktop", url: "/?encounterTest=interaction&visualQa=l2-interaction" },
+  { id: "l2-boss", levelId: "level-2", checkpoint: "boss", bossId: "brutus-bin-hound", viewport: "desktop", url: "/?bossTest=brutus&visualQa=l2-boss" },
+  { id: "l2-victory", levelId: "level-2", checkpoint: "victory", viewport: "desktop", url: "/?victoryTest=level2&visualQa=l2-victory" },
+  { id: "player-states", levelId: "level-1", checkpoint: "states", viewport: "desktop", url: "/?powerupTest=taco&visualQa=player-states&debugVisuals=1" },
+  { id: "enemy-states", levelId: "level-2", checkpoint: "states", viewport: "desktop", url: "/?encounterTest=interaction&visualQa=enemy-states&debugVisuals=1" },
+]);
+
+export function inventorySummary(inventory = IMPLEMENTED_VISUAL_INVENTORY) {
+  const unique = (values) => [...new Set(values)].sort();
+  return {
+    levels: unique(inventory.flatMap(({ levelIds = [] }) => levelIds)),
+    players: unique(inventory.filter(({ category }) => category === "player").map(({ id }) => id)),
+    enemies: unique(inventory.filter(({ category }) => category === "enemy").map(({ id }) => id)),
+    bosses: unique(inventory.filter(({ category }) => category === "boss").map(({ id }) => id)),
+    categories: unique(inventory.map(({ category }) => category)),
+  };
+}
+
+export function validateImplementedVisualInventory(inventory = IMPLEMENTED_VISUAL_INVENTORY) {
+  const errors = inventory.flatMap((record) => validateVisualContract(record.contract));
+  for (const record of inventory) {
+    if (!record.animations) continue;
+    const entries = Object.fromEntries(Object.entries(record.animations).map(([name, animation]) => [name, {
+      ...animation,
+      row: animation.row ?? 0,
+      frames: animation.frames,
+    }]));
+    const atlas = record.nativeSize?.rows && record.nativeSize?.columns
+      ? { rows: record.nativeSize.rows, columns: record.nativeSize.columns }
+      : null;
+    errors.push(...validateAnimationManifest(entries, { requiredStates: record.requiredStates, atlas }).map((error) => `${record.id}: ${error}`));
+  }
+  const ids = new Set();
+  for (const record of inventory) {
+    const scopedId = `${record.levelIds?.join(",") ?? "global"}:${record.category}:${record.id}`;
+    if (ids.has(scopedId)) errors.push(`${record.id}: duplicate inventory record`);
+    ids.add(scopedId);
+  }
+  return errors;
+}
