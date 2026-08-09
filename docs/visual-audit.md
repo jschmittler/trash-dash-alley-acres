@@ -352,6 +352,51 @@ Verification:
   The similarly named `task2-dumpster-victory-close.png` is an incorrect crop
   and is deliberately excluded from this audit evidence.
 
+### 2026-08-09 — Complete source-to-runtime mapping follow-up
+
+- RED replaced the prior source-rectangle loop that silently skipped missing
+  records. It measured alpha bounds inside every declared source crop, applied
+  the actual runtime destination axes, and reproduced the exact state-level
+  mismatch allowlist now exported by `MEASURED_RUNTIME_DISTORTION_STATES`.
+- GREEN gives every fixed-aspect shipped asset an immutable source-rectangle
+  and runtime-destination map. The test fails if a source crop, destination,
+  frame count, alpha bounds, or a newly measured distortion is missing or
+  unclassified. `visibleSourceSize` is no longer contract authority.
+- The draw-family manifest binds decorative sprites, players, both enemy
+  families, bosses, pickups, dumpster, legacy props, ordinary bin lid,
+  bin-lid source, Brutus can, and procedural paths to inventory records.
+  The ordinary lid is truthfully 34×34; the Brutus rolling can is 42×42.
+
+### VIS-005: Player animation axis distortion (Task 3)
+
+- Observed source/runtime evidence: measured alpha crops in the 192×192
+  Trashy and Jimothy animation cells differ from the fixed runtime
+  destination axes for the allowlisted run, jump/fall, land, hurt, skid,
+  defeat, and large-form action states.
+- Root cause: per-state runtime draw widths/heights are not a uniform transform
+  of all visible alpha frames.
+- Owner: Task 3 player renderer/animation pass. Task 2 records and detects the
+  exact state set but does not alter the shared dirty runtime renderer.
+
+### VIS-006: Enemy and boss animation axis distortion (Task 4)
+
+- Observed source/runtime evidence: 192×192 Level 1/Level 2 alpha crops and
+  256×256 Trash Heap Tyrant crops reproduce the exact allowlisted enemy and
+  boss states against their current draw destinations.
+- Root cause: runtime family draw dimensions are not uniform for those frames.
+- Owner: Task 4 enemy/boss renderer pass. The Brutus 256×192 → 220×165 path
+  is uniform and is not on this issue's allowlist.
+
+### VIS-007: Prop and pickup residual axis distortion (separate prop/runtime pass)
+
+- Observed source/runtime evidence: charge obstacle 128²→84×112,
+  sprinkler water 128²→120×96, hydrant body 128²→72×108, tires' rounded
+  224×115→112×58 destination, and cap 58×48→50×42 destination are explicit
+  allowlisted mismatches.
+- The Level 2 prop entries remain owned by the separate prop/runtime pass. Cap
+  shares the dirty gameplay renderer; the tires deviation is a one-pixel
+  rounding decision. Neither runtime change is staged in Task 2.
+
 ### 2026-08-09 — Post-normalization visual verification
 
 Applicable canonical skills declared and applied:

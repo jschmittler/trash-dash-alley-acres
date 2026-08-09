@@ -4,7 +4,7 @@ import { BRUTUS_ANIMATIONS, BRUTUS_RENDER_METRICS } from "./brutus-boss.mjs";
 import { DUMPSTER_CELL, DUMPSTER_DRAW_HEIGHT, DUMPSTER_DRAW_WIDTH, DUMPSTER_STATES } from "./dumpster-render.mjs";
 import { LEVEL_ONE, LEVEL_ONE_ENEMY_KINDS } from "./level-one.mjs";
 import { LEVEL_TWO, LEVEL_TWO_ENEMY_KINDS } from "./level-two.mjs";
-import { LEVEL_TWO_ENEMY_ANIMATIONS, LEVEL_TWO_ENEMY_COLLISION } from "./level-two-enemies.mjs";
+import { LEVEL_TWO_ENEMY_COLLISION } from "./level-two-enemies.mjs";
 import { LEVEL_TWO_PROP_ASSET, LEVEL_TWO_PROP_ATLAS, LEVEL_TWO_PROP_FRAMES } from "./level-two-props.mjs";
 import { PLAYER_FORM_STATES } from "./player-animation.mjs";
 import { PLAYABLE_CHARACTERS } from "./playable-character.mjs";
@@ -21,6 +21,21 @@ import {
 
 const rect = (x, y, w, h) => ({ x, y, w, h });
 const clearance = (all = 0) => ({ left: all, right: all, top: all, bottom: all });
+const repeated = (count, value) => Array.from({ length: count }, () => ({ ...value }));
+const cellRects = ({ row = 0, frames = 1, startFrame = 0, cellW, cellH }) => (
+  Array.from({ length: frames }, (_, column) => rect((startFrame + column) * cellW, row * cellH, cellW, cellH))
+);
+const animationSourceRects = (animations, cellW, cellH) => Object.fromEntries(
+  Object.entries(animations).map(([state, animation]) => [state, Array.isArray(animation.frames)
+    ? animation.frames.map(([x, y, w, h]) => rect(x, y, w, h))
+    : cellRects({ ...animation, cellW, cellH })]),
+);
+const animationDestinations = (animations, fallback) => Object.fromEntries(
+  Object.entries(animations).map(([state, animation]) => [state, repeated(animation.frames?.length ?? animation.frames ?? 1, {
+    w: animation.drawWidth ?? fallback.w,
+    h: animation.drawHeight ?? fallback.h,
+  })]),
+);
 const cloneAndFreeze = (value) => {
   if (Array.isArray(value)) return Object.freeze(value.map(cloneAndFreeze));
   if (value && typeof value === "object") return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, item]) => [key, cloneAndFreeze(item)])));
@@ -64,9 +79,9 @@ const makeRecord = (record, geometry) => {
   return Object.freeze({
   ...record,
   nativeSize: cloneAndFreeze(record.nativeSize ?? null),
-  visibleSourceSize: cloneAndFreeze(record.visibleSourceSize ?? null),
   renderedSize: cloneAndFreeze(record.renderedSize ?? null),
   sourceRects: cloneAndFreeze(record.sourceRects ?? null),
+  runtimeDestinations: cloneAndFreeze(record.runtimeDestinations ?? null),
   anchorPolicy: geometry.anchorPolicy ?? FREE_ANCHOR,
   contract: createVisualContract({
     id: record.id,
@@ -127,11 +142,12 @@ const playerRecords = Object.values(PLAYABLE_CHARACTERS).map((profile) => {
     id: profile.id,
     category: "player",
     assetSource: profile.atlasSrc,
-    nativeSize: { w: 1152, h: 4224, cellW: 192, cellH: 192 },
-    renderedSize: { small: [84, 84], large: [110, 110], maximum: [envelope.w, envelope.h] },
+  nativeSize: { w: 1152, h: 4224, cellW: 192, cellH: 192 },
+  renderedSize: { small: [84, 84], large: [110, 110], maximum: [envelope.w, envelope.h] },
+    sourceRects: animationSourceRects(animations, 192, 192),
+    runtimeDestinations: animationDestinations(animations, { w: 84, h: 84 }),
     origin: "destination center-bottom",
     facing: "right-authored; horizontal flip around destination center",
-    visibleSourceSize: { w: envelope.w, h: envelope.h },
     animations,
     requiredStates: Object.freeze([...PLAYER_FORM_STATES.small.map((state) => `small_${state}`), ...PLAYER_FORM_STATES.large.map((state) => `large_${state}`)]),
   }, {
@@ -156,6 +172,7 @@ const levelOneCollision = Object.freeze({
   snake: [58, 28], pigeon: [46, 38], wasp: [48, 32], mosquito: [46, 30],
   possum: [58, 38], spider: [52, 30], fox: [62, 40],
 });
+const levelOneRows = Object.freeze({ snake: 4, pigeon: 0, wasp: 1, mosquito: 2, possum: 3, spider: 5, fox: 8 });
 const levelOneEnemyRecords = LEVEL_ONE_ENEMY_KINDS.map((kind) => {
   const [drawW, drawH] = levelOneDraw[kind];
   const [collisionW, collisionH] = levelOneCollision[kind];
@@ -166,8 +183,9 @@ const levelOneEnemyRecords = LEVEL_ONE_ENEMY_KINDS.map((kind) => {
     levelIds: ["level-1"],
     assetSource: kind === "pigeon" || kind === "possum" ? "assets/enemy-motion.png" : "assets/generated/enemy-variety-motion.png",
     nativeSize: { cellW: 192, cellH: 192, frames: 4 },
-    visibleSourceSize: { w: drawW, h: drawH },
     renderedSize: { w: drawW, h: drawH },
+    sourceRects: { move: cellRects({ row: levelOneRows[kind], frames: 4, cellW: 192, cellH: 192 }) },
+    runtimeDestinations: { move: repeated(4, { w: drawW, h: drawH }) },
     origin: isFlying ? "destination center" : "destination center-bottom",
     facing: "right-authored; horizontal flip around destination center",
     animations: { move: { row: 0, frames: 4, fps: 7, loop: true } },
@@ -180,6 +198,15 @@ const levelTwoRequired = Object.freeze({
   terrier: ["locomotion", "sleep", "telegraph", "attack", "stunned", "recover", "hit", "defeat"],
   skunk: ["locomotion", "telegraph", "attack", "hit", "defeat"],
   moth: ["locomotion", "telegraph", "attack", "hit", "defeat"],
+});
+const baseAnimation = (row, frames, fps, loop = false, startFrame = 0) => Object.freeze({ row, frames, fps, loop, startFrame });
+// Base committed manifest only. Expanded actor work is independently owned and
+// cannot become an implicit Task 2 dependency.
+const BASE_LEVEL_TWO_ENEMY_ANIMATIONS = Object.freeze({
+  squirrel: Object.freeze({ locomotion: baseAnimation(0, 4, 8, true), telegraph: baseAnimation(1, 4, 7), attack: baseAnimation(2, 4, 20), hit: baseAnimation(3, 2, 9), defeat: baseAnimation(4, 2, 5) }),
+  terrier: Object.freeze({ locomotion: baseAnimation(5, 4, 9, true), sleep: baseAnimation(6, 1, 1), telegraph: baseAnimation(6, 4, 7), attack: baseAnimation(7, 4, 12, true), hit: baseAnimation(8, 2, 9), stunned: baseAnimation(8, 2, 6), recover: baseAnimation(8, 1, 1, false, 1), defeat: baseAnimation(9, 2, 5) }),
+  skunk: Object.freeze({ locomotion: baseAnimation(10, 4, 7, true), telegraph: baseAnimation(11, 4, 7), attack: baseAnimation(12, 4, 12), hit: baseAnimation(13, 2, 9), defeat: baseAnimation(14, 2, 5) }),
+  moth: Object.freeze({ locomotion: baseAnimation(15, 4, 10, true), telegraph: baseAnimation(16, 4, 8), attack: baseAnimation(17, 4, 12, true), hit: baseAnimation(18, 2, 9), defeat: baseAnimation(19, 2, 6) }),
 });
 // The committed renderer's drawSizes table. Keep this base-runtime geometry
 // here rather than importing an optional later render-metrics export.
@@ -198,11 +225,12 @@ const levelTwoEnemyRecords = LEVEL_TWO_ENEMY_KINDS.map((kind) => {
     levelIds: ["level-2"],
     assetSource: "assets/generated/level2-enemy-motion.png",
     nativeSize: { w: 768, h: 3840, cellW: 192, cellH: 192, rows: 20, columns: 4 },
-    visibleSourceSize: { w: drawW, h: drawH },
     renderedSize: { w: drawW, h: drawH },
+    sourceRects: animationSourceRects(BASE_LEVEL_TWO_ENEMY_ANIMATIONS[kind], 192, 192),
+    runtimeDestinations: animationDestinations(BASE_LEVEL_TWO_ENEMY_ANIMATIONS[kind], { w: drawW, h: drawH }),
     origin: kind === "moth" ? "destination center" : "source baseline row 176 to destination ground",
     facing: "right-authored; horizontal flip around destination center with dead-zone facing",
-    animations: LEVEL_TWO_ENEMY_ANIMATIONS[kind],
+    animations: BASE_LEVEL_TWO_ENEMY_ANIMATIONS[kind],
     requiredStates: levelTwoRequired[kind],
   }, kind === "moth" ? flying(drawW, drawH, collisionW, collisionH) : grounded(drawW, drawH, collisionW, collisionH, kind === "terrier" ? 26 : 16, 8));
 });
@@ -210,15 +238,19 @@ const levelTwoEnemyRecords = LEVEL_TWO_ENEMY_KINDS.map((kind) => {
 const bossRecords = [
   makeRecord({
     id: "trash-heap-tyrant", category: "boss", levelIds: ["level-1"],
-    assetSource: "assets/generated/boss-motion.png", nativeSize: { cellW: 256, cellH: 256, rows: 8, columns: 6 }, visibleSourceSize: { w: 184, h: 170 },
+    assetSource: "assets/generated/boss-motion.png", nativeSize: { w: 1536, h: 2048, cellW: 256, cellH: 256, rows: 8, columns: 6 },
     renderedSize: { maximum: [184, 170] }, origin: "destination center-bottom",
+    sourceRects: animationSourceRects(BOSS_ANIMATIONS, 256, 256),
+    runtimeDestinations: animationDestinations(BOSS_ANIMATIONS, { w: 166, h: 166 }),
     facing: "right-authored; centered horizontal flip", animations: BOSS_ANIMATIONS,
     requiredStates: ["idle", "walk", "windup", "charge", "recover", "hit", "rage", "defeat"],
   }, grounded(184, 170, 96, 96, 64, 16)),
   makeRecord({
     id: "brutus-bin-hound", category: "boss", levelIds: ["level-2"],
-    assetSource: "assets/generated/brutus-motion.png", nativeSize: { w: 1024, h: 2112, cellW: 256, cellH: 192 }, visibleSourceSize: { w: BRUTUS_RENDER_METRICS.drawWidth, h: BRUTUS_RENDER_METRICS.drawHeight },
+    assetSource: "assets/generated/brutus-motion.png", nativeSize: { w: 1024, h: 2112, cellW: 256, cellH: 192, rows: 11, columns: 4 },
     renderedSize: { w: BRUTUS_RENDER_METRICS.drawWidth, h: BRUTUS_RENDER_METRICS.drawHeight },
+    sourceRects: animationSourceRects(BRUTUS_ANIMATIONS, 256, 192),
+    runtimeDestinations: animationDestinations(BRUTUS_ANIMATIONS, { w: BRUTUS_RENDER_METRICS.drawWidth, h: BRUTUS_RENDER_METRICS.drawHeight }),
     origin: "audited source baseline inset to destination ground", facing: "right-authored; centered horizontal flip",
     animations: BRUTUS_ANIMATIONS, requiredStates: Object.keys(BRUTUS_ANIMATIONS),
   }, grounded(220, 165, 96, 96, 86, 28)),
@@ -257,8 +289,14 @@ const surfaceRecords = [LEVEL_ONE, LEVEL_TWO].flatMap((level) => level.surfaces.
 const decorativeRecords = Object.entries(DECORATIVE_PROPS).map(([id, meta]) => makeRecord({
   id, category: id === "checkpoint" ? "interactive-prop" : "decorative-prop", levelIds: ["level-1", "level-2"],
   assetSource: "assets/generated/decorative-atlas.png", nativeSize: { w: 768, h: 512, cellW: 256, cellH: 256 },
-  visibleSourceSize: id === "tires" ? { w: 112, h: 58 } : { w: meta.sourceWidth, h: meta.sourceHeight },
   renderedSize: { w: Math.round(meta.sourceWidth * 0.5), h: Math.round(meta.sourceHeight * 0.5) },
+  sourceRects: { idle: rect(
+    meta.frame.column * 256 + Math.round((256 - meta.sourceWidth) / 2),
+    meta.frame.row * 256 + meta.baseline - meta.sourceHeight,
+    meta.sourceWidth,
+    meta.sourceHeight,
+  ) },
+  runtimeDestinations: { idle: [{ w: Math.round(meta.sourceWidth * 0.5), h: Math.round(meta.sourceHeight * 0.5) }] },
   origin: "audited source baseline to destination ground", facing: "not applicable", animations: null, requiredStates: [],
 }, {
   ...grounded(Math.round(meta.sourceWidth * 0.5), Math.round(meta.sourceHeight * 0.5), Math.round(meta.sourceWidth * 0.5), Math.round(meta.sourceHeight * 0.5)),
@@ -274,6 +312,7 @@ const legacyPropRecord = ({ id, category, sourceRect, renderedSize, renderLayer,
   nativeSize: { cellW: LEVEL_TWO_PROP_ATLAS.cell, cellH: LEVEL_TWO_PROP_ATLAS.cell },
   sourceRects: { idle: sourceRect },
   renderedSize,
+  runtimeDestinations: { idle: [{ ...renderedSize }] },
   runtimeOwner,
   origin: effectOrigin ? "named emitter origin" : "source baseline to destination ground",
   facing: "mirrored around named attachment origin",
@@ -300,8 +339,13 @@ const propRecords = [
 const pickupRecords = [["trash", 46, 46], ["taco", 58, 58], ["cap", 50, 42]].map(([id, w, h]) => makeRecord({
   id, category: "pickup", levelIds: ["level-1", "level-2"],
   assetSource: id === "trash" ? "assets/generated/trash-pickups-motion.png" : id === "taco" ? "assets/generated/taco-power-motion.png" : "assets/raccoon-sprites.png",
-  nativeSize: id === "cap" ? null : { cellW: 192, cellH: 192 }, renderedSize: { w, h }, origin: "destination center", facing: "not applicable",
-  visibleSourceSize: id === "cap" ? { w, h } : null,
+  nativeSize: id === "cap" ? { w: 1448, h: 1086 } : { cellW: 192, cellH: 192 }, renderedSize: { w, h }, origin: "destination center", facing: "not applicable",
+  sourceRects: id === "cap"
+    ? { idle: rect(385, 615, 58, 48) }
+    : { idle: id === "trash"
+      ? Array.from({ length: 16 }, (_, index) => rect((index % 4) * 192, Math.floor(index / 4) * 192, 192, 192))
+      : cellRects({ row: 0, frames: 4, cellW: 192, cellH: 192 }) },
+  runtimeDestinations: { idle: repeated(id === "trash" ? 16 : id === "taco" ? 4 : 1, { w, h }) },
   animations: id === "cap" ? null : { idle: { row: 0, frames: 4, fps: 5, loop: true } }, requiredStates: id === "cap" ? [] : ["idle"],
 }, {
   visualBounds: rect(-w / 2, -h / 2 - 2, w, h + 4), collisionBounds: rect(-14, -14, 28, 28), placementFootprint: rect(-w / 2 - 4, -h / 2 - 8, w + 8, h + 16),
@@ -320,6 +364,10 @@ const dumpsterRecord = makeRecord({
     holy: Array.from({ length: 4 }, (_, column) => rect(column * DUMPSTER_CELL, DUMPSTER_STATES.holy.row * DUMPSTER_CELL, DUMPSTER_CELL, DUMPSTER_CELL)),
   },
   renderedSize: { w: DUMPSTER_DRAW_WIDTH, h: DUMPSTER_DRAW_HEIGHT },
+  runtimeDestinations: {
+    sealed: [{ w: DUMPSTER_DRAW_WIDTH, h: DUMPSTER_DRAW_HEIGHT }],
+    holy: repeated(4, { w: DUMPSTER_DRAW_WIDTH, h: DUMPSTER_DRAW_HEIGHT }),
+  },
   origin: "destination center-bottom; both reveal rows share one grounded rect",
   facing: "not applicable",
   animations: {
@@ -336,11 +384,14 @@ const dumpsterRecord = makeRecord({
 });
 
 const miscRecords = [
-  makeRecord({ id: "acorn", category: "projectile", levelIds: ["level-2"], assetSource: LEVEL_TWO_PROP_ASSET, nativeSize: { cellW: 128, cellH: 128 }, renderedSize: { w: 28, h: 28 }, origin: "center", facing: "velocity-controlled rotation", animations: { active: LEVEL_TWO_PROP_FRAMES.acorn }, requiredStates: ["active"] }, {
+  makeRecord({ id: "ordinary-bin-lid", category: "projectile", levelIds: ["level-1", "level-2"], assetSource: LEVEL_TWO_PROP_ASSET, nativeSize: { cellW: 128, cellH: 128 }, renderedSize: { w: 34, h: 34 }, sourceRects: animationSourceRects({ active: LEVEL_TWO_PROP_FRAMES.acorn }, 128, 128), runtimeDestinations: { active: repeated(4, { w: 34, h: 34 }) }, origin: "center", facing: "velocity-controlled rotation", animations: { active: LEVEL_TWO_PROP_FRAMES.acorn }, requiredStates: ["active"] }, {
     visualBounds: rect(-17, -17, 34, 34), collisionBounds: rect(-8, -8, 16, 16), placementFootprint: rect(-22, -22, 44, 44), groundAnchor: { x: 0, y: 17 }, renderLayer: "GAMEPLAY_EFFECTS", allowedZones: ["authored-projectile-lane"], forbiddenZones: ["source-owner-footprint"], minimumClearance: clearance(0), scalePolicy: canonicalScale(1, 1),
   }),
-  makeRecord({ id: "rolling-can", category: "projectile", levelIds: ["level-2"], assetSource: LEVEL_TWO_PROP_ASSET, nativeSize: { cellW: 128, cellH: 128 }, renderedSize: { w: 34, h: 34 }, origin: "center", facing: "velocity-controlled rotation", animations: { active: LEVEL_TWO_PROP_FRAMES["rolling-can"] }, requiredStates: ["active"] }, {
-    ...grounded(34, 34, 22, 22, 6), renderLayer: "GAMEPLAY_EFFECTS", allowedZones: ["boss-arena-floor"], forbiddenZones: ["boss-platform-interior"], minimumClearance: clearance(0),
+  makeRecord({ id: "bin-lid-source", category: "interactive-prop", levelIds: ["level-2"], assetSource: LEVEL_TWO_PROP_ASSET, nativeSize: { cellW: 128, cellH: 128 }, renderedSize: { w: 44, h: 44 }, sourceRects: { idle: [rect(0, 0, 128, 128)] }, runtimeDestinations: { idle: [{ w: 44, h: 44 }] }, origin: "center", facing: "not applicable", animations: null, requiredStates: [] }, {
+    ...grounded(44, 44, 22, 22, 6), renderLayer: "GAMEPLAY", allowedZones: ["authored-world-geometry"], forbiddenZones: ["boss-platform-interior"], minimumClearance: clearance(0),
+  }),
+  makeRecord({ id: "brutus-rolling-can", category: "projectile", levelIds: ["level-2"], assetSource: LEVEL_TWO_PROP_ASSET, nativeSize: { cellW: 128, cellH: 128 }, renderedSize: { w: 42, h: 42 }, sourceRects: animationSourceRects({ active: LEVEL_TWO_PROP_FRAMES["rolling-can"] }, 128, 128), runtimeDestinations: { active: [{ w: 42, h: 42 }] }, origin: "center", facing: "velocity-controlled rotation", animations: { active: LEVEL_TWO_PROP_FRAMES["rolling-can"] }, requiredStates: ["active"] }, {
+    ...grounded(42, 42, 22, 22, 6), renderLayer: "GAMEPLAY_EFFECTS", allowedZones: ["boss-arena-floor"], forbiddenZones: ["boss-platform-interior"], minimumClearance: clearance(0),
   }),
   makeRecord({ id: "pit-and-drainage-gap", category: "hazard", levelIds: ["level-1", "level-2"], assetSource: null, nativeSize: null, renderedSize: null, origin: "authored gap rectangle", facing: "not applicable", animations: null, requiredStates: [] }, {
     visualBounds: rect(0, 0, 1, 1), collisionBounds: rect(0, 0, 1, 1), placementFootprint: rect(0, 0, 1, 1), groundAnchor: { x: 0, y: 0 }, renderLayer: "TERRAIN", allowedZones: ["gap-between-surfaces"], forbiddenZones: ["walkable-surface"], minimumClearance: clearance(0), scalePolicy: canonicalScale(1, 1),
@@ -356,6 +407,41 @@ const miscRecords = [
 export const IMPLEMENTED_VISUAL_INVENTORY = Object.freeze([
   ...backgroundRecords, ...surfaceRecords, ...decorativeRecords, ...propRecords, ...pickupRecords,
   dumpsterRecord, ...miscRecords, ...playerRecords, ...levelOneEnemyRecords, ...levelTwoEnemyRecords, ...bossRecords,
+]);
+
+const drawFamily = (id, renderer, recordIds) => Object.freeze({ id, renderer, recordIds: Object.freeze(recordIds) });
+
+// Every runtime art path must name the inventory record(s) whose source crop
+// and destination geometry it uses. This is coverage, not a second renderer.
+export const RUNTIME_DRAW_FAMILY_MANIFEST = Object.freeze([
+  drawFamily("decorative-props", "drawDecorativeProp", ["bush", "tree", "bin", "crate", "checkpoint", "tires"]),
+  drawFamily("level-one-enemies", "drawEnemy/enemyMotion+varietyEnemyMotion", ["snake", "pigeon", "wasp", "mosquito", "possum", "spider", "fox"]),
+  drawFamily("level-two-enemies", "drawEnemy/levelTwoEnemyMotion", ["squirrel", "terrier", "skunk", "moth"]),
+  drawFamily("players", "drawSprite/profileAnimations", ["raccoon", "jimothy"]),
+  drawFamily("bosses", "drawEnemy/bossAnimation+brutusDrawRect", ["trash-heap-tyrant", "brutus-bin-hound"]),
+  drawFamily("pickups", "drawSprite/trashPickupRows+tacoPowerMotion+sprites.cap", ["trash", "taco", "cap"]),
+  drawFamily("victory-dumpster", "drawSprite/dumpsterFrame+dumpsterDrawRect", ["victory-dumpster"]),
+  drawFamily("level-two-legacy-props", "drawSprite/levelTwoPropFrame", ["charge-obstacle", "sprinkler-body", "sprinkler-water", "hydrant-body"]),
+  drawFamily("bin-lid-source", "drawSprite/levelTwoPropFrame(acorn)", ["bin-lid-source"]),
+  drawFamily("ordinary-bin-lid", "drawSprite/binLids", ["ordinary-bin-lid"]),
+  drawFamily("brutus-rolling-can", "drawSprite/binLids", ["brutus-rolling-can"]),
+  drawFamily("procedural-effects", "canvas fill/particle renderer", ["pit-and-drainage-gap", "impact-particles", "gameplay-hud"]),
+]);
+
+// Exact measured alpha-crop → runtime-destination mismatches. Any new state
+// must be consciously routed to an owning visual repair before tests pass.
+export const MEASURED_RUNTIME_DISTORTION_STATES = Object.freeze([
+  "tires:idle", "cap:idle", "charge-obstacle:idle", "sprinkler-water:idle", "hydrant-body:idle",
+  "snake:move", "spider:move", "fox:move",
+  "raccoon:small_run", "raccoon:small_jump", "raccoon:small_fall", "raccoon:small_land", "raccoon:small_hurt", "raccoon:small_skid", "raccoon:small_defeat",
+  "raccoon:large_run", "raccoon:large_jump", "raccoon:large_fall", "raccoon:large_land", "raccoon:large_tail_swipe", "raccoon:large_hurt", "raccoon:large_shrink", "raccoon:large_skid", "raccoon:large_victory",
+  "jimothy:small_run", "jimothy:small_jump", "jimothy:small_fall", "jimothy:small_land", "jimothy:small_hurt", "jimothy:small_skid", "jimothy:small_defeat",
+  "jimothy:large_run", "jimothy:large_jump", "jimothy:large_fall", "jimothy:large_land", "jimothy:large_tail_swipe", "jimothy:large_hurt", "jimothy:large_shrink", "jimothy:large_skid", "jimothy:large_victory",
+  "squirrel:locomotion", "squirrel:telegraph", "squirrel:attack", "squirrel:hit", "squirrel:defeat",
+  "terrier:locomotion", "terrier:sleep", "terrier:telegraph", "terrier:attack", "terrier:hit", "terrier:stunned", "terrier:recover", "terrier:defeat",
+  "skunk:locomotion", "skunk:telegraph", "skunk:attack", "skunk:hit", "skunk:defeat",
+  "moth:locomotion", "moth:telegraph", "moth:attack", "moth:hit", "moth:defeat",
+  "trash-heap-tyrant:windup", "trash-heap-tyrant:charge", "trash-heap-tyrant:recover", "trash-heap-tyrant:hit", "trash-heap-tyrant:rage", "trash-heap-tyrant:defeat",
 ]);
 
 const immutableRoute = (route) => Object.freeze({ ...route });

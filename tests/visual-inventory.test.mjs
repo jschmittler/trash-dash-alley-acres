@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   IMPLEMENTED_VISUAL_INVENTORY,
+  RUNTIME_DRAW_FAMILY_MANIFEST,
   VISUAL_QA_ROUTES,
   inventorySummary,
   validateImplementedVisualInventory,
@@ -58,10 +59,16 @@ test("inventory covers every implemented level, hero, enemy roster, boss and ren
   ]) assert.ok(summary.categories.includes(category), category);
 });
 
-test("inventory includes every contract-owned runtime family, including the victory dumpster and split prop effects", () => {
+test("renderer draw-family manifest binds every named runtime path to canonical inventory records", () => {
   const ids = new Set(IMPLEMENTED_VISUAL_INVENTORY.map(({ id }) => id));
-  for (const id of ["victory-dumpster", "charge-obstacle", "sprinkler-body", "sprinkler-water", "hydrant-body"]) {
-    assert.ok(ids.has(id), id);
+  const families = new Set(RUNTIME_DRAW_FAMILY_MANIFEST.map(({ id }) => id));
+  for (const id of ["victory-dumpster", "level-two-legacy-props", "ordinary-bin-lid", "brutus-rolling-can", "players", "bosses"]) {
+    assert.ok(families.has(id), id);
+  }
+  for (const family of RUNTIME_DRAW_FAMILY_MANIFEST) {
+    assert.ok(family.renderer.length > 0, `${family.id}: renderer`);
+    assert.ok(family.recordIds.length > 0, `${family.id}: record coverage`);
+    for (const recordId of family.recordIds) assert.ok(ids.has(recordId), `${family.id}:${recordId}`);
   }
   const dumpster = IMPLEMENTED_VISUAL_INVENTORY.find(({ id }) => id === "victory-dumpster");
   assert.deepEqual(Object.keys(dumpster.sourceRects), ["sealed", "holy"]);

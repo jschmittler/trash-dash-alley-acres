@@ -10,7 +10,7 @@ import {
   DUMPSTER_DRAW_WIDTH,
   dumpsterDrawRect,
 } from "../app/dumpster-render.mjs";
-import { IMPLEMENTED_VISUAL_INVENTORY } from "../app/visual-inventory.mjs";
+import { IMPLEMENTED_VISUAL_INVENTORY, MEASURED_RUNTIME_DISTORTION_STATES } from "../app/visual-inventory.mjs";
 import { SCALE_POLICIES, validateAspectRatio, validateVisibleAnchor } from "../app/visual-contract.mjs";
 
 const publicAssetUrl = (source) => new URL(`../public/${source}`, import.meta.url);
@@ -27,6 +27,13 @@ const renderedGeometryFor = (record) => {
 };
 const sourceRectanglesFor = (record) => Object.values(record.sourceRects ?? {})
   .flatMap((value) => Array.isArray(value) ? value : [value]);
+const sourceRuntimeMappingsFor = (record) => Object.entries(record.sourceRects ?? {}).flatMap(([state, sourceValue]) => {
+  const sources = Array.isArray(sourceValue) ? sourceValue : [sourceValue];
+  const destinations = record.runtimeDestinations?.[state];
+  assert.ok(Array.isArray(destinations), `${record.id}:${state}: missing runtime destinations`);
+  assert.equal(destinations.length, sources.length, `${record.id}:${state}: source/destination frame count`);
+  return sources.map((source, index) => ({ state, source, destination: destinations[index] }));
+});
 
 const visibleBoundsForCell = ({ data, info }, { x, y, w, h }) => {
   let left = w;
@@ -100,16 +107,26 @@ test("dumpster source cells reach their runtime destination through uniform axes
   );
 });
 
-test("complete visual inventory preserves declared fixed aspects and ground contact anchors", () => {
+test("complete visual inventory measures every fixed-aspect source crop through its runtime destination", async () => {
   const errors = [];
+  const measuredDistortions = new Set();
   for (const record of IMPLEMENTED_VISUAL_INVENTORY) {
     const { scalePolicy } = record.contract;
     assert.equal(scalePolicy.preserveAspectRatio, true, `${record.id}: declared aspect policy`);
     if (!EXEMPT_ASPECT_POLICIES.has(scalePolicy.kind)) {
-      for (const source of sourceRectanglesFor(record)) {
-        if (record.runtimeOwner) continue;
-        errors.push(...validateAspectRatio({ source, destination: renderedGeometryFor(record) })
-          .map((error) => `${record.id}: ${error}`));
+      if (!record.assetSource) continue;
+      const mappings = sourceRuntimeMappingsFor(record);
+      assert.ok(mappings.length > 0, `${record.id}: fixed-aspect asset requires source rectangles`);
+      const atlas = await sharp(fileURLToPath(publicAssetUrl(record.assetSource))).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      for (const { state, source, destination } of mappings) {
+        const visible = visibleBoundsForCell(atlas, source);
+        assert.ok(visible.w > 0 && visible.h > 0, `${record.id}:${state}: source crop has visible alpha`);
+        const transformedVisible = {
+          w: visible.w * destination.w / source.w,
+          h: visible.h * destination.h / source.h,
+        };
+        const diagnostics = validateAspectRatio({ source: visible, destination: transformedVisible });
+        if (diagnostics.length > 0) measuredDistortions.add(`${record.id}:${state}`);
       }
     }
     if (record.anchorPolicy === "GROUND_CONTACT") {
@@ -120,6 +137,7 @@ test("complete visual inventory preserves declared fixed aspects and ground cont
     }
   }
   assert.deepEqual(errors, []);
+  assert.deepEqual([...measuredDistortions].sort(), [...MEASURED_RUNTIME_DISTORTION_STATES].sort());
 });
 
 test("overlapping legacy prop renderer defects remain explicit until their owner repairs the runtime", () => {
