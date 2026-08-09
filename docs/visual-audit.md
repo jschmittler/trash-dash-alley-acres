@@ -309,7 +309,7 @@ Measured contract evidence (source geometry → rendered geometry):
 | Lamp post | 192×256 PNG | 96×208 grounded visible frame | 96×208 |
 | Player maximum envelopes | 192×192 atlas cells | Trashy 142×140; Jimothy 142×134 | same |
 | Level 1 / Level 2 enemy families | 192×192 atlas cells | declared per-family visible frames | same per-family rendered dimensions |
-| Trash Heap Tyrant | 256×256 atlas cell | 184×170 maximum visible frame | 184×170 |
+| Trash Heap Tyrant | 256×256 atlas cell | 166×166 runtime destination | 166×166 |
 
 Verification:
 
@@ -577,9 +577,15 @@ Browser diagnostics:
   throw instead of falling back to locomotion or hit.
 - I2 timing: Level 1 actor frames are selected from declared local FPS and
   state elapsed time. A deterministic phase seed only selects an initial frame.
-- I3 geometry: Trash Heap Tyrant's contract visual bounds and placement
-  footprint are now 166×166, exactly matching its uniform runtime destination;
-  collision and authored arena clearance are unchanged.
+- I3 geometry: Round 2 makes the Trash Heap Tyrant's physical visual bounds
+  and placement footprint exactly 166×166, matching its uniform runtime
+  destination. Its 96×96 collision remains unchanged; the former 64px side
+  and 16px top reserve are explicit composition padding, preserving the
+  294×182 expanded arena envelope without claiming invisible geometry as a
+  physical footprint.
+- I4 campaign migration guard: the runtime scan is again exact-token
+  `/\bLEVEL_ONE\b/`, with positive direct-token and negative
+  `LEVEL_ONE_ENEMY_ANIMATIONS` fixtures.
 - Assets: no rebuild performed—opaque-source and atlas tests confirmed the
   compatible actor cells already existed. Existing controller idle/grounding
   screenshots remain the only browser evidence; full action/facing sequences

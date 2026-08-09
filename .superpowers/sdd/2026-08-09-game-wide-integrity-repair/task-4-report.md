@@ -51,7 +51,7 @@ recorded as `CANNOT VERIFY`.
 
 ## Verification
 
-- Clean archive focused matrix: 83 passing, 0 failing.
+- Clean archive focused matrix: 85 passing, 0 failing.
 - Clean archive `npm test`: 205 passing, 0 failing, including production build.
 - Shared-worktree `npm run validate:skills`: passed for all seven canonical
   skills and references.
@@ -110,10 +110,25 @@ full tell/action/recovery/hit/defeat/exit sequences remain `CANNOT VERIFY`.
 - I2: Level 1 has a pure, declared-FPS frame selector. Runtime rendering uses
   elapsed local state time plus a phase seed only for deterministic initial
   desynchronization, rather than phase velocity for playback speed.
-- I3: Trash Heap Tyrant's visual bounds and placement footprint are 166×166,
-  matching the maximum actual runtime destination while collision and arena
-  clearance remain unchanged.
+- I3: superseded by the Round 2 correction below; the original 166×166 claim
+  did not account for the old invisible placement expansion.
 - RED evidence: the first focused run failed with the missing Level 1 selector
   module; it is now covered by selector, runtime-wiring, semantic-mapping, and
   Tyrant-bound regressions. No asset/source rebuild was needed because the
   required compatible source cells already exist in their respective atlases.
+
+## Round 2 review repair — I3 / I4
+
+- I3: the Trash Heap Tyrant's physical `placementFootprint` now exactly equals
+  its 166×166 visual bounds and maximum runtime destination. Collision remains
+  96×96. The prior 64px side reserve and 16px overhead action reserve now live
+  in explicit composition padding; the expanded composition footprint remains
+  the intended 294×182 arena envelope.
+- I4: campaign-runtime protection uses the exact `/\bLEVEL_ONE\b/` scan. The
+  test includes a positive direct-identifier fixture and a negative
+  `LEVEL_ONE_ENEMY_ANIMATIONS` fixture, preserving manifest-backed animation
+  imports while rejecting direct `LEVEL_ONE` runtime use.
+- RED → GREEN: the new Tyrant footprint regression first reported the old
+  294×182 physical footprint against the required 166×166 destination. The
+  clean archive focused matrix passes 85/85 after the contract correction;
+  no runtime drawing or asset bytes changed, so no browser rerun was needed.
