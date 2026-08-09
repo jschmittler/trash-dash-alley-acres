@@ -62,3 +62,14 @@ export function resolvePitFall(lives) {
     outcome: nextLives > 0 ? "respawn" : "gameover",
   };
 }
+
+export function presentPitDefeat({ pit, defeatAnimation }) {
+  if (pit.outcome !== "gameover") {
+    return { ...pit, animationName: null, duration: 0 };
+  }
+  return {
+    ...pit,
+    animationName: "small_defeat",
+    duration: defeatAnimation.frames / defeatAnimation.fps,
+  };
+}

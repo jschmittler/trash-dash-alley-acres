@@ -47,6 +47,18 @@ export const JIMOTHY_ANIMATION_BASELINES = Object.fromEntries(
   Object.entries(JIMOTHY_ANIMATIONS).map(([name, animation]) => [name, animation.baseline]),
 );
 
+// Reachable states that cannot share any of the legacy concept-sheet rows.
+// The builder consumes this manifest directly, so this semantic ownership is
+// tested alongside the production atlas rather than living in documentation.
+export const JIMOTHY_SOURCE_STATE_IDENTITY = Object.freeze({
+  small_land: Object.freeze({ semanticState: "land", source: "source/jimothy-land-source.png", frames: 4 }),
+  large_land: Object.freeze({ semanticState: "land", source: "source/jimothy-land-source.png", frames: 4 }),
+  small_defeat: Object.freeze({ semanticState: "defeat", source: "source/jimothy-defeat-source.png", frames: 4 }),
+  small_victory: Object.freeze({ semanticState: "victory", source: "source/jimothy-victory-source.png", frames: 4 }),
+  large_victory: Object.freeze({ semanticState: "victory", source: "source/jimothy-victory-source.png", frames: 4 }),
+  large_glide: Object.freeze({ semanticState: "glide", source: "source/jimothy-large-glide-source.png", frames: 4 }),
+});
+
 // Optional source motions remain available to the concept viewer only.
 export const JIMOTHY_CONCEPT_ANIMATIONS = {
   forage: entry(5, 4, 5, true, 84, 84),

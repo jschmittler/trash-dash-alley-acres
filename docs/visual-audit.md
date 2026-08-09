@@ -408,6 +408,18 @@ Verification:
   to the form/state), `offsetY` is derived from that same 184 baseline, and the
   bottom-center renderer no longer applies a grounded-only compensation. Right
   is authored and left flips around the unchanged destination center.
+- Round-1 source-state repair: four Jimothy-specific, right-authored pixel-art
+  strips were generated against a removable chroma key, deterministically
+  converted to RGBA, and inspected in the rebuilt contact sheet. The source
+  identity manifest gives land, defeat, victory, and large glide distinct
+  semantic ownership (small/large land and victory share only their compatible
+  named rows); the glide cells show the bamboo canopy, never a jump pose.
+  Regression coverage asserts the exact source mapping and alpha-bearing strips
+  so these states cannot silently borrow legacy jump, hurt, or idle rows.
+- Round-1 pit repair: terminal pit falls still consume exactly one paw without
+  hurt, shrink, or respawn, then commit the selected profile's `small_defeat`
+  for its four-frame local duration before changing to game over. Pure state
+  tests cover both terminal and non-terminal outcomes.
 - Automated verification: the shared reachable-state contract covers all small
   and large states, atlas bounds, one-shot clamping, maximum envelopes, and
   both-facing anchors. The focused player plus visual-contract/asset/inventory

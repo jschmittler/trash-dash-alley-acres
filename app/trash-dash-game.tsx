@@ -20,6 +20,7 @@ import {
   advanceHurtTimer,
   beginPlayerHurt,
   nextEnemyIntent,
+  presentPitDefeat,
   resolvePitFall,
 } from "./gameplay-animation-state.mjs";
 import {
@@ -1422,7 +1423,11 @@ export function TrashDashGame() {
 
     const handlePitFall = (world: World) => {
       const player = world.player;
-      const pit = resolvePitFall(world.lives);
+      const profile = getPlayableCharacter(world.selectedCharacterId);
+      const pit = presentPitDefeat({
+        pit: resolvePitFall(world.lives),
+        defeatAnimation: profile.animations.small_defeat,
+      });
       world.lives = pit.lives;
       transformPlayer(player, false);
       player.hurtTimer = 0;
@@ -1430,13 +1435,21 @@ export function TrashDashGame() {
       player.attackTimer = 0;
       player.glider = 0;
       player.shrinkTimer = 0;
-      player.endSequence = null;
-      player.endTimer = 0;
       burst(world, player.x + player.w / 2, HEIGHT - 8, "#f6d477", 11);
       tone(100, 0.2, "sawtooth");
 
       if (pit.outcome === "respawn") respawn(world);
-      else changeScreen("gameover");
+      else {
+        // Pit loss is immediate (one paw, no hurt/shrink/respawn), but its
+        // locally committed animation must play before changing screens.
+        player.endSequence = "gameover";
+        player.endTimer = pit.duration;
+        player.animationName = pit.animationName;
+        player.animationElapsed = 0;
+        player.vx = 0;
+        player.vy = 0;
+        player.grounded = true;
+      }
     };
 
     const setBossState = (

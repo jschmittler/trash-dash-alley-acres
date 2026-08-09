@@ -6,6 +6,7 @@ import {
   advanceHurtTimer,
   beginPlayerHurt,
   nextEnemyIntent,
+  presentPitDefeat,
   resolvePitFall,
 } from "../app/gameplay-animation-state.mjs";
 
@@ -100,4 +101,28 @@ test("pit fall consumes exactly one paw immediately", () => {
   assert.deepEqual(resolvePitFall(3), { lives: 2, outcome: "respawn" });
   assert.deepEqual(resolvePitFall(1), { lives: 0, outcome: "gameover" });
   assert.deepEqual(resolvePitFall(0), { lives: 0, outcome: "gameover" });
+});
+
+test("terminal pit fall preserves instant death but commits small_defeat before gameover", () => {
+  assert.deepEqual(presentPitDefeat({
+    pit: resolvePitFall(1),
+    defeatAnimation: { frames: 4, fps: 6 },
+  }), {
+    lives: 0,
+    outcome: "gameover",
+    animationName: "small_defeat",
+    duration: 4 / 6,
+  });
+});
+
+test("non-terminal pit fall does not queue a defeat presentation", () => {
+  assert.deepEqual(presentPitDefeat({
+    pit: resolvePitFall(3),
+    defeatAnimation: { frames: 4, fps: 6 },
+  }), {
+    lives: 2,
+    outcome: "respawn",
+    animationName: null,
+    duration: 0,
+  });
 });

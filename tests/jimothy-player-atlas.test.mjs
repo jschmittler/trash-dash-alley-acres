@@ -3,7 +3,11 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
-import { JIMOTHY_ANIMATIONS, JIMOTHY_ANIMATION_BASELINES } from "../concepts/jimothy/jimothy-animation.mjs";
+import {
+  JIMOTHY_ANIMATIONS,
+  JIMOTHY_ANIMATION_BASELINES,
+  JIMOTHY_SOURCE_STATE_IDENTITY,
+} from "../concepts/jimothy/jimothy-animation.mjs";
 
 const CELL = 192;
 const atlasPath = fileURLToPath(new URL("../public/assets/generated/jimothy-hero-motion.png", import.meta.url));
@@ -53,4 +57,32 @@ test("Jimothy contact sheet is available for visual review", async () => {
   const metadata = await sharp(fileURLToPath(new URL("../public/assets/generated/jimothy-hero-contact-sheet.png", import.meta.url))).metadata();
   assert.ok(metadata.width >= CELL * 6);
   assert.ok(metadata.height >= CELL * 22);
+});
+
+test("Jimothy reachable state rows own compatible authored source strips", async () => {
+  const requiredStates = {
+    small_land: ["land", "source/jimothy-land-source.png"],
+    large_land: ["land", "source/jimothy-land-source.png"],
+    small_defeat: ["defeat", "source/jimothy-defeat-source.png"],
+    small_victory: ["victory", "source/jimothy-victory-source.png"],
+    large_victory: ["victory", "source/jimothy-victory-source.png"],
+    large_glide: ["glide", "source/jimothy-large-glide-source.png"],
+  };
+
+  for (const [state, [semanticState, source]] of Object.entries(requiredStates)) {
+    assert.deepEqual(
+      JIMOTHY_SOURCE_STATE_IDENTITY[state],
+      { semanticState, source, frames: 4 },
+      `${state} must not borrow an incompatible legacy row`,
+    );
+    const sourcePath = fileURLToPath(new URL(`../concepts/jimothy/${source}`, import.meta.url));
+    const metadata = await sharp(sourcePath).metadata();
+    assert.equal(metadata.channels, 4, `${state} source must retain deterministic alpha`);
+  }
+
+  assert.notEqual(
+    JIMOTHY_SOURCE_STATE_IDENTITY.large_glide.semanticState,
+    "jump",
+    "glide must never map to the jump source row",
+  );
 });

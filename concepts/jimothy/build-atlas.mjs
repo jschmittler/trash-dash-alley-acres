@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
+import { JIMOTHY_SOURCE_STATE_IDENTITY } from "./jimothy-animation.mjs";
 
 const root = path.dirname(new URL(import.meta.url).pathname);
 const privateAtlas = path.join(root, "jimothy-animation-atlas.png");
@@ -9,9 +10,8 @@ const CELL = 192;
 const columns = 6;
 const BASELINE_MARGIN = 8;
 
-// Existing concept rows are reused as clean source poses until bespoke
-// full-parity drawings are available. Every output state still has explicit
-// frames, a normalized baseline, and a complete cell in the public atlas.
+// Legacy concept rows provide the remaining intentional source poses. States
+// with their own authored strips are declared in JIMOTHY_SOURCE_STATE_IDENTITY.
 const sourceRows = {
   idle: 0,
   walk: 1,
@@ -63,6 +63,11 @@ const sourceFor = (state) => {
   return row < 4 ? [sourceFiles.locomotion, row] : row < 8 ? [sourceFiles.actions, row - 4] : [sourceFiles.character, row - 8];
 };
 
+const authoredSourceFor = (stateName) => {
+  const source = JIMOTHY_SOURCE_STATE_IDENTITY[stateName];
+  return source ? path.join(root, source.source) : null;
+};
+
 const clearCellEdge = async (buffer) => {
   const { data, info } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   for (let y = 0; y < CELL; y += 1) {
@@ -76,12 +81,12 @@ const clearCellEdge = async (buffer) => {
 
 const normalizeToBaseline = async (buffer) => {
   const { data, info } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  let left = CELL;
-  let top = CELL;
+  let left = info.width;
+  let top = info.height;
   let right = -1;
   let bottom = -1;
-  for (let y = 0; y < CELL; y += 1) {
-    for (let x = 0; x < CELL; x += 1) {
+  for (let y = 0; y < info.height; y += 1) {
+    for (let x = 0; x < info.width; x += 1) {
       if (data[(y * info.width + x) * info.channels + 3] === 0) continue;
       left = Math.min(left, x);
       top = Math.min(top, y);
@@ -90,10 +95,18 @@ const normalizeToBaseline = async (buffer) => {
     }
   }
   if (right < left || bottom < top) throw new Error("Jimothy source frame is empty");
-  const pose = await sharp(buffer).extract({ left, top, width: right - left + 1, height: bottom - top + 1 }).png().toBuffer();
-  const width = right - left + 1;
-  const height = bottom - top + 1;
-  if (width > CELL - 2 || height > CELL - BASELINE_MARGIN - 1) throw new Error("Jimothy source frame exceeds the safe baseline cell");
+  const sourceWidth = right - left + 1;
+  const sourceHeight = bottom - top + 1;
+  // A generated strip is uniformly reduced from its square source region;
+  // never independently resize opaque width/height or distort Jimothy's pose.
+  const scale = Math.min(1, (CELL - 2) / sourceWidth, (CELL - BASELINE_MARGIN - 1) / sourceHeight);
+  const width = Math.max(1, Math.round(sourceWidth * scale));
+  const height = Math.max(1, Math.round(sourceHeight * scale));
+  const pose = await sharp(buffer)
+    .extract({ left, top, width: sourceWidth, height: sourceHeight })
+    .resize({ width, height, fit: "fill", kernel: sharp.kernel.nearest })
+    .png()
+    .toBuffer();
   return sharp({ create: { width: CELL, height: CELL, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
     .composite([{ input: pose, left: Math.floor((CELL - width) / 2), top: CELL - BASELINE_MARGIN - height }])
     .png()
@@ -101,13 +114,23 @@ const normalizeToBaseline = async (buffer) => {
 };
 
 const makeFrames = async (state) => {
-  const [, sourceRow, frames] = state;
-  const [file, row] = sourceFor(sourceRow);
+  const [stateName, sourceRow, frames] = state;
+  const authoredFile = authoredSourceFor(stateName);
+  const [file, row] = authoredFile ? [authoredFile, null] : sourceFor(sourceRow);
+  const generatedMetadata = authoredFile ? await sharp(authoredFile).metadata() : null;
   const out = [];
   for (let column = 0; column < frames; column += 1) {
     const sourceColumn = column % 4;
+    const sourceFrame = authoredFile
+      ? await sharp(file).ensureAlpha().extract({
+        left: Math.floor((sourceColumn * generatedMetadata.width) / 4),
+        top: 0,
+        width: Math.floor(((sourceColumn + 1) * generatedMetadata.width) / 4) - Math.floor((sourceColumn * generatedMetadata.width) / 4),
+        height: generatedMetadata.height,
+      }).png().toBuffer()
+      : await clearCellEdge(await sharp(file).ensureAlpha().extract({ left: sourceColumn * CELL, top: row * CELL, width: CELL, height: CELL }).png().toBuffer());
     out.push({
-      input: await normalizeToBaseline(await clearCellEdge(await sharp(file).ensureAlpha().extract({ left: sourceColumn * CELL, top: row * CELL, width: CELL, height: CELL }).png().toBuffer())),
+      input: await normalizeToBaseline(sourceFrame),
       left: (column % columns) * CELL,
       top: 0,
     });

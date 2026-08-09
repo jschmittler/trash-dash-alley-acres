@@ -2,9 +2,10 @@
 
 ## Status
 
-`DONE_WITH_CONCERNS` — deterministic/player-contract evidence is green;
-controller-attributed normal-spawn idle verification passed, while
-keyboard-driven action and both-facing runtime sequences remain `CANNOT VERIFY`.
+`DONE_WITH_CONCERNS` — deterministic/player-contract evidence is green,
+including the Round-1 source-state and pit-defeat repairs; controller-attributed
+normal-spawn idle verification passed, while keyboard-driven action and
+both-facing runtime sequences remain `CANNOT VERIFY`.
 
 ## RED evidence
 
@@ -17,6 +18,10 @@ keyboard-driven action and both-facing runtime sequences remain `CANNOT VERIFY`.
 - The task's atlas assertions failed before the repair: Jimothy
   `small_idle:0` ended at source row 170 instead of 183, and the legacy player
   manifests used unequal destination axes such as 142×112 tail swipe.
+- Round-1 RED: focused source identity regressions could not import a Jimothy
+  semantic-source manifest, and pit-presentation regressions could not import
+  a terminal `small_defeat` sequence. Review also proved the old builder routed
+  named land/defeat/victory and `large_glide` through incompatible legacy rows.
 
 ## GREEN implementation and measurements
 
@@ -31,14 +36,27 @@ keyboard-driven action and both-facing runtime sequences remain `CANNOT VERIFY`.
   resolved player entries from `MEASURED_RUNTIME_DISTORTION_FRAMES`.
 - Two consecutive rebuilds produced identical SHA-256 values for all five
   player motion/contact/selection artifacts.
+- Round-1 authored four coherent Jimothy-specific pixel-art rows — land,
+  defeat, victory, and large glide — against a flat chroma key, then removed
+  that key with the deterministic chroma helper. The source-state manifest is
+  consumed directly by the builder and regression-tested; small/large land and
+  victory share only their semantically matching row, while `large_glide`
+  uniquely owns the canopy-glider row.
+- Round-1 terminal pit falls now retain the immediate one-paw loss semantics
+  but commit the selected character's `small_defeat` (four frames at its local
+  FPS) before gameover. Hurt, shrink, and respawn remain cleared on that path.
+- Round-1 repeat-build SHA-256 values matched for Trashy motion/contact and
+  Jimothy motion/contact/private atlas: `cd5712057…`, `4589a51e…`, and
+  `64d707831…` respectively (Jimothy's three identical atlas copies share the
+  final hash).
 
 ## Verification
 
 - RED matrix: `node --test tests/player-animation.test.mjs tests/player-hero-atlas.test.mjs tests/jimothy-player-atlas.test.mjs tests/character-gameplay.test.mjs` — 3 failures (missing shared atlas export and two baseline violations).
-- GREEN focused player and Task 2 visual-contract matrix — 40 passed, 0 failed.
+- GREEN focused player, pit-state, and Task 2 visual-contract matrix — 51 passed, 0 failed.
 - `npm run validate:skills` — passed.
 - `npm run lint` — 0 errors; one pre-existing Next `<img>` performance warning.
-- `npm test` — 250 passed, 0 failed; production build completed.
+- `npm test` — 253 passed, 0 failed; production build completed.
 - Static contact-sheet QA: inspected both regenerated sheets at native size;
   complete silhouettes stay inset and share the baseline. Both-facing behavior
   is covered by the destination-center flip contract and regression.
@@ -62,17 +80,19 @@ keyboard-driven action and both-facing runtime sequences remain `CANNOT VERIFY`.
 | VIS-005 measured source/destination/anchor checks | PASS — zero remaining player mismatch entries |
 | Controller normal-spawn idle route, Trashy and Jimothy | PASS — 1280×720 DPR 2 debug-bound screenshots; no browser warning/error logs |
 | Keyboard-driven actions and repeated both-facing runtime sequences | CANNOT VERIFY — keyboard action automation unavailable |
+| Jimothy source-state contact-sheet repair | PASS — authored land/defeat/victory/glide rows are distinct, alpha-clean, baseline-normalized, and visually inspected |
+| Terminal pit-defeat state/timer | PASS — pure transition tests prove a four-frame `small_defeat` before gameover while preserving one-paw instant death |
 
 `docs/visual-audit.md` narrows VIS-005 accordingly and retains the complete
 runtime route/state matrix for a browser-equipped follow-up.
 
 ## Scope and self-review
 
-The commit contains only Task 3 player manifests/profiles, the exact renderer
-compensation hunk, deterministic player builders and generated outputs, focused
-tests, visual-inventory/audit evidence, and this report. Existing dirty Level
-1/Level 2 and shared renderer work was not staged or altered. No unrelated
-untracked Jimothy sources/documentation were included.
+The commits contain only Task 3 player manifests/profiles, the exact renderer
+compensation and pit-sequence hunks, deterministic player builders and
+generated outputs, focused tests, visual-inventory/audit evidence, and this
+report. Existing dirty Level 1/Level 2 and shared renderer work was not staged
+or altered. No unrelated untracked Jimothy sources/documentation were included.
 
 ## Commit
 
