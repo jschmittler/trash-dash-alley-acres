@@ -292,12 +292,14 @@ export const IMPLEMENTED_VISUAL_INVENTORY = Object.freeze([
   ...miscRecords, ...playerRecords, ...levelOneEnemyRecords, ...levelTwoEnemyRecords, ...bossRecords,
 ]);
 
+const immutableRoute = (route) => Object.freeze({ ...route });
+
 export const VISUAL_QA_ROUTES = Object.freeze([
   { id: "l1-start", levelId: "level-1", checkpoint: "start", viewport: "desktop", url: "/?backgroundTest=woodland&visualQa=l1-start" },
   { id: "l1-creek", levelId: "level-1", checkpoint: "creek", viewport: "desktop", url: "/?backgroundTest=creek&visualQa=l1-creek" },
   { id: "l1-highway", levelId: "level-1", checkpoint: "highway", viewport: "desktop", url: "/?backgroundTest=highway&visualQa=l1-highway" },
   { id: "l1-industrial", levelId: "level-1", checkpoint: "industrial", viewport: "desktop", url: "/?backgroundTest=industrial&visualQa=l1-industrial" },
-  { id: "l1-park", levelId: "level-1", checkpoint: "park", viewport: "mobile-landscape", url: "/?backgroundTest=park&visualQa=l1-park" },
+  { id: "l1-park", levelId: "level-1", checkpoint: "park", viewport: "desktop", url: "/?backgroundTest=park&visualQa=l1-park" },
   { id: "l1-middle", levelId: "level-1", checkpoint: "middle", viewport: "desktop", url: "/?backgroundTest=highway&visualQa=l1-middle" },
   { id: "l1-end", levelId: "level-1", checkpoint: "end", viewport: "mobile-landscape", url: "/?backgroundTest=park&visualQa=l1-end" },
   { id: "l1-boss", levelId: "level-1", checkpoint: "boss", bossId: "trash-heap-tyrant", viewport: "desktop", url: "/?bossTest=1&visualQa=l1-boss" },
@@ -307,7 +309,7 @@ export const VISUAL_QA_ROUTES = Object.freeze([
   { id: "l2-obstacle", levelId: "level-2", checkpoint: "obstacle", viewport: "desktop", url: "/?level=2&levelTest=obstacle&visualQa=l2-obstacle" },
   { id: "l2-drainage", levelId: "level-2", checkpoint: "drainage", viewport: "desktop", url: "/?level=2&levelTest=drainage&visualQa=l2-drainage" },
   { id: "l2-runway", levelId: "level-2", checkpoint: "runway", viewport: "desktop", url: "/?level=2&levelTest=runway&visualQa=l2-runway" },
-  { id: "l2-main-street", levelId: "level-2", checkpoint: "main-street", viewport: "mobile-landscape", url: "/?level=2&levelTest=main-street&visualQa=l2-main-street" },
+  { id: "l2-main-street", levelId: "level-2", checkpoint: "main-street", viewport: "desktop", url: "/?level=2&levelTest=main-street&visualQa=l2-main-street" },
   { id: "l2-start", levelId: "level-2", checkpoint: "start", viewport: "mobile-portrait", url: "/?level=2&levelTest=backyard&visualQa=l2-start" },
   { id: "l2-middle", levelId: "level-2", checkpoint: "middle", viewport: "desktop", url: "/?level=2&levelTest=obstacle&visualQa=l2-middle" },
   { id: "l2-end", levelId: "level-2", checkpoint: "end", viewport: "mobile-landscape", url: "/?level=2&levelTest=main-street&visualQa=l2-end" },
@@ -320,7 +322,7 @@ export const VISUAL_QA_ROUTES = Object.freeze([
   { id: "l2-victory", levelId: "level-2", checkpoint: "victory", viewport: "desktop", url: "/?victoryTest=level2&visualQa=l2-victory" },
   { id: "player-states", levelId: "level-1", checkpoint: "states", viewport: "desktop", url: "/?powerupTest=taco&visualQa=player-states&debugVisuals=1" },
   { id: "enemy-states", levelId: "level-2", checkpoint: "states", viewport: "desktop", url: "/?encounterTest=interaction&visualQa=enemy-states&debugVisuals=1" },
-]);
+].map(immutableRoute));
 
 export function inventorySummary(inventory = IMPLEMENTED_VISUAL_INVENTORY) {
   const unique = (values) => [...new Set(values)].sort();

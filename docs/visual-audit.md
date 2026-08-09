@@ -221,6 +221,10 @@ Screenshot references:
   Task 4 verification condition, not an opened issue.
 - Full route/viewport/interaction evidence is recorded in
   `docs/superpowers/reports/2026-08-09-game-wide-integrity-baseline.md`.
+- Review follow-up: catalog entries now freeze each route object and assert
+  their exact immutable metadata. The corrected per-URL console and dedicated
+  landscape/portrait recheck remains explicitly pending because the in-app
+  browser backend became unavailable after the baseline session finalized.
 
 ## Asset quality checklist
 

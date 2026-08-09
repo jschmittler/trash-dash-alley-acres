@@ -14,6 +14,36 @@ const REQUIRED_GAME_WIDE_ROUTES = [
   "l2-squirrel", "l2-terrier", "l2-skunk", "l2-moth", "l2-interaction", "l2-boss", "l2-victory",
 ];
 
+const EXPECTED_VISUAL_QA_ROUTES = [
+  { id: "l1-start", levelId: "level-1", checkpoint: "start", viewport: "desktop", url: "/?backgroundTest=woodland&visualQa=l1-start" },
+  { id: "l1-creek", levelId: "level-1", checkpoint: "creek", viewport: "desktop", url: "/?backgroundTest=creek&visualQa=l1-creek" },
+  { id: "l1-highway", levelId: "level-1", checkpoint: "highway", viewport: "desktop", url: "/?backgroundTest=highway&visualQa=l1-highway" },
+  { id: "l1-industrial", levelId: "level-1", checkpoint: "industrial", viewport: "desktop", url: "/?backgroundTest=industrial&visualQa=l1-industrial" },
+  { id: "l1-park", levelId: "level-1", checkpoint: "park", viewport: "desktop", url: "/?backgroundTest=park&visualQa=l1-park" },
+  { id: "l1-middle", levelId: "level-1", checkpoint: "middle", viewport: "desktop", url: "/?backgroundTest=highway&visualQa=l1-middle" },
+  { id: "l1-end", levelId: "level-1", checkpoint: "end", viewport: "mobile-landscape", url: "/?backgroundTest=park&visualQa=l1-end" },
+  { id: "l1-boss", levelId: "level-1", checkpoint: "boss", bossId: "trash-heap-tyrant", viewport: "desktop", url: "/?bossTest=1&visualQa=l1-boss" },
+  { id: "l1-victory", levelId: "level-1", checkpoint: "victory", viewport: "desktop", url: "/?victoryTest=1&visualQa=l1-victory" },
+  { id: "l2-backyard", levelId: "level-2", checkpoint: "backyard", viewport: "desktop", url: "/?level=2&levelTest=backyard&visualQa=l2-backyard" },
+  { id: "l2-street", levelId: "level-2", checkpoint: "street", viewport: "desktop", url: "/?level=2&levelTest=street&visualQa=l2-street" },
+  { id: "l2-obstacle", levelId: "level-2", checkpoint: "obstacle", viewport: "desktop", url: "/?level=2&levelTest=obstacle&visualQa=l2-obstacle" },
+  { id: "l2-drainage", levelId: "level-2", checkpoint: "drainage", viewport: "desktop", url: "/?level=2&levelTest=drainage&visualQa=l2-drainage" },
+  { id: "l2-runway", levelId: "level-2", checkpoint: "runway", viewport: "desktop", url: "/?level=2&levelTest=runway&visualQa=l2-runway" },
+  { id: "l2-main-street", levelId: "level-2", checkpoint: "main-street", viewport: "desktop", url: "/?level=2&levelTest=main-street&visualQa=l2-main-street" },
+  { id: "l2-start", levelId: "level-2", checkpoint: "start", viewport: "mobile-portrait", url: "/?level=2&levelTest=backyard&visualQa=l2-start" },
+  { id: "l2-middle", levelId: "level-2", checkpoint: "middle", viewport: "desktop", url: "/?level=2&levelTest=obstacle&visualQa=l2-middle" },
+  { id: "l2-end", levelId: "level-2", checkpoint: "end", viewport: "mobile-landscape", url: "/?level=2&levelTest=main-street&visualQa=l2-end" },
+  { id: "l2-squirrel", levelId: "level-2", checkpoint: "squirrel", viewport: "desktop", url: "/?encounterTest=squirrel&visualQa=l2-squirrel" },
+  { id: "l2-terrier", levelId: "level-2", checkpoint: "terrier", viewport: "desktop", url: "/?encounterTest=terrier&visualQa=l2-terrier" },
+  { id: "l2-skunk", levelId: "level-2", checkpoint: "skunk", viewport: "desktop", url: "/?encounterTest=skunk&visualQa=l2-skunk" },
+  { id: "l2-moth", levelId: "level-2", checkpoint: "moth", viewport: "desktop", url: "/?encounterTest=moth&visualQa=l2-moth" },
+  { id: "l2-interaction", levelId: "level-2", checkpoint: "interaction", viewport: "desktop", url: "/?encounterTest=interaction&visualQa=l2-interaction" },
+  { id: "l2-boss", levelId: "level-2", checkpoint: "boss", bossId: "brutus-bin-hound", viewport: "desktop", url: "/?bossTest=brutus&visualQa=l2-boss" },
+  { id: "l2-victory", levelId: "level-2", checkpoint: "victory", viewport: "desktop", url: "/?victoryTest=level2&visualQa=l2-victory" },
+  { id: "player-states", levelId: "level-1", checkpoint: "states", viewport: "desktop", url: "/?powerupTest=taco&visualQa=player-states&debugVisuals=1" },
+  { id: "enemy-states", levelId: "level-2", checkpoint: "states", viewport: "desktop", url: "/?encounterTest=interaction&visualQa=enemy-states&debugVisuals=1" },
+];
+
 test("inventory covers every implemented level, hero, enemy roster, boss and rendered category", () => {
   const summary = inventorySummary(IMPLEMENTED_VISUAL_INVENTORY);
   assert.deepEqual(summary.levels, ["level-1", "level-2"]);
@@ -51,4 +81,16 @@ test("visual QA catalog covers every Level 1 and Level 2 integrity checkpoint", 
     REQUIRED_GAME_WIDE_ROUTES.filter((id) => !VISUAL_QA_ROUTES.some((route) => route.id === id)),
     [],
   );
+});
+
+test("visual QA catalog is deeply immutable and preserves exact route metadata", () => {
+  assert.deepEqual(VISUAL_QA_ROUTES, EXPECTED_VISUAL_QA_ROUTES);
+  assert.equal(Object.isFrozen(VISUAL_QA_ROUTES), true);
+  assert.ok(VISUAL_QA_ROUTES.every(Object.isFrozen));
+  assert.throws(() => {
+    VISUAL_QA_ROUTES[0].url = "/?visualQa=mutated";
+  }, TypeError);
+  assert.throws(() => {
+    VISUAL_QA_ROUTES.push({});
+  }, TypeError);
 });

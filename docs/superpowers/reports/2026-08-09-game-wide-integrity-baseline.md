@@ -23,6 +23,25 @@
 3. `node --test tests/visual-inventory.test.mjs tests/visual-contract.test.mjs`
    passed: 11 tests, 0 failures.
 
+### Review follow-up — catalog integrity
+
+- `app/visual-inventory.mjs` is intentionally retained as the pre-existing,
+  untracked canonical visual-inventory dependency required by Task 1; this was
+  explicitly confirmed as in-scope during review rather than removed as
+  unrelated worktree content.
+- Every route object and the catalog array are now frozen. The catalog
+  regression asserts all exact `id`, `levelId`, `checkpoint`, `bossId`,
+  `viewport`, and URL values as well as mutation rejection.
+- Ordinary diagnosis entries, including `l1-park` and `l2-main-street`, are
+  desktop-first. `l1-end` and `l2-end` are the dedicated mobile-landscape
+  samples; `l2-start` remains the dedicated mobile-portrait sample.
+- The original landscape screenshots predate this metadata correction. A
+  follow-up attempt to re-enter every URL and attach per-URL console evidence
+  was blocked when the in-app browser backend became unavailable after its
+  prior test session was finalized. No per-URL console result was invented;
+  rerun the desktop/landscape/portrait evidence sweep when browser access is
+  restored.
+
 ## Desktop route sweep (1440×900)
 
 All listed URLs reached active gameplay or the intended victory overlay after
@@ -58,12 +77,16 @@ the entry protocol. Screenshot path is `none — no visible defect` for each.
 | player-states | `/?powerupTest=taco&visualQa=player-states&debugVisuals=1` | debug bounds; player action key; respawn/recovery presentation | active gameplay | none / none |
 | enemy-states | `/?encounterTest=interaction&visualQa=enemy-states&debugVisuals=1` | debug bounds; squirrel/skunk ground anchors | active gameplay | none / none |
 
-## Responsive repeats (844×390 landscape)
+## Original responsive repeats (844×390 landscape)
 
 | Catalog ID | Visited URL | Result | Screenshot / issue |
 | --- | --- | --- | --- |
 | l1-park | `/?backgroundTest=park&visualQa=l1-park` | canvas, HUD, route and runway fit without observed clipping or overlap | none / none |
 | l2-main-street | `/?level=2&levelTest=main-street&visualQa=l2-main-street` | canvas, HUD, post-boss dumpster and exit scene fit without observed clipping or overlap | none / none |
+
+The catalog now designates `l1-end` and `l2-end` for future mobile-landscape
+evidence and `l2-start` for mobile-portrait evidence; the corrected designated
+viewport sweep is pending the browser-backend recovery noted above.
 
 ## Historical-item recheck
 
