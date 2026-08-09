@@ -22,7 +22,9 @@ import {
   reflectBinLidFromTail,
   selectChargeObstacle,
   SKUNK_STATES,
+  SQUIRREL_THROW,
   SQUIRREL_STATES,
+  squirrelThrowAttachment,
   TERRIER_STATES,
   selectEncounterTestRoute,
   updateBinLid,
@@ -35,7 +37,9 @@ import {
 } from "../app/level-two-enemies.mjs";
 
 test("exports the authored state sets", () => {
-  assert.deepEqual(SQUIRREL_STATES, ["idle", "telegraph", "throw", "recover", "defeated"]);
+  assert.deepEqual(SQUIRREL_STATES, [
+    "idle", "throw-anticipation", "throw-release", "throw-follow-through", "throw-recover", "defeated",
+  ]);
   assert.deepEqual(TERRIER_STATES, ["sleep", "wake", "charge", "stunned", "recover", "defeated"]);
   assert.deepEqual(SKUNK_STATES, ["patrol", "telegraph", "spray", "recover", "defeated"]);
   assert.deepEqual(MOTH_STATES, ["orbit", "telegraph", "dive", "climb", "defeated"]);
@@ -70,17 +74,43 @@ test("runtime reflection applies direction only on the false-to-true transition"
   );
 });
 
-test("squirrel uses a readable tell before throwing one lid", () => {
+test("squirrel uses anticipation, one release, follow-through, and recovery", () => {
   const telegraph = updateSquirrel({ state: "idle", timer: 0 }, {
     dt: 0.1, playerInRange: true, defeated: false,
   });
-  assert.equal(telegraph.state, "telegraph");
+  assert.equal(telegraph.state, "throw-anticipation");
   assert.ok(telegraph.timer >= ATTACK_TELL_MIN);
-  const throwing = updateSquirrel({ ...telegraph, timer: 0.01 }, {
+  const release = updateSquirrel({ ...telegraph, timer: 0.01 }, {
     dt: 0.02, playerInRange: true, defeated: false,
   });
-  assert.equal(throwing.state, "throw");
-  assert.equal(throwing.spawnLid, true);
+  assert.equal(release.state, "throw-release");
+  assert.equal(release.spawnAcorn, true);
+  const heldRelease = updateSquirrel({ ...release, timer: SQUIRREL_THROW.release }, {
+    dt: 0.01, playerInRange: true, defeated: false,
+  });
+  assert.equal(heldRelease.spawnAcorn, false);
+  const follow = updateSquirrel({ ...heldRelease, timer: 0.01 }, {
+    dt: 0.02, playerInRange: true, defeated: false,
+  });
+  assert.equal(follow.state, "throw-follow-through");
+  const recover = updateSquirrel({ ...follow, timer: 0.01 }, {
+    dt: 0.02, playerInRange: true, defeated: false,
+  });
+  assert.equal(recover.state, "throw-recover");
+  const idle = updateSquirrel({ ...recover, timer: 0.01, facing: 1 }, {
+    dt: 0.02, playerInRange: false, defeated: false,
+  });
+  assert.equal(idle.state, "idle");
+});
+
+test("acorn release attachment mirrors from the throwing paw without changing projectile balance", () => {
+  const squirrel = { x: 800, y: 296, w: 50, h: 36 };
+  const right = squirrelThrowAttachment(squirrel, 1);
+  const left = squirrelThrowAttachment(squirrel, -1);
+  assert.equal(right.y, left.y);
+  assert.equal(right.x + left.x, (squirrel.x + squirrel.w / 2) * 2);
+  assert.deepEqual(SQUIRREL_THROW.projectile, { w: 28, h: 10, speed: 140 });
+  assert.ok(right.x > squirrel.x + squirrel.w);
 });
 
 test("terrier stops at its surface edge and enters stunned recovery", () => {
@@ -210,6 +240,10 @@ test("authored animation playback exposes key frames and clamps one-shots", () =
     assert.equal(enemyAnimationFrame(animations.telegraph, 99), 3);
   }
   assert.equal(enemyAnimationFrame(LEVEL_TWO_ENEMY_ANIMATIONS.squirrel.attack, 0.16), 3);
+  assert.equal(enemyAnimationFrame(levelTwoEnemyAnimation("squirrel", "throw-anticipation"), 99), 0);
+  assert.equal(enemyAnimationFrame(levelTwoEnemyAnimation("squirrel", "throw-release"), 99), 1);
+  assert.equal(enemyAnimationFrame(levelTwoEnemyAnimation("squirrel", "throw-follow-through"), 99), 2);
+  assert.equal(enemyAnimationFrame(levelTwoEnemyAnimation("squirrel", "throw-recover"), 99), 3);
   assert.equal(enemyAnimationFrame(LEVEL_TWO_ENEMY_ANIMATIONS.skunk.attack, 0.26), 3);
   assert.equal(enemyAnimationFrame(LEVEL_TWO_ENEMY_ANIMATIONS.terrier.sleep, 99), 0);
 });

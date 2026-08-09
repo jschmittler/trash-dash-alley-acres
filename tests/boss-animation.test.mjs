@@ -17,6 +17,11 @@ import {
   IMPLEMENTED_VISUAL_INVENTORY,
   MEASURED_RUNTIME_DISTORTION_FRAMES,
 } from "../app/visual-inventory.mjs";
+import {
+  LEVEL_ONE_ENEMY_ANIMATIONS,
+  levelOneEnemyAnimationFrame,
+} from "../app/level-one-enemy-animation.mjs";
+import { readFile } from "node:fs/promises";
 
 const base = { defeated: false, hit: false, raging: false, action: "idle", vx: 0 };
 
@@ -97,4 +102,42 @@ test("VIS-006 state destinations preserve their source-cell aspect ratio", () =>
     [],
     "enemy and boss state destinations must not remain on the distortion allowlist",
   );
+});
+
+test("Level 2 semantic recovery and return states select their own compatible rows", () => {
+  const expected = [
+    ["skunk", "recover", "recover", 12, 3, 1, false],
+    ["moth", "climb", "climb", 15, 0, 4, true],
+  ];
+  for (const [kind, state, key, row, startFrame, frames, loop] of expected) {
+    const animation = levelTwoEnemyAnimation(kind, state);
+    assert.equal(animation, LEVEL_TWO_ENEMY_ANIMATIONS[kind][key], `${kind}/${state} semantic key`);
+    assert.deepEqual(
+      { row: animation.row, startFrame: animation.startFrame, frames: animation.frames, loop: animation.loop },
+      { row, startFrame, frames, loop },
+      `${kind}/${state} exact source selection`,
+    );
+  }
+  assert.throws(() => levelTwoEnemyAnimation("skunk", "unknown"), /unknown.*state/i);
+});
+
+test("Level 1 enemy rendering uses declared local animation FPS rather than phase speed", async () => {
+  assert.equal(LEVEL_ONE_ENEMY_ANIMATIONS.fox.move.fps, 7);
+  assert.equal(levelOneEnemyAnimationFrame("fox", "move", 1 / 7 - 0.001, 3), 3);
+  assert.equal(levelOneEnemyAnimationFrame("fox", "move", 1 / 7 + 0.001, 3), 0);
+  assert.equal(levelOneEnemyAnimationFrame("fox", "move", 1 / 7 + 0.001, 0), 1);
+  const runtime = await readFile(new URL("../app/trash-dash-game.tsx", import.meta.url), "utf8");
+  assert.match(runtime, /levelOneEnemyAnimationFrame\(enemy\.kind, "move", enemy\.stateElapsed, enemy\.animationOffset\)/);
+  assert.match(runtime, /enemy\.stateElapsed \+= dt/);
+});
+
+test("Trash Heap Tyrant visual bounds equal its maximum actual destination", () => {
+  const tyrant = IMPLEMENTED_VISUAL_INVENTORY.find(({ id }) => id === "trash-heap-tyrant");
+  assert.ok(tyrant);
+  const destinations = Object.values(tyrant.runtimeDestinations).flat();
+  const maximum = {
+    w: Math.max(...destinations.map(({ w }) => w)),
+    h: Math.max(...destinations.map(({ h }) => h)),
+  };
+  assert.deepEqual({ w: tyrant.contract.visualBounds.w, h: tyrant.contract.visualBounds.h }, maximum);
 });

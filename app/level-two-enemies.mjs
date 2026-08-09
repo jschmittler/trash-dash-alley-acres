@@ -6,7 +6,9 @@ const approach = (value, target, amount) => (
 export const ATTACK_TELL_MIN = 0.35;
 export const ATTACK_TELL_MAX = 0.65;
 
-export const SQUIRREL_STATES = Object.freeze(["idle", "telegraph", "throw", "recover", "defeated"]);
+export const SQUIRREL_STATES = Object.freeze([
+  "idle", "throw-anticipation", "throw-release", "throw-follow-through", "throw-recover", "defeated",
+]);
 export const TERRIER_STATES = Object.freeze(["sleep", "wake", "charge", "stunned", "recover", "defeated"]);
 export const SKUNK_STATES = Object.freeze(["patrol", "telegraph", "spray", "recover", "defeated"]);
 export const MOTH_STATES = Object.freeze(["orbit", "telegraph", "dive", "climb", "defeated"]);
@@ -30,6 +32,22 @@ export const ATTACK_TELLS = Object.freeze({
   moth: MOTH_TELL,
 });
 
+export const SQUIRREL_THROW = Object.freeze({
+  anticipation: SQUIRREL_TELL,
+  release: 0.12,
+  followThrough: 0.22,
+  recover: 0.45,
+  pawOffset: Object.freeze({ x: 30, y: 12 }),
+  projectile: Object.freeze({ w: 28, h: 10, speed: 140 }),
+});
+
+export function squirrelThrowAttachment(squirrel, facing = 1) {
+  return {
+    x: squirrel.x + squirrel.w / 2 + (facing < 0 ? -1 : 1) * SQUIRREL_THROW.pawOffset.x,
+    y: squirrel.y + SQUIRREL_THROW.pawOffset.y,
+  };
+}
+
 export function updateBinLid(lid, { tailSwipeHit = false } = {}) {
   if (!tailSwipeHit || lid.reflected) return { ...lid };
   return { ...lid, vx: 190, reflected: true };
@@ -48,30 +66,35 @@ export function facingFromVelocity(vx, facing, deadZone = 8) {
 
 export function updateSquirrel(squirrel, { dt, playerInRange = false, defeated = false }) {
   if (defeated || squirrel.state === "defeated") {
-    return { ...squirrel, state: "defeated", timer: 0, vx: 0, spawnLid: false };
+    return { ...squirrel, state: "defeated", timer: 0, vx: 0, spawnAcorn: false };
   }
   if (squirrel.state === "idle") {
     return playerInRange
-      ? { ...squirrel, state: "telegraph", timer: SQUIRREL_TELL, vx: 0, spawnLid: false }
-      : { ...squirrel, spawnLid: false };
+      ? { ...squirrel, state: "throw-anticipation", timer: SQUIRREL_THROW.anticipation, vx: 0, spawnAcorn: false }
+      : { ...squirrel, spawnAcorn: false };
   }
   const timer = Math.max(0, (squirrel.timer ?? 0) - dt);
-  if (squirrel.state === "telegraph") {
+  if (squirrel.state === "throw-anticipation") {
     return timer === 0
-      ? { ...squirrel, state: "throw", timer: 0.18, vx: 0, spawnLid: true }
-      : { ...squirrel, timer, vx: 0, spawnLid: false };
+      ? { ...squirrel, state: "throw-release", timer: SQUIRREL_THROW.release, vx: 0, spawnAcorn: true }
+      : { ...squirrel, timer, vx: 0, spawnAcorn: false };
   }
-  if (squirrel.state === "throw") {
+  if (squirrel.state === "throw-release") {
     return timer === 0
-      ? { ...squirrel, state: "recover", timer: 0.65, vx: 0, spawnLid: false }
-      : { ...squirrel, timer, vx: 0, spawnLid: false };
+      ? { ...squirrel, state: "throw-follow-through", timer: SQUIRREL_THROW.followThrough, vx: 0, spawnAcorn: false }
+      : { ...squirrel, timer, vx: 0, spawnAcorn: false };
   }
-  if (squirrel.state === "recover") {
+  if (squirrel.state === "throw-follow-through") {
     return timer === 0
-      ? { ...squirrel, state: "idle", timer: 0, vx: squirrel.facing === -1 ? -42 : 42, spawnLid: false }
-      : { ...squirrel, timer, vx: 0, spawnLid: false };
+      ? { ...squirrel, state: "throw-recover", timer: SQUIRREL_THROW.recover, vx: 0, spawnAcorn: false }
+      : { ...squirrel, timer, vx: 0, spawnAcorn: false };
   }
-  return { ...squirrel, spawnLid: false };
+  if (squirrel.state === "throw-recover") {
+    return timer === 0
+      ? { ...squirrel, state: "idle", timer: 0, vx: squirrel.facing === -1 ? -42 : 42, spawnAcorn: false }
+      : { ...squirrel, timer, vx: 0, spawnAcorn: false };
+  }
+  return { ...squirrel, spawnAcorn: false };
 }
 
 export function updateTerrier(terrier, context) {
@@ -269,6 +292,8 @@ const animation = (row, frames, fps = 7, loop = false, startFrame = 0) => Object
 export const LEVEL_TWO_ENEMY_ANIMATIONS = Object.freeze({
   squirrel: Object.freeze({
     locomotion: animation(0, 4, 8, true), telegraph: animation(1, 4, 7), attack: animation(2, 4, 20),
+    anticipation: animation(2, 1, 1, false, 0), release: animation(2, 1, 1, false, 1),
+    followThrough: animation(2, 1, 1, false, 2), recover: animation(2, 1, 1, false, 3),
     hit: animation(3, 2, 9), defeat: animation(4, 2, 5),
   }),
   terrier: Object.freeze({
@@ -277,11 +302,30 @@ export const LEVEL_TWO_ENEMY_ANIMATIONS = Object.freeze({
   }),
   skunk: Object.freeze({
     locomotion: animation(10, 4, 7, true), telegraph: animation(11, 4, 7), attack: animation(12, 4, 12),
-    hit: animation(13, 2, 9), defeat: animation(14, 2, 5),
+    // The last spray cell is the authored follow-through/recovery pose.
+    recover: animation(12, 1, 6, false, 3), hit: animation(13, 2, 9), defeat: animation(14, 2, 5),
   }),
   moth: Object.freeze({
     locomotion: animation(15, 4, 10, true), telegraph: animation(16, 4, 8), attack: animation(17, 4, 12, true),
-    hit: animation(18, 2, 9), defeat: animation(19, 2, 6),
+    // Flight locomotion is the compatible authored return motion; it is not a hit reaction.
+    climb: animation(15, 4, 10, true), hit: animation(18, 2, 9), defeat: animation(19, 2, 6),
+  }),
+});
+
+export const LEVEL_TWO_ENEMY_STATE_ANIMATION_KEYS = Object.freeze({
+  squirrel: Object.freeze({
+    idle: "locomotion", "throw-anticipation": "anticipation", "throw-release": "release",
+    "throw-follow-through": "followThrough", "throw-recover": "recover", hit: "hit", defeated: "defeat",
+  }),
+  terrier: Object.freeze({
+    sleep: "sleep", wake: "telegraph", charge: "attack", stunned: "stunned", recover: "recover",
+    hit: "hit", defeated: "defeat",
+  }),
+  skunk: Object.freeze({
+    patrol: "locomotion", telegraph: "telegraph", spray: "attack", recover: "recover", hit: "hit", defeated: "defeat",
+  }),
+  moth: Object.freeze({
+    orbit: "locomotion", telegraph: "telegraph", dive: "attack", climb: "climb", hit: "hit", defeated: "defeat",
   }),
 });
 
@@ -326,16 +370,11 @@ export function applyLevelTwoBehaviorTransition(enemy, state) {
 
 export function levelTwoEnemyAnimation(kind, state) {
   const animations = LEVEL_TWO_ENEMY_ANIMATIONS[kind];
-  if (!animations) return null;
-  if (state === "defeated") return animations.defeat;
-  if (state === "hit") return animations.hit;
-  if (kind === "terrier" && state === "sleep") return animations.sleep;
-  if (kind === "terrier" && state === "stunned") return animations.stunned;
-  if (kind === "terrier" && state === "recover") return animations.recover;
-  if (state === "telegraph" || state === "wake") return animations.telegraph;
-  if (state === "throw" || state === "charge" || state === "spray" || state === "dive") return animations.attack;
-  if (state === "stunned" || state === "recover" || (kind === "moth" && state === "climb")) return animations.hit;
-  return animations.locomotion;
+  const key = LEVEL_TWO_ENEMY_STATE_ANIMATION_KEYS[kind]?.[state];
+  if (!animations || !key || !animations[key]) {
+    throw new RangeError(`Unknown Level 2 animation state "${kind}/${state}"`);
+  }
+  return animations[key];
 }
 
 export const ENCOUNTER_TEST_ROUTES = Object.freeze({

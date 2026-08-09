@@ -2,9 +2,10 @@ import { DECORATIVE_PROPS } from "../concepts/decorative/decorative-manifest.mjs
 import { BOSS_ANIMATIONS } from "./boss-animation.mjs";
 import { BRUTUS_ANIMATIONS, BRUTUS_RENDER_METRICS } from "./brutus-boss.mjs";
 import { DUMPSTER_CELL, DUMPSTER_DRAW_HEIGHT, DUMPSTER_DRAW_WIDTH, DUMPSTER_STATES } from "./dumpster-render.mjs";
+import { LEVEL_ONE_ENEMY_ANIMATIONS } from "./level-one-enemy-animation.mjs";
 import { LEVEL_ONE, LEVEL_ONE_ENEMY_KINDS } from "./level-one.mjs";
 import { LEVEL_TWO, LEVEL_TWO_ENEMY_KINDS } from "./level-two.mjs";
-import { LEVEL_TWO_ENEMY_COLLISION } from "./level-two-enemies.mjs";
+import { LEVEL_TWO_ENEMY_ANIMATIONS, LEVEL_TWO_ENEMY_COLLISION } from "./level-two-enemies.mjs";
 import { LEVEL_TWO_PROP_ASSET, LEVEL_TWO_PROP_ATLAS, LEVEL_TWO_PROP_FRAMES } from "./level-two-props.mjs";
 import { PLAYER_FORM_STATES } from "./player-animation.mjs";
 import { PLAYABLE_CHARACTERS } from "./playable-character.mjs";
@@ -172,7 +173,6 @@ const levelOneCollision = Object.freeze({
   snake: [58, 28], pigeon: [46, 38], wasp: [48, 32], mosquito: [46, 30],
   possum: [58, 38], spider: [52, 30], fox: [62, 40],
 });
-const levelOneRows = Object.freeze({ snake: 4, pigeon: 0, wasp: 1, mosquito: 2, possum: 3, spider: 5, fox: 8 });
 const levelOneEnemyRecords = LEVEL_ONE_ENEMY_KINDS.map((kind) => {
   const [drawW, drawH] = levelOneDraw[kind];
   const [collisionW, collisionH] = levelOneCollision[kind];
@@ -184,32 +184,16 @@ const levelOneEnemyRecords = LEVEL_ONE_ENEMY_KINDS.map((kind) => {
     assetSource: kind === "pigeon" || kind === "possum" ? "assets/enemy-motion.png" : "assets/generated/enemy-variety-motion.png",
     nativeSize: { cellW: 192, cellH: 192, frames: 4 },
     renderedSize: { w: drawW, h: drawH },
-    sourceRects: { move: cellRects({ row: levelOneRows[kind], frames: 4, cellW: 192, cellH: 192 }) },
+    sourceRects: { move: cellRects({ row: LEVEL_ONE_ENEMY_ANIMATIONS[kind].move.row, frames: 4, cellW: 192, cellH: 192 }) },
     runtimeDestinations: { move: repeated(4, { w: drawW, h: drawH }) },
     origin: isFlying ? "destination center" : "destination center-bottom",
     facing: "right-authored; horizontal flip around destination center",
-    animations: { move: { row: 0, frames: 4, fps: 7, loop: true } },
+    animations: LEVEL_ONE_ENEMY_ANIMATIONS[kind],
     requiredStates: ["move"],
   }, isFlying ? flying(drawW, drawH, collisionW, collisionH) : grounded(drawW, drawH, collisionW, collisionH, 8, 4));
 });
 
-const levelTwoRequired = Object.freeze({
-  squirrel: ["locomotion", "telegraph", "attack", "hit", "defeat"],
-  terrier: ["locomotion", "sleep", "telegraph", "attack", "stunned", "recover", "hit", "defeat"],
-  skunk: ["locomotion", "telegraph", "attack", "hit", "defeat"],
-  moth: ["locomotion", "telegraph", "attack", "hit", "defeat"],
-});
-const baseAnimation = (row, frames, fps, loop = false, startFrame = 0) => Object.freeze({ row, frames, fps, loop, startFrame });
-// Base committed manifest only. Expanded actor work is independently owned and
-// cannot become an implicit Task 2 dependency.
-const BASE_LEVEL_TWO_ENEMY_ANIMATIONS = Object.freeze({
-  squirrel: Object.freeze({ locomotion: baseAnimation(0, 4, 8, true), telegraph: baseAnimation(1, 4, 7), attack: baseAnimation(2, 4, 20), hit: baseAnimation(3, 2, 9), defeat: baseAnimation(4, 2, 5) }),
-  terrier: Object.freeze({ locomotion: baseAnimation(5, 4, 9, true), sleep: baseAnimation(6, 1, 1), telegraph: baseAnimation(6, 4, 7), attack: baseAnimation(7, 4, 12, true), hit: baseAnimation(8, 2, 9), stunned: baseAnimation(8, 2, 6), recover: baseAnimation(8, 1, 1, false, 1), defeat: baseAnimation(9, 2, 5) }),
-  skunk: Object.freeze({ locomotion: baseAnimation(10, 4, 7, true), telegraph: baseAnimation(11, 4, 7), attack: baseAnimation(12, 4, 12), hit: baseAnimation(13, 2, 9), defeat: baseAnimation(14, 2, 5) }),
-  moth: Object.freeze({ locomotion: baseAnimation(15, 4, 10, true), telegraph: baseAnimation(16, 4, 8), attack: baseAnimation(17, 4, 12, true), hit: baseAnimation(18, 2, 9), defeat: baseAnimation(19, 2, 6) }),
-});
-// The committed renderer's drawSizes table. Keep this base-runtime geometry
-// here rather than importing an optional later render-metrics export.
+// Authoritative Task 4 animation manifest and actual runtime destinations.
 const LEVEL_TWO_ENEMY_DRAW_GEOMETRY = Object.freeze({
   squirrel: Object.freeze({ w: 76, h: 76 }),
   terrier: Object.freeze({ w: 82, h: 82 }),
@@ -226,12 +210,12 @@ const levelTwoEnemyRecords = LEVEL_TWO_ENEMY_KINDS.map((kind) => {
     assetSource: "assets/generated/level2-enemy-motion.png",
     nativeSize: { w: 768, h: 3840, cellW: 192, cellH: 192, rows: 20, columns: 4 },
     renderedSize: { w: drawW, h: drawH },
-    sourceRects: animationSourceRects(BASE_LEVEL_TWO_ENEMY_ANIMATIONS[kind], 192, 192),
-    runtimeDestinations: animationDestinations(BASE_LEVEL_TWO_ENEMY_ANIMATIONS[kind], { w: drawW, h: drawH }),
+    sourceRects: animationSourceRects(LEVEL_TWO_ENEMY_ANIMATIONS[kind], 192, 192),
+    runtimeDestinations: animationDestinations(LEVEL_TWO_ENEMY_ANIMATIONS[kind], { w: drawW, h: drawH }),
     origin: kind === "moth" ? "destination center" : "source baseline row 176 to destination ground",
     facing: "right-authored; horizontal flip around destination center with dead-zone facing",
-    animations: BASE_LEVEL_TWO_ENEMY_ANIMATIONS[kind],
-    requiredStates: levelTwoRequired[kind],
+    animations: LEVEL_TWO_ENEMY_ANIMATIONS[kind],
+    requiredStates: Object.keys(LEVEL_TWO_ENEMY_ANIMATIONS[kind]),
   }, kind === "moth" ? flying(drawW, drawH, collisionW, collisionH) : grounded(drawW, drawH, collisionW, collisionH, kind === "terrier" ? 26 : 16, 8));
 });
 
@@ -244,7 +228,7 @@ const bossRecords = [
     runtimeDestinations: animationDestinations(BOSS_ANIMATIONS, { w: 166, h: 166 }),
     facing: "right-authored; centered horizontal flip", animations: BOSS_ANIMATIONS,
     requiredStates: ["idle", "walk", "windup", "charge", "recover", "hit", "rage", "defeat"],
-  }, grounded(184, 170, 96, 96, 64, 16)),
+  }, grounded(166, 166, 96, 96, 64, 16)),
   makeRecord({
     id: "brutus-bin-hound", category: "boss", levelIds: ["level-2"],
     assetSource: "assets/generated/brutus-motion.png", nativeSize: { w: 1024, h: 2112, cellW: 256, cellH: 192, rows: 11, columns: 4 },

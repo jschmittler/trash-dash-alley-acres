@@ -25,6 +25,10 @@ import {
   resolvePitFall,
 } from "./gameplay-animation-state.mjs";
 import {
+  LEVEL_ONE_ENEMY_ANIMATIONS,
+  levelOneEnemyAnimationFrame,
+} from "./level-one-enemy-animation.mjs";
+import {
   PLAYER_ANIMATIONS,
   animationFrame,
   isTailSwipeActive,
@@ -108,10 +112,12 @@ import {
   levelTwoEnemyCanReceiveAttack,
   levelTwoEnvironmentRecords,
   reflectBinLidFromTail,
+  SQUIRREL_THROW,
   selectChargeObstacle,
   selectEncounterTestRoute,
   updateLevelTwoEnemy,
   updateSprinkler,
+  squirrelThrowAttachment,
 } from "./level-two-enemies.mjs";
 import { levelTwoPlatformDrawRect, levelTwoPropFrame } from "./level-two-props.mjs";
 
@@ -225,6 +231,7 @@ interface Enemy extends Rect {
   flightBand?: string;
   sprayActive: boolean;
   stateElapsed: number;
+  animationOffset: number;
   visualState: string | null;
   visualTimer: number;
   brutusState: ReturnType<typeof createBrutusState> | null;
@@ -594,6 +601,7 @@ const makeEnemy = (
     active: kind === "boss" || spawnX <= 780,
     spawned: kind === "boss" || spawnX <= 780,
     phase: x / 100,
+    animationOffset: Math.floor(Math.abs(x / 100)) % 4,
     hp: kind === "boss" ? 3 : 1,
     hitCooldown: 0,
     originX: spawnX,
@@ -1903,6 +1911,8 @@ export function TrashDashGame() {
           enemy.hitCooldown = Math.max(0, enemy.hitCooldown - dt);
           if (levelTwoEnemyKinds.has(enemy.kind)) {
             Object.assign(enemy, advanceLevelTwoEnemyPlayback(enemy, dt));
+          } else {
+            enemy.stateElapsed += dt;
           }
         }
 
@@ -1973,13 +1983,14 @@ export function TrashDashGame() {
                 }
               }
             }
-            if (next.spawnLid) {
+            if (next.spawnAcorn) {
+              const attachment = squirrelThrowAttachment(enemy, enemy.facing);
               world.binLids.push({
-                x: enemy.x + enemy.w / 2 - 14,
-                y: enemy.y + 8,
-                w: 28,
-                h: 10,
-                vx: enemy.facing * 140,
+                x: attachment.x - SQUIRREL_THROW.projectile.w / 2,
+                y: attachment.y - SQUIRREL_THROW.projectile.h / 2,
+                w: SQUIRREL_THROW.projectile.w,
+                h: SQUIRREL_THROW.projectile.h,
+                vx: enemy.facing * SQUIRREL_THROW.projectile.speed,
                 reflected: false,
                 ownerId: enemy.id,
                 lightweight: true,
@@ -2591,7 +2602,9 @@ export function TrashDashGame() {
         if (!enemy.active) continue;
         const x = enemy.x - camera;
         if (x < -150 || x > WIDTH + 150) continue;
-        const frameIndex = Math.floor(enemy.phase) % 4;
+        const frameIndex = Object.hasOwn(LEVEL_ONE_ENEMY_ANIMATIONS, enemy.kind)
+          ? levelOneEnemyAnimationFrame(enemy.kind, "move", enemy.stateElapsed, enemy.animationOffset)
+          : Math.floor(enemy.phase) % 4;
         const flip = enemy.facing < 0;
         const drawEnemy = (
           frame: Frame,
