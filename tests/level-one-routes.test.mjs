@@ -52,7 +52,7 @@ test("Level 1 checkpoints are ordered and respawn before their trigger positions
   assert.deepEqual(LEVEL_ONE.checkpoints.map(({ id, x, respawnX, label }) => ({ id, x, respawnX, label })), [
     { id: "creek-checkpoint", x: 1130, respawnX: 1080, label: "Creek checkpoint" },
     { id: "highway-checkpoint", x: 2770, respawnX: 2700, label: "Highway checkpoint" },
-    { id: "boss-runway-checkpoint", x: 4870, respawnX: 4800, label: "Boss runway checkpoint" },
+    { id: "boss-runway-checkpoint", x: 4930, respawnX: 4900, label: "Boss runway checkpoint" },
   ]);
 
   for (let index = 0; index < LEVEL_ONE.checkpoints.length; index += 1) {

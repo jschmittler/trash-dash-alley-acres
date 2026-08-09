@@ -602,3 +602,39 @@ Browser diagnostics:
 
 Spatial validity is not sufficient. Every generated or placed asset must also
 pass a visual composition review.
+
+### 2026-08-09 — Task 5 world placement and composition
+
+- **Automated closure:** 45/45 focused relationship, patrol, composition,
+  route, and arena checks pass. The complete project suite passes 270/270;
+  GitHub Pages build/verification passes 1/1.
+- **RED findings repaired:** Level 1 rewards without semantic supports; two
+  vertically invalid Level 1 flight envelopes; twelve patrol ranges whose
+  largest placement footprints could leave their supports/bands; overlapping
+  campsite crates; walking pigeons authored as flight actors; rolling windows
+  with more than two encounter introductions; a Level 1 boss checkpoint
+  respawn outside its declared ground; and Brutus utility-platform asymmetry.
+- **Relationship ledger:** every scenery object, pickup hover envelope,
+  checkpoint trigger/respawn, grounded patrol extreme, flight envelope,
+  Level 2 environment/boss prop, attached water effect, and boss utility
+  platform now has deterministic full-envelope evidence. Water origins remain
+  inside both emitter bodies and independent effect rectangles. Opaque-pixel
+  measurement proves both Brutus platform tops agree with collision within
+  2px, their bases meet the arena floor, and their offsets are symmetric.
+- **Composition ledger:** rolling 960px windows at 120px increments include
+  expanded scenery, pickup, and encounter footprints; validate route/reward
+  references and continuous zone transitions; reject repeated hero props;
+  cap ordinary encounter introductions at two; and isolate large encounters.
+  Level 2's street squirrel now begins after the terrier recovery boundary.
+- **Boss/runway ledger:** both arenas have deterministic runway length,
+  grounded boss props, in-bounds spawn/recovery, reachable utility platforms,
+  enemy purge, fixed camera/clamp behavior, and defeat-gated release coverage
+  in the existing boss-transition/victory suites.
+- **Runtime limitation:** the in-app browser connection initialized, but the
+  local game navigation did not complete and was abandoned rather than allowed
+  to block the task. Full-speed Level 1/Level 2 rolling views, direct route
+  screenshots, foreground-occlusion observation, and browser console logs are
+  therefore **CANNOT VERIFY** in Task 5. These runtime-only checks remain open
+  for the next controllable visual QA session; no screenshot is claimed.
+- No generated image or source-art bytes changed in this task, so deterministic
+  asset rebuild comparison was not applicable.

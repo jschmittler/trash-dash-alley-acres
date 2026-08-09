@@ -12,7 +12,10 @@ import {
   clampArenaBossX,
   clampArenaPlayerX,
   selectBossTestRoute,
+  validateBossArenaPlacement,
 } from "../app/boss-arena.mjs";
+import { LEVEL_ONE } from "../app/level-one.mjs";
+import { LEVEL_TWO } from "../app/level-two.mjs";
 
 test("arena activation removes every ordinary enemy and preserves the boss", () => {
   const enemies = [{ kind: "rat", active: true }, { kind: "boss", active: true }, { kind: "crow", active: false }];
@@ -59,7 +62,12 @@ test("boss test routes preserve canonical Level 1 positions and isolate Brutus",
     levelId: "level-1", playerX: 5690, checkpointX: 5590, cameraX: 5280, glider: 0,
   });
   assert.deepEqual(selectBossTestRoute("brutus"), {
-    levelId: "level-2", playerX: 5650, checkpointX: 5200, cameraX: 5300, glider: 14,
+    levelId: "level-2", playerX: 5770, checkpointX: 5200, cameraX: 5700, glider: 14, activateArena: true,
   });
   assert.equal(selectBossTestRoute("unknown"), null);
+});
+
+test("both boss arenas provide a quiet runway, grounded props, and reachable symmetric utility platforms", () => {
+  assert.deepEqual(validateBossArenaPlacement(LEVEL_ONE), []);
+  assert.deepEqual(validateBossArenaPlacement(LEVEL_TWO), []);
 });

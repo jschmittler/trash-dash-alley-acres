@@ -103,7 +103,7 @@ test("rejects an explicit support that is narrower than the enemy", () => {
 test("resolves actual Level 2 grounded enemies against their authored surfaces", () => {
   const widths = { squirrel: 50, terrier: 64, skunk: 58 };
   const expected = {
-    squirrel: { spawnX: 800, minX: 720, maxX: 930, surfaceY: 332, surfaceId: "backyard-fence" },
+    squirrel: { spawnX: 800, minX: 720, maxX: 911, surfaceY: 332, surfaceId: "backyard-fence" },
     terrier: { spawnX: 1580, minX: 1420, maxX: 2480, surfaceY: 468, surfaceId: "street-ground" },
     skunk: { spawnX: 2920, minX: 2800, maxX: 3100, surfaceY: 468, surfaceId: "obstacle-lawn" },
   };
@@ -142,7 +142,7 @@ test("keeps an authored Level 2 flight baseline independent from terrain", () =>
       patrolBounds: moth.patrol,
       grounded: false,
     }, LEVEL_TWO.surfaces),
-    { spawnX: 4020, minX: 3960, maxX: 4160, surfaceY: 220 },
+    { spawnX: 4020, minX: 3978, maxX: 4122, surfaceY: 220 },
   );
 });
 

@@ -48,8 +48,8 @@ const surfaces = [
   { id: "drainage-landing", x: 4920, y: 468, w: 630, h: 90, kind: "ground" },
   { id: "boss-runway", x: 5300, y: 468, w: 400, h: 90, kind: "ground" },
   { id: "cul-de-sac", x: 5700, y: 468, w: 850, h: 90, kind: "ground" },
-  { id: "brutus-platform-left", x: 5724, y: 404, w: 72, h: 64, kind: "crate", visual: "boss-platform-left" },
-  { id: "brutus-platform-right", x: 6454, y: 404, w: 72, h: 64, kind: "crate", visual: "boss-platform-right" },
+  { id: "brutus-platform-left", x: 5736, y: 404, w: 72, h: 64, kind: "crate", visual: "boss-platform-left" },
+  { id: "brutus-platform-right", x: 6442, y: 404, w: 72, h: 64, kind: "crate", visual: "boss-platform-right" },
   { id: "victory-street", x: 6550, y: 468, w: 650, h: 90, kind: "ground" },
 ];
 
@@ -61,38 +61,38 @@ const flightBands = [
 
 const encounters = [
   {
-    id: "backyard-squirrel-tutorial", zoneId: "moonlit-backyard", spawnX: 780, sizeClass: "small",
-    enemies: [{ kind: "squirrel", movement: "platform", x: 800, patrol: [720, 930], surfaceId: "backyard-fence" }],
+    id: "backyard-squirrel-tutorial", zoneId: "moonlit-backyard", spawnX: 740, sizeClass: "small",
+    enemies: [{ kind: "squirrel", movement: "platform", x: 800, patrol: [720, 911], surfaceId: "backyard-fence" }],
   },
   {
     id: "street-terrier-tutorial", zoneId: "garbage-night-street", spawnX: 1540, sizeClass: "large", recoveryEndX: 2500,
     enemies: [{ kind: "terrier", movement: "grounded", x: 1580, patrol: [1420, 2480], surfaceId: "street-ground" }],
   },
   {
-    id: "street-squirrel-repeat", zoneId: "garbage-night-street", spawnX: 2550, sizeClass: "small", bypass: "parked-car-route",
-    enemies: [{ kind: "squirrel", movement: "platform", x: 2570, patrol: [2520, 2640], surfaceId: "street-fence-east" }],
+    id: "street-squirrel-repeat", zoneId: "garbage-night-street", spawnX: 2520, sizeClass: "small", bypass: "parked-car-route",
+    enemies: [{ kind: "squirrel", movement: "platform", x: 2570, patrol: [2539, 2576], surfaceId: "street-fence-east" }],
   },
   {
     id: "obstacle-skunk-tutorial", zoneId: "backyard-obstacle-course", spawnX: 2900, sizeClass: "medium",
     enemies: [{ kind: "skunk", movement: "grounded", x: 2920, patrol: [2800, 3100], surfaceId: "obstacle-lawn" }],
   },
   {
-    id: "obstacle-interaction-test", zoneId: "backyard-obstacle-course", spawnX: 3460, sizeClass: "medium", bypass: "treehouse-route",
+    id: "obstacle-interaction-test", zoneId: "backyard-obstacle-course", spawnX: 3480, sizeClass: "medium", bypass: "treehouse-route",
     enemies: [
-      { kind: "squirrel", movement: "platform", x: 3640, patrol: [3580, 3780], surfaceId: "treehouse-platform" },
+      { kind: "squirrel", movement: "platform", x: 3640, patrol: [3580, 3751], surfaceId: "treehouse-platform" },
       { kind: "skunk", movement: "grounded", x: 3440, patrol: [3300, 3550], surfaceId: "obstacle-lawn" },
     ],
   },
   {
     id: "porch-light-moth-introduction", zoneId: "backyard-obstacle-course", spawnX: 4010, sizeClass: "small",
-    enemies: [{ kind: "moth", movement: "flying", x: 4020, flightY: 220, flightBand: "porch-light-orbit", patrol: [3960, 4160] }],
+    enemies: [{ kind: "moth", movement: "flying", x: 4020, flightY: 220, flightBand: "porch-light-orbit", patrol: [3978, 4122] }],
   },
   {
     id: "drainage-mastery", zoneId: "drainage-ditch", spawnX: 4650, sizeClass: "large", recoveryEndX: 5300, bypass: "culvert-bypass",
     enemies: [
-      { kind: "moth", movement: "flying", x: 4400, flightY: 280, flightBand: "drainage-moth-low", patrol: [4320, 4600] },
-      { kind: "moth", movement: "flying", x: 4680, flightY: 205, flightBand: "drainage-moth-high", patrol: [4520, 4800] },
-      { kind: "terrier", movement: "grounded", x: 5030, patrol: [4950, 5250], surfaceId: "drainage-landing" },
+      { kind: "moth", movement: "flying", x: 4400, flightY: 280, flightBand: "drainage-moth-low", patrol: [4328, 4542] },
+      { kind: "moth", movement: "flying", x: 4680, flightY: 205, flightBand: "drainage-moth-high", patrol: [4528, 4742] },
+      { kind: "terrier", movement: "grounded", x: 5030, patrol: [4955, 5250], surfaceId: "drainage-landing" },
     ],
   },
   // This is a population marker, not an ordinary hostile group. It keeps the
@@ -103,7 +103,7 @@ const encounters = [
 const rewards = [
   { id: "backyard-porch-trash", kind: "trash", x: 510, surfaceId: "backyard-porch", surfaceY: 374, optional: true, gate: "backyard-porch-route" },
   { id: "street-car-trash-chain", kind: "trash", x: 2280, surfaceId: "parked-car-west", surfaceY: 358, optional: true, gate: "parked-car-route" },
-  { id: "street-car-trash-cap", kind: "trash", x: 2500, surfaceId: "parked-car-east", surfaceY: 358, optional: true, gate: "parked-car-route" },
+  { id: "street-car-trash-cap", kind: "trash", x: 2450, surfaceId: "parked-car-east", surfaceY: 358, optional: true, gate: "parked-car-route" },
   { id: "treehouse-taco-refresh", kind: "taco", x: 3680, surfaceId: "treehouse-platform", surfaceY: 252, optional: true, gate: "treehouse-route" },
   { id: "poolside-major-cache", kind: "trash", x: 3980, surfaceId: "poolside-ledge", surfaceY: 370, optional: true, gate: "poolside-secret" },
   { id: "culvert-recovery-trash", kind: "trash", x: 4700, surfaceId: "culvert-route", surfaceY: 404, optional: true, gate: "culvert-bypass" },
@@ -116,10 +116,10 @@ const rewards = [
 ];
 
 const checkpoints = [
-  { id: "street-checkpoint", x: 1370, respawnX: 1300, label: "Street checkpoint" },
-  { id: "obstacle-course-checkpoint", x: 2750, respawnX: 2710, label: "Obstacle-course checkpoint" },
-  { id: "drainage-checkpoint", x: 4270, respawnX: 4210, label: "Drainage checkpoint" },
-  { id: "boss-runway-checkpoint", x: 5270, respawnX: 5200, label: "Boss runway checkpoint" },
+  { id: "street-checkpoint", x: 1370, respawnX: 1300, surfaceId: "street-ground", label: "Street checkpoint" },
+  { id: "obstacle-course-checkpoint", x: 2750, respawnX: 2710, surfaceId: "obstacle-lawn", label: "Obstacle-course checkpoint" },
+  { id: "drainage-checkpoint", x: 4270, respawnX: 4210, surfaceId: "drainage-entry-lawn", label: "Drainage checkpoint" },
+  { id: "boss-runway-checkpoint", x: 5270, respawnX: 5200, surfaceId: "drainage-landing", label: "Boss runway checkpoint" },
 ];
 
 const routeChoices = [
@@ -158,14 +158,15 @@ export const LEVEL_TWO = freezeDeep({
     triggerX: 5750,
     arenaStartX: 5700,
     arenaEndX: 6550,
+    spawnX: 6250,
     surfaceId: "cul-de-sac",
     checkpointId: "boss-runway-checkpoint",
-    hydrant: { id: "brutus-hydrant", x: 5810, y: 400, w: 42, h: 68 },
-    recoveryX: 6200,
+    hydrant: { id: "brutus-hydrant", x: 5868, y: 400, w: 42, h: 68, placementType: "ON_SURFACE", surfaceId: "cul-de-sac" },
+    recoveryX: 6250,
     defeatExitX: 6740,
     sprinklers: [
-      { id: "brutus-sprinkler-left", side: "left", x: 6000, y: 444, w: 34, h: 24 },
-      { id: "brutus-sprinkler-right", side: "right", x: 6320, y: 444, w: 34, h: 24 },
+      { id: "brutus-sprinkler-left", side: "left", x: 6070, y: 444, w: 34, h: 24, placementType: "ON_SURFACE", surfaceId: "cul-de-sac" },
+      { id: "brutus-sprinkler-right", side: "right", x: 6280, y: 444, w: 34, h: 24, placementType: "ON_SURFACE", surfaceId: "cul-de-sac" },
     ],
     postBossStartX: 6550,
   },
