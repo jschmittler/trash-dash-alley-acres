@@ -1,16 +1,19 @@
-const entry = (row, frames, fps, loop, drawWidth = 166, drawHeight = 166) => ({
-  row, frames, fps, loop, drawWidth, drawHeight,
+// Every source frame is a 256px square cell. Keep one uniform transform for
+// the whole boss family so state changes cannot squeeze the visible pose or
+// shift its bottom anchor.
+const entry = (row, frames, fps, loop, drawSize = 166) => ({
+  row, frames, fps, loop, drawWidth: drawSize, drawHeight: drawSize,
 });
 
 export const BOSS_ANIMATIONS = {
-  idle: entry(0, 4, 3, true, 158, 158),
+  idle: entry(0, 4, 3, true),
   walk: entry(1, 6, 8, true),
-  windup: entry(2, 3, 6, false, 172, 158),
-  charge: entry(3, 4, 8, false, 184, 152),
-  recover: entry(4, 3, 7, false, 176, 158),
-  hit: entry(5, 4, 8, false, 174, 166),
-  rage: entry(6, 4, 6, false, 180, 170),
-  defeat: entry(7, 6, 7, false, 184, 160),
+  windup: entry(2, 3, 6, false),
+  charge: entry(3, 4, 8, false),
+  recover: entry(4, 3, 7, false),
+  hit: entry(5, 4, 8, false),
+  rage: entry(6, 4, 6, false),
+  defeat: entry(7, 6, 7, false),
 };
 
 export const BOSS_SEQUENCE_DURATIONS = {

@@ -2618,8 +2618,8 @@ export function TrashDashGame() {
         const varietyKind = enemy.kind as keyof typeof varietyEnemyMotion;
         const varietyFrames = varietyEnemyMotion[varietyKind];
         if (varietyFrames && !(world.levelId === "level-2" && levelTwoEnemyKinds.has(enemy.kind))) {
-          const [drawW, drawH] = varietyEnemyDrawSizes[varietyKind];
-          drawEnemy(varietyFrames[frameIndex], drawW, drawH, 1, varietyEnemyMotionRef.current);
+          const [, drawSize] = varietyEnemyDrawSizes[varietyKind];
+          drawEnemy(varietyFrames[frameIndex], drawSize, drawSize, 1, varietyEnemyMotionRef.current);
         }
         if (world.levelId === "level-2" && levelTwoEnemyKinds.has(enemy.kind)) {
           const animation = levelTwoEnemyAnimation(enemy.kind, enemy.visualState ?? enemy.behaviorState);
@@ -2631,19 +2631,19 @@ export function TrashDashGame() {
               MOTION_CELL,
               MOTION_CELL,
             ] as Frame;
-            const drawSizes: Record<"squirrel" | "terrier" | "skunk" | "moth", [number, number]> = {
-              squirrel: [78, 76], terrier: [94, 82], skunk: [90, 78], moth: [84, 82],
+            const drawSizes: Record<"squirrel" | "terrier" | "skunk" | "moth", number> = {
+              squirrel: 76, terrier: 82, skunk: 78, moth: 82,
             };
-            const [drawW, drawH] = drawSizes[enemy.kind as keyof typeof drawSizes];
+            const drawSize = drawSizes[enemy.kind as keyof typeof drawSizes];
             const drawY = enemy.kind === "moth"
-              ? enemy.y + enemy.h / 2 - drawH / 2
-              : enemy.y + enemy.h - drawH + drawH * (16 / MOTION_CELL);
+              ? enemy.y + enemy.h / 2 - drawSize / 2
+              : enemy.y + enemy.h - drawSize + drawSize * (16 / MOTION_CELL);
             drawSprite(
               stateFrameRect,
-              x + enemy.w / 2 - drawW / 2,
+              x + enemy.w / 2 - drawSize / 2,
               drawY,
-              drawW,
-              drawH,
+              drawSize,
+              drawSize,
               flip,
               1,
               levelTwoEnemyMotionRef.current,

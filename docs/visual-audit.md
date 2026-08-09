@@ -459,12 +459,23 @@ Verification:
 
 ### VIS-006: Enemy and boss animation axis distortion (Task 4)
 
-- Observed source/runtime evidence: 192×192 Level 1/Level 2 alpha crops and
-  256×256 Trash Heap Tyrant crops reproduce the exact allowlisted enemy and
-  boss states against their current draw destinations.
-- Root cause: runtime family draw dimensions are not uniform for those frames.
-- Owner: Task 4 enemy/boss renderer pass. The Brutus 256×192 → 220×165 path
-  is uniform and is not on this issue's allowlist.
+- **Closed 2026-08-09 (Task 4):** the RED contract measured 86 allowlisted
+  Level 1/Level 2 enemy and Trash Heap Tyrant frame mappings with unequal
+  source-cell/destination axes. The source atlases were complete, inset, and
+  frame-bounded, so a rebuild was not justified.
+- Root cause: `drawEnemy`/boss dispatch independently forced width and height.
+  Snake, spider, and fox now use 64²/64²/72² transforms; squirrel, terrier,
+  skunk, and moth use 76²/82²/78²/82² transforms; every Trash Heap Tyrant
+  state uses one 166² transform. Ground actors retain their bottom anchor and
+  moth retains its authored center anchor. The complete frame-level visual
+  integrity matrix is green and `MEASURED_RUNTIME_DISTORTION_FRAMES` has no
+  VIS-006 entry.
+- Brutus remains 256×192 → 220×165 (a uniform 0.859375 scale) with its
+  frame-audited visible-top weak-point geometry and collision mapping intact.
+- Browser route/state input automation is unavailable in this Task 4 session;
+  the required squirrel/terrier/skunk/moth/interactions and both boss
+  sequences are **CANNOT VERIFY** at runtime. Automated state/atlas/geometry
+  coverage is not a substitute for that route evidence.
 
 ### VIS-007: Prop and pickup residual axis distortion (separate prop/runtime pass)
 

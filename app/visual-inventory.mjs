@@ -165,8 +165,8 @@ const playerRecords = Object.values(PLAYABLE_CHARACTERS).map((profile) => {
 });
 
 const levelOneDraw = Object.freeze({
-  snake: [74, 64], pigeon: [66, 66], wasp: [66, 66], mosquito: [64, 64],
-  possum: [78, 78], spider: [70, 64], fox: [82, 72],
+  snake: [64, 64], pigeon: [66, 66], wasp: [66, 66], mosquito: [64, 64],
+  possum: [78, 78], spider: [64, 64], fox: [72, 72],
 });
 const levelOneCollision = Object.freeze({
   snake: [58, 28], pigeon: [46, 38], wasp: [48, 32], mosquito: [46, 30],
@@ -211,10 +211,10 @@ const BASE_LEVEL_TWO_ENEMY_ANIMATIONS = Object.freeze({
 // The committed renderer's drawSizes table. Keep this base-runtime geometry
 // here rather than importing an optional later render-metrics export.
 const LEVEL_TWO_ENEMY_DRAW_GEOMETRY = Object.freeze({
-  squirrel: Object.freeze({ w: 78, h: 76 }),
-  terrier: Object.freeze({ w: 94, h: 82 }),
-  skunk: Object.freeze({ w: 90, h: 78 }),
-  moth: Object.freeze({ w: 84, h: 82 }),
+  squirrel: Object.freeze({ w: 76, h: 76 }),
+  terrier: Object.freeze({ w: 82, h: 82 }),
+  skunk: Object.freeze({ w: 78, h: 78 }),
+  moth: Object.freeze({ w: 82, h: 82 }),
 });
 const levelTwoEnemyRecords = LEVEL_TWO_ENEMY_KINDS.map((kind) => {
   const { w: drawW, h: drawH } = LEVEL_TWO_ENEMY_DRAW_GEOMETRY[kind];
@@ -239,7 +239,7 @@ const bossRecords = [
   makeRecord({
     id: "trash-heap-tyrant", category: "boss", levelIds: ["level-1"],
     assetSource: "assets/generated/boss-motion.png", nativeSize: { w: 1536, h: 2048, cellW: 256, cellH: 256, rows: 8, columns: 6 },
-    renderedSize: { maximum: [184, 170] }, origin: "destination center-bottom",
+    renderedSize: { maximum: [166, 166] }, origin: "destination center-bottom",
     sourceRects: animationSourceRects(BOSS_ANIMATIONS, 256, 256),
     runtimeDestinations: animationDestinations(BOSS_ANIMATIONS, { w: 166, h: 166 }),
     facing: "right-authored; centered horizontal flip", animations: BOSS_ANIMATIONS,
@@ -487,12 +487,6 @@ const distortionCells = ({ id, state, row, frames, destination, issue, cellW = 1
     issue,
   ))
 );
-const actorDistortions = (id, specs, issue, cellW = 192, cellH = 192) => (
-  specs.flatMap(([state, row, frames, w, h, startFrame = 0]) => distortionCells({
-    id, state, row, frames, destination: { w, h }, issue, cellW, cellH, startFrame,
-  }))
-);
-
 export const MEASURED_RUNTIME_DISTORTION_FRAMES = Object.freeze([
   distortionFrame("tires", "idle", 0, rect(528, 373, 224, 115), { w: 112, h: 58 }, "VIS-007"),
   distortionFrame("cap", "idle", 0, rect(385, 615, 58, 48), { w: 50, h: 42 }, "VIS-007"),
@@ -502,14 +496,6 @@ export const MEASURED_RUNTIME_DISTORTION_FRAMES = Object.freeze([
   distortionFrame("hydrant-body", "idle", 0, rect(128, 384, 128, 128), { w: 72, h: 108 }, "VIS-007"),
   distortionFrame("brutus-platform-left", "idle", 0, rect(128, 128, 128, 128), { w: 104, h: 96 }, "VIS-007"),
   distortionFrame("brutus-platform-right", "idle", 0, rect(256, 128, 128, 128), { w: 104, h: 96 }, "VIS-007"),
-  ...actorDistortions("snake", [["move", 4, 4, 74, 64]], "VIS-006"),
-  ...actorDistortions("spider", [["move", 5, 4, 70, 64]], "VIS-006"),
-  ...actorDistortions("fox", [["move", 8, 4, 82, 72]], "VIS-006"),
-  ...actorDistortions("squirrel", [["locomotion", 0, 4, 78, 76], ["telegraph", 1, 4, 78, 76], ["attack", 2, 4, 78, 76], ["hit", 3, 2, 78, 76], ["defeat", 4, 2, 78, 76]], "VIS-006"),
-  ...actorDistortions("terrier", [["locomotion", 5, 4, 94, 82], ["sleep", 6, 1, 94, 82], ["telegraph", 6, 4, 94, 82], ["attack", 7, 4, 94, 82], ["hit", 8, 2, 94, 82], ["stunned", 8, 2, 94, 82], ["recover", 8, 1, 94, 82, 1], ["defeat", 9, 2, 94, 82]], "VIS-006"),
-  ...actorDistortions("skunk", [["locomotion", 10, 4, 90, 78], ["telegraph", 11, 4, 90, 78], ["attack", 12, 4, 90, 78], ["hit", 13, 2, 90, 78], ["defeat", 14, 2, 90, 78]], "VIS-006"),
-  ...actorDistortions("moth", [["locomotion", 15, 4, 84, 82], ["telegraph", 16, 4, 84, 82], ["attack", 17, 4, 84, 82], ["hit", 18, 2, 84, 82], ["defeat", 19, 2, 84, 82]], "VIS-006"),
-  ...actorDistortions("trash-heap-tyrant", [["windup", 2, 3, 172, 158], ["charge", 3, 4, 184, 152], ["recover", 4, 3, 176, 158], ["hit", 5, 4, 174, 166], ["rage", 6, 4, 180, 170], ["defeat", 7, 6, 184, 160]], "VIS-006", 256, 256),
 ]);
 
 const immutableRoute = (route) => Object.freeze({ ...route });
