@@ -228,7 +228,12 @@ const bossRecords = [
     runtimeDestinations: animationDestinations(BOSS_ANIMATIONS, { w: 166, h: 166 }),
     facing: "right-authored; centered horizontal flip", animations: BOSS_ANIMATIONS,
     requiredStates: ["idle", "walk", "windup", "charge", "recover", "hit", "rage", "defeat"],
-  }, grounded(166, 166, 96, 96, 64, 16)),
+  }, {
+    ...grounded(166, 166, 96, 96),
+    // Physical placement is the rendered sprite; the authored arena reserve
+    // remains a composition concern rather than invisible collision geometry.
+    compositionPadding: { left: 64, right: 64, top: 16, bottom: 0 },
+  }),
   makeRecord({
     id: "brutus-bin-hound", category: "boss", levelIds: ["level-2"],
     assetSource: "assets/generated/brutus-motion.png", nativeSize: { w: 1024, h: 2112, cellW: 256, cellH: 192, rows: 11, columns: 4 },

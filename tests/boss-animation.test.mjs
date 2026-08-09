@@ -17,6 +17,7 @@ import {
   IMPLEMENTED_VISUAL_INVENTORY,
   MEASURED_RUNTIME_DISTORTION_FRAMES,
 } from "../app/visual-inventory.mjs";
+import { expandedCompositionFootprint } from "../app/visual-contract.mjs";
 import {
   LEVEL_ONE_ENEMY_ANIMATIONS,
   levelOneEnemyAnimationFrame,
@@ -131,7 +132,7 @@ test("Level 1 enemy rendering uses declared local animation FPS rather than phas
   assert.match(runtime, /enemy\.stateElapsed \+= dt/);
 });
 
-test("Trash Heap Tyrant visual bounds equal its maximum actual destination", () => {
+test("Trash Heap Tyrant physical footprint equals its destination while composition retains arena reserve", () => {
   const tyrant = IMPLEMENTED_VISUAL_INVENTORY.find(({ id }) => id === "trash-heap-tyrant");
   assert.ok(tyrant);
   const destinations = Object.values(tyrant.runtimeDestinations).flat();
@@ -140,4 +141,9 @@ test("Trash Heap Tyrant visual bounds equal its maximum actual destination", () 
     h: Math.max(...destinations.map(({ h }) => h)),
   };
   assert.deepEqual({ w: tyrant.contract.visualBounds.w, h: tyrant.contract.visualBounds.h }, maximum);
+  assert.deepEqual(tyrant.contract.placementFootprint, tyrant.contract.visualBounds);
+  assert.deepEqual({ w: tyrant.contract.collisionBounds.w, h: tyrant.contract.collisionBounds.h }, { w: 96, h: 96 });
+  assert.deepEqual(expandedCompositionFootprint(tyrant.contract), {
+    x: -147, y: -182, w: 294, h: 182,
+  });
 });
