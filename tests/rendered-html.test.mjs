@@ -100,7 +100,7 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /assets\/generated\/metal-platform-strip\.png/);
   assert.match(game, /ground-seamless\.png/);
   assert.match(game, /drawPlatformStrip/);
-  assert.match(game, /const frameIndex = Math\.floor\(enemy\.phase\) % 4/);
+  assert.match(game, /levelOneEnemyAnimationFrame\(enemy\.kind, "move", enemy\.stateElapsed, enemy\.animationOffset\)/);
   assert.match(game, /nextEnemyIntent/);
   assert.match(game, /animationState: keyof typeof BOSS_ANIMATIONS/);
   assert.match(game, /const flip = enemy\.facing < 0/);
