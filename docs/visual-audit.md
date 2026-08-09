@@ -420,6 +420,19 @@ Verification:
   hurt, shrink, or respawn, then commit the selected profile's `small_defeat`
   for its four-frame local duration before changing to game over. Pure state
   tests cover both terminal and non-terminal outcomes.
+- Round-2 glide identity repair: replaced only Jimothy's `large_glide` source
+  with a freshly generated, chroma-removed four-frame row using the Jimothy
+  key as identity authority and the existing glider strip only for canopy
+  mechanics. Native and generated-row review shows the unclothed gray,
+  rounded, bob-tail rider in all four cells. Narrow pixel guards reject
+  saturated orange/blue outfit contamination in the rider core and constrain
+  the four coherent compact glide silhouettes; generic atlas checks retain
+  population, inset, and shared-baseline coverage.
+- Round-2 pit lifecycle repair: the live fall threshold, pit result, and end
+  timer now use shared pure transitions. Integration coverage proves terminal
+  Jimothy loss selects `small_defeat` for `4 / 6` seconds through its clamped
+  final frame before gameover; a non-terminal crossing respawns with no defeat
+  sequence and preserves the checkpoint.
 - Automated verification: the shared reachable-state contract covers all small
   and large states, atlas bounds, one-shot clamping, maximum envelopes, and
   both-facing anchors. The focused player plus visual-contract/asset/inventory

@@ -1,6 +1,7 @@
 export const POSSUM_CHASE_RADIUS = 250;
 export const POSSUM_FACING_DEAD_ZONE = 18;
 export const PLAYER_HURT_DURATION = 0.48;
+export const PIT_FALL_DEPTH = 120;
 
 const facingFromVelocity = (vx, fallback) => (
   Math.abs(vx) >= 1 ? (vx < 0 ? -1 : 1) : fallback
@@ -72,4 +73,38 @@ export function presentPitDefeat({ pit, defeatAnimation }) {
     animationName: "small_defeat",
     duration: defeatAnimation.frames / defeatAnimation.fps,
   };
+}
+
+export function beginPitFallTransition({ playerY, viewportHeight, lives, pit = resolvePitFall(lives), defeatAnimation }) {
+  if (playerY <= viewportHeight + PIT_FALL_DEPTH) return null;
+
+  const presentation = presentPitDefeat({ pit, defeatAnimation });
+  const terminal = presentation.outcome === "gameover";
+  return {
+    ...presentation,
+    respawn: !terminal,
+    checkpoint: "preserve",
+    player: {
+      large: false,
+      hurtTimer: 0,
+      pendingDamage: null,
+      attackTimer: 0,
+      glider: 0,
+      shrinkTimer: 0,
+      endSequence: terminal ? "gameover" : null,
+      endTimer: presentation.duration,
+      animationName: presentation.animationName,
+      animationElapsed: 0,
+      vx: 0,
+      vy: 0,
+      grounded: true,
+    },
+  };
+}
+
+export function advanceEndSequence({ sequence, timer, dt }) {
+  if (!sequence) return { sequence: null, timer: 0, completedScreen: null };
+  const nextTimer = Math.max(0, timer - dt);
+  if (nextTimer > 0) return { sequence, timer: nextTimer, completedScreen: null };
+  return { sequence: null, timer: 0, completedScreen: sequence };
 }

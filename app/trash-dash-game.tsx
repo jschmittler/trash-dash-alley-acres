@@ -17,10 +17,11 @@ import {
 } from "./music-controller.mjs";
 import { createEnemyPatrol } from "./enemy-surface.mjs";
 import {
+  advanceEndSequence,
   advanceHurtTimer,
+  beginPitFallTransition,
   beginPlayerHurt,
   nextEnemyIntent,
-  presentPitDefeat,
   resolvePitFall,
 } from "./gameplay-animation-state.mjs";
 import {
@@ -1421,34 +1422,20 @@ export function TrashDashGame() {
       return outcome;
     };
 
-    const handlePitFall = (world: World) => {
+    const handlePitFall = (world: World, pit: ReturnType<typeof beginPitFallTransition>) => {
+      if (!pit) return;
       const player = world.player;
-      const profile = getPlayableCharacter(world.selectedCharacterId);
-      const pit = presentPitDefeat({
-        pit: resolvePitFall(world.lives),
-        defeatAnimation: profile.animations.small_defeat,
-      });
       world.lives = pit.lives;
-      transformPlayer(player, false);
-      player.hurtTimer = 0;
-      player.pendingDamage = null;
-      player.attackTimer = 0;
-      player.glider = 0;
-      player.shrinkTimer = 0;
+      transformPlayer(player, pit.player.large);
+      Object.assign(player, pit.player);
       burst(world, player.x + player.w / 2, HEIGHT - 8, "#f6d477", 11);
       tone(100, 0.2, "sawtooth");
 
-      if (pit.outcome === "respawn") respawn(world);
+      if (pit.respawn) respawn(world);
       else {
         // Pit loss is immediate (one paw, no hurt/shrink/respawn), but its
         // locally committed animation must play before changing screens.
-        player.endSequence = "gameover";
-        player.endTimer = pit.duration;
-        player.animationName = pit.animationName;
-        player.animationElapsed = 0;
-        player.vx = 0;
-        player.vy = 0;
-        player.grounded = true;
+        player.endSequence = pit.player.endSequence;
       }
     };
 
@@ -1730,11 +1717,11 @@ export function TrashDashGame() {
       world.messageTimer = Math.max(0, world.messageTimer - dt);
 
       if (player.endSequence) {
-        player.endTimer = Math.max(0, player.endTimer - dt);
-        if (player.endTimer <= 0) {
-          const completedScreen = player.endSequence;
-          player.endSequence = null;
-          changeScreen(completedScreen);
+        const endStep = advanceEndSequence({ sequence: player.endSequence, timer: player.endTimer, dt });
+        player.endSequence = endStep.sequence;
+        player.endTimer = endStep.timer;
+        if (endStep.completedScreen) {
+          changeScreen(endStep.completedScreen);
           pressedRef.current.clear();
           return;
         }
@@ -1823,8 +1810,15 @@ export function TrashDashGame() {
         player.airtime = 0;
       }
 
-      if (player.y > HEIGHT + 120) {
-        handlePitFall(world);
+      const pitFall = beginPitFallTransition({
+        playerY: player.y,
+        viewportHeight: HEIGHT,
+        lives: world.lives,
+        pit: resolvePitFall(world.lives),
+        defeatAnimation: getPlayableCharacter(world.selectedCharacterId).animations.small_defeat,
+      });
+      if (pitFall) {
+        handlePitFall(world, pitFall);
         pressedRef.current.clear();
         return;
       }

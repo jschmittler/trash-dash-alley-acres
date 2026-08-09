@@ -22,6 +22,10 @@ both-facing runtime sequences remain `CANNOT VERIFY`.
   semantic-source manifest, and pit-presentation regressions could not import
   a terminal `small_defeat` sequence. Review also proved the old builder routed
   named land/defeat/victory and `large_glide` through incompatible legacy rows.
+- Round-2 RED: rereview native inspection rejected the first glide rebuild as
+  a dressed, long-ringed-tail substitute rather than Jimothy. The new
+  threshold-to-end-sequence integration regression also failed to import the
+  shared pit/end lifecycle helpers before extraction.
 
 ## GREEN implementation and measurements
 
@@ -49,14 +53,26 @@ both-facing runtime sequences remain `CANNOT VERIFY`.
   Jimothy motion/contact/private atlas: `cd5712057…`, `4589a51e…`, and
   `64d707831…` respectively (Jimothy's three identical atlas copies share the
   final hash).
+- Round-2 replaced only `jimothy-large-glide-source.png` with a targeted
+  built-in image generation using Jimothy's character key as the identity
+  authority and the shipped canopy only as a pose/mechanics reference. Native
+  inspection of all four alpha frames and row 19 confirms the unclothed gray,
+  squat, bob-tail Jimothy rider; no second iteration was required.
+- Round-2 extracted shared threshold and end-sequence transitions used by the
+  runtime. The integration test follows actual threshold → one-paw pit result
+  → selected profile `small_defeat` → local `4 / 6` duration → clamped final
+  frame → delayed gameover, and separately proves non-terminal respawn without
+  queuing defeat or changing checkpoint state.
+- Round-2 repeat-build SHA-256 values matched for the Jimothy private atlas,
+  runtime motion atlas, and contact sheet: `844bf1805100ab41bb105e8f6cf25fa05d65868a9ffe6e2d76f53f90f70d9000`.
 
 ## Verification
 
 - RED matrix: `node --test tests/player-animation.test.mjs tests/player-hero-atlas.test.mjs tests/jimothy-player-atlas.test.mjs tests/character-gameplay.test.mjs` — 3 failures (missing shared atlas export and two baseline violations).
-- GREEN focused player, pit-state, and Task 2 visual-contract matrix — 51 passed, 0 failed.
+- GREEN focused player, pit-state, and Task 2 visual-contract matrix — 57 passed, 0 failed.
 - `npm run validate:skills` — passed.
 - `npm run lint` — 0 errors; one pre-existing Next `<img>` performance warning.
-- `npm test` — 253 passed, 0 failed; production build completed.
+- `npm test` — 256 passed, 0 failed; production build completed.
 - Static contact-sheet QA: inspected both regenerated sheets at native size;
   complete silhouettes stay inset and share the baseline. Both-facing behavior
   is covered by the destination-center flip contract and regression.
@@ -82,6 +98,8 @@ both-facing runtime sequences remain `CANNOT VERIFY`.
 | Keyboard-driven actions and repeated both-facing runtime sequences | CANNOT VERIFY — keyboard action automation unavailable |
 | Jimothy source-state contact-sheet repair | PASS — authored land/defeat/victory/glide rows are distinct, alpha-clean, baseline-normalized, and visually inspected |
 | Terminal pit-defeat state/timer | PASS — pure transition tests prove a four-frame `small_defeat` before gameover while preserving one-paw instant death |
+| Jimothy large-glide identity | PASS — native source and rebuilt row-19 inspection; gray bob-tail rider and no orange/blue outfit contamination in guarded rider cores |
+| Pit threshold through delayed gameover | PASS — shared runtime lifecycle integration test covers terminal/non-terminal branches and final-frame clamp |
 
 `docs/visual-audit.md` narrows VIS-005 accordingly and retains the complete
 runtime route/state matrix for a browser-equipped follow-up.

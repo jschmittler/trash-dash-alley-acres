@@ -86,3 +86,61 @@ test("Jimothy reachable state rows own compatible authored source strips", async
     "glide must never map to the jump source row",
   );
 });
+
+test("Jimothy glide keeps the gray bob-tail rider free of Trashy outfit colors", async () => {
+  const glidePath = fileURLToPath(new URL("../concepts/jimothy/source/jimothy-large-glide-source.png", import.meta.url));
+  const { data, info } = await sharp(glidePath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const riderBounds = [];
+
+  for (let frame = 0; frame < 4; frame += 1) {
+    const left = Math.floor((frame * info.width) / 4);
+    const right = Math.floor(((frame + 1) * info.width) / 4);
+    let minX = right;
+    let minY = info.height;
+    let maxX = -1;
+    let maxY = -1;
+    let orangeOutfitPixels = 0;
+    let blueOutfitPixels = 0;
+
+    for (let y = Math.floor(info.height * 0.48); y < info.height; y += 1) {
+      for (let x = left; x < right; x += 1) {
+        const pixel = (y * info.width + x) * 4;
+        if (data[pixel + 3] < 220) continue;
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+
+        // The compact belly/leg region excludes canopy and rigging; saturated
+        // orange or blue here would be a Trashy-style outfit substitution.
+        if (
+          y >= Math.floor(info.height * 0.62)
+          && y < Math.floor(info.height * 0.8)
+          && x >= left + Math.floor((right - left) * 0.32)
+          && x < left + Math.floor((right - left) * 0.68)
+        ) {
+          const red = data[pixel];
+          const green = data[pixel + 1];
+          const blue = data[pixel + 2];
+          if (red > 130 && red > green * 1.35 && red > blue * 1.65) orangeOutfitPixels += 1;
+          if (blue > 110 && blue > red * 1.35 && blue > green * 1.15) blueOutfitPixels += 1;
+        }
+      }
+    }
+
+    assert.ok(maxX >= minX && maxY >= minY, `large_glide:${frame} rider is empty`);
+    assert.ok(orangeOutfitPixels <= 4, `large_glide:${frame} has orange outfit contamination`);
+    assert.equal(blueOutfitPixels, 0, `large_glide:${frame} has blue outfit contamination`);
+    riderBounds.push({
+      width: maxX - minX + 1,
+      height: maxY - minY + 1,
+    });
+  }
+
+  // Jimothy's source silhouette is compact and rounded; the gliding pose may
+  // extend horizontally, but all four frames must retain one coherent body.
+  for (const bounds of riderBounds) {
+    assert.ok(bounds.width / bounds.height > 1.85 && bounds.width / bounds.height < 2.2);
+    assert.ok(bounds.height >= 150 && bounds.height <= 165);
+  }
+});
