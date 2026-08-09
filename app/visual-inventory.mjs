@@ -273,18 +273,55 @@ const backgroundRecords = [LEVEL_ONE, LEVEL_TWO].flatMap((level) => level.backgr
   }))
 )));
 
-const surfaceRecords = [LEVEL_ONE, LEVEL_TWO].flatMap((level) => level.surfaces.map((surface) => makeRecord({
+const surfaceRecords = [LEVEL_ONE, LEVEL_TWO].flatMap((level) => level.surfaces
+  .filter((surface) => !surface.visual)
+  .map((surface) => makeRecord({
   id: `${level.id}-${surface.id}`,
   entityId: surface.id,
   category: surface.kind === "ground" ? "terrain" : "platform",
-  levelIds: [level.id], assetSource: surface.visual ? LEVEL_TWO_PROP_ASSET : surface.kind === "ground" ? "assets/ground-seamless.png" : surface.kind === "box" ? "assets/generated/decorative-atlas.png" : `assets/generated/${surface.kind}-platform-strip.png`,
-  nativeSize: surface.visual ? { cellW: 128, cellH: 128 } : null, renderedSize: { w: surface.w, h: surface.h },
+  levelIds: [level.id], assetSource: surface.kind === "ground" ? "assets/ground-seamless.png" : surface.kind === "box" ? "assets/generated/decorative-atlas.png" : `assets/generated/${surface.kind}-platform-strip.png`,
+  nativeSize: null, renderedSize: { w: surface.w, h: surface.h },
   origin: "world rectangle top-left", facing: "not applicable", animations: null, requiredStates: [],
 }, {
   visualBounds: rect(0, 0, surface.w, surface.h), collisionBounds: rect(0, 0, surface.w, surface.h), placementFootprint: rect(0, 0, surface.w, surface.h),
   groundAnchor: { x: 0, y: 0 }, renderLayer: "TERRAIN", allowedZones: ["authored-world-geometry"], forbiddenZones: [],
   minimumClearance: clearance(0), scalePolicy: { kind: SCALE_POLICIES.NINE_SLICE_OR_TILE, min: 1, max: 1, preserveAspectRatio: true },
 })));
+
+// These are atlas sprites, despite also supplying collision surfaces. Their
+// renderer uses a distinct fixed 104×96 destination, so they cannot inherit
+// the tiled-surface exemption used by ordinary authored platforms.
+const levelTwoVisualPlatformRecords = LEVEL_TWO.surfaces
+  .filter((surface) => surface.visual)
+  .map((surface) => {
+    const [x, y, w, h] = LEVEL_TWO_PROP_FRAMES[surface.visual].frames[0];
+    return makeRecord({
+      id: surface.id,
+      category: "platform",
+      levelIds: ["level-2"],
+      assetSource: LEVEL_TWO_PROP_ASSET,
+      nativeSize: { cellW: 128, cellH: 128 },
+      renderedSize: { w: 104, h: 96 },
+      sourceRects: { idle: [rect(x, y, w, h)] },
+      runtimeDestinations: { idle: [{ w: 104, h: 96 }] },
+      origin: "levelTwoPlatformDrawRect bottom-aligned to authored surface",
+      facing: "not applicable",
+      animations: { idle: { row: y / 128, frames: 1, fps: 0, loop: false } },
+      requiredStates: ["idle"],
+      runtimeOwner: "level-two-prop-render",
+    }, {
+      visualBounds: rect(-52, -84, 104, 96),
+      collisionBounds: rect(-surface.w / 2, -surface.h, surface.w, surface.h),
+      placementFootprint: rect(-52, -84, 104, 96),
+      groundAnchor: { x: 0, y: 0 },
+      renderLayer: "TERRAIN",
+      allowedZones: ["authored-world-geometry"],
+      forbiddenZones: [],
+      minimumClearance: clearance(0),
+      scalePolicy: canonicalScale(1, 1),
+      anchorPolicy: FREE_ANCHOR,
+    });
+  });
 
 const decorativeRecords = Object.entries(DECORATIVE_PROPS).map(([id, meta]) => makeRecord({
   id, category: id === "checkpoint" ? "interactive-prop" : "decorative-prop", levelIds: ["level-1", "level-2"],
@@ -304,15 +341,18 @@ const decorativeRecords = Object.entries(DECORATIVE_PROPS).map(([id, meta]) => m
   allowedZones: ["walkable-surface"], forbiddenZones: ["platform-interior", "hazard", "pickup-clearance", "enemy-footprint"], minimumClearance: clearance(6),
 }));
 
-const legacyPropRecord = ({ id, category, sourceRect, renderedSize, renderLayer, effectOrigin = null, runtimeOwner = null }) => makeRecord({
+const legacyPropRecord = ({ id, category, sourceRects, renderedSize, runtimeDestinations = null, renderLayer, effectOrigin = null, runtimeOwner = null }) => makeRecord({
   id,
   category,
   levelIds: ["level-2"],
   assetSource: LEVEL_TWO_PROP_ASSET,
   nativeSize: { cellW: LEVEL_TWO_PROP_ATLAS.cell, cellH: LEVEL_TWO_PROP_ATLAS.cell },
-  sourceRects: { idle: sourceRect },
+  sourceRects,
   renderedSize,
-  runtimeDestinations: { idle: [{ ...renderedSize }] },
+  runtimeDestinations: runtimeDestinations ?? Object.fromEntries(Object.entries(sourceRects).map(([state, sources]) => [
+    state,
+    repeated(Array.isArray(sources) ? sources.length : 1, renderedSize),
+  ])),
   runtimeOwner,
   origin: effectOrigin ? "named emitter origin" : "source baseline to destination ground",
   facing: "mirrored around named attachment origin",
@@ -330,10 +370,12 @@ const legacyPropRecord = ({ id, category, sourceRect, renderedSize, renderLayer,
 // These are the committed four-row atlas records. Later prop-state work owns
 // its expanded manifest separately and must not become an implicit dependency.
 const propRecords = [
-  legacyPropRecord({ id: "charge-obstacle", category: "interactive-prop", sourceRect: rect(0, 128, 128, 128), renderedSize: { w: 84, h: 112 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
-  legacyPropRecord({ id: "sprinkler-body", category: "hazard", sourceRect: rect(0, 256, 128, 128), renderedSize: { w: 82, h: 82 }, renderLayer: "GAMEPLAY" }),
-  legacyPropRecord({ id: "sprinkler-water", category: "effect", sourceRect: rect(128, 256, 128, 128), renderedSize: { w: 120, h: 96 }, renderLayer: "GAMEPLAY_EFFECTS", effectOrigin: { x: 0, y: 0 }, runtimeOwner: "level-two-prop-render" }),
-  legacyPropRecord({ id: "hydrant-body", category: "interactive-prop", sourceRect: rect(128, 384, 128, 128), renderedSize: { w: 72, h: 108 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
+  legacyPropRecord({ id: "charge-obstacle", category: "interactive-prop", sourceRects: { idle: [rect(0, 128, 128, 128)] }, renderedSize: { w: 84, h: 112 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
+  legacyPropRecord({ id: "sprinkler-body", category: "hazard", sourceRects: { idle: [rect(0, 256, 128, 128)] }, renderedSize: { w: 82, h: 82 }, renderLayer: "GAMEPLAY" }),
+  // Committed runtime: exactly four spray cells at 120×96. Do not import the
+  // separately-owned expanded prop manifest, which is not part of this range.
+  legacyPropRecord({ id: "sprinkler-water", category: "effect", sourceRects: { spray: [rect(128, 256, 128, 128), rect(256, 256, 128, 128), rect(384, 256, 128, 128), rect(0, 384, 128, 128)] }, renderedSize: { w: 120, h: 96 }, renderLayer: "GAMEPLAY_EFFECTS", effectOrigin: { x: 0, y: 0 }, runtimeOwner: "level-two-prop-render" }),
+  legacyPropRecord({ id: "hydrant-body", category: "interactive-prop", sourceRects: { idle: [rect(128, 384, 128, 128)] }, renderedSize: { w: 72, h: 108 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
 ];
 
 const pickupRecords = [["trash", 46, 46], ["taco", 58, 58], ["cap", 50, 42]].map(([id, w, h]) => makeRecord({
@@ -387,7 +429,7 @@ const miscRecords = [
   makeRecord({ id: "ordinary-bin-lid", category: "projectile", levelIds: ["level-1", "level-2"], assetSource: LEVEL_TWO_PROP_ASSET, nativeSize: { cellW: 128, cellH: 128 }, renderedSize: { w: 34, h: 34 }, sourceRects: animationSourceRects({ active: LEVEL_TWO_PROP_FRAMES.acorn }, 128, 128), runtimeDestinations: { active: repeated(4, { w: 34, h: 34 }) }, origin: "center", facing: "velocity-controlled rotation", animations: { active: LEVEL_TWO_PROP_FRAMES.acorn }, requiredStates: ["active"] }, {
     visualBounds: rect(-17, -17, 34, 34), collisionBounds: rect(-8, -8, 16, 16), placementFootprint: rect(-22, -22, 44, 44), groundAnchor: { x: 0, y: 17 }, renderLayer: "GAMEPLAY_EFFECTS", allowedZones: ["authored-projectile-lane"], forbiddenZones: ["source-owner-footprint"], minimumClearance: clearance(0), scalePolicy: canonicalScale(1, 1),
   }),
-  makeRecord({ id: "bin-lid-source", category: "interactive-prop", levelIds: ["level-2"], assetSource: LEVEL_TWO_PROP_ASSET, nativeSize: { cellW: 128, cellH: 128 }, renderedSize: { w: 44, h: 44 }, sourceRects: { idle: [rect(0, 0, 128, 128)] }, runtimeDestinations: { idle: [{ w: 44, h: 44 }] }, origin: "center", facing: "not applicable", animations: null, requiredStates: [] }, {
+  makeRecord({ id: "bin-lid-source", category: "interactive-prop", levelIds: ["level-2"], assetSource: LEVEL_TWO_PROP_ASSET, nativeSize: { cellW: 128, cellH: 128 }, renderedSize: { w: 44, h: 44 }, sourceRects: animationSourceRects({ active: LEVEL_TWO_PROP_FRAMES.acorn }, 128, 128), runtimeDestinations: { active: repeated(4, { w: 44, h: 44 }) }, origin: "center", facing: "not applicable", animations: { active: LEVEL_TWO_PROP_FRAMES.acorn }, requiredStates: ["active"] }, {
     ...grounded(44, 44, 22, 22, 6), renderLayer: "GAMEPLAY", allowedZones: ["authored-world-geometry"], forbiddenZones: ["boss-platform-interior"], minimumClearance: clearance(0),
   }),
   makeRecord({ id: "brutus-rolling-can", category: "projectile", levelIds: ["level-2"], assetSource: LEVEL_TWO_PROP_ASSET, nativeSize: { cellW: 128, cellH: 128 }, renderedSize: { w: 42, h: 42 }, sourceRects: animationSourceRects({ active: LEVEL_TWO_PROP_FRAMES["rolling-can"] }, 128, 128), runtimeDestinations: { active: [{ w: 42, h: 42 }] }, origin: "center", facing: "velocity-controlled rotation", animations: { active: LEVEL_TWO_PROP_FRAMES["rolling-can"] }, requiredStates: ["active"] }, {
@@ -405,7 +447,7 @@ const miscRecords = [
 ];
 
 export const IMPLEMENTED_VISUAL_INVENTORY = Object.freeze([
-  ...backgroundRecords, ...surfaceRecords, ...decorativeRecords, ...propRecords, ...pickupRecords,
+  ...backgroundRecords, ...surfaceRecords, ...levelTwoVisualPlatformRecords, ...decorativeRecords, ...propRecords, ...pickupRecords,
   dumpsterRecord, ...miscRecords, ...playerRecords, ...levelOneEnemyRecords, ...levelTwoEnemyRecords, ...bossRecords,
 ]);
 
@@ -422,26 +464,60 @@ export const RUNTIME_DRAW_FAMILY_MANIFEST = Object.freeze([
   drawFamily("pickups", "drawSprite/trashPickupRows+tacoPowerMotion+sprites.cap", ["trash", "taco", "cap"]),
   drawFamily("victory-dumpster", "drawSprite/dumpsterFrame+dumpsterDrawRect", ["victory-dumpster"]),
   drawFamily("level-two-legacy-props", "drawSprite/levelTwoPropFrame", ["charge-obstacle", "sprinkler-body", "sprinkler-water", "hydrant-body"]),
+  drawFamily("level-two-visual-platforms", "drawSprite/levelTwoPlatformDrawRect", ["brutus-platform-left", "brutus-platform-right"]),
   drawFamily("bin-lid-source", "drawSprite/levelTwoPropFrame(acorn)", ["bin-lid-source"]),
   drawFamily("ordinary-bin-lid", "drawSprite/binLids", ["ordinary-bin-lid"]),
   drawFamily("brutus-rolling-can", "drawSprite/binLids", ["brutus-rolling-can"]),
   drawFamily("procedural-effects", "canvas fill/particle renderer", ["pit-and-drainage-gap", "impact-particles", "gameplay-hud"]),
 ]);
 
-// Exact measured alpha-crop → runtime-destination mismatches. Any new state
-// must be consciously routed to an owning visual repair before tests pass.
-export const MEASURED_RUNTIME_DISTORTION_STATES = Object.freeze([
-  "tires:idle", "cap:idle", "charge-obstacle:idle", "sprinkler-water:idle", "hydrant-body:idle",
-  "snake:move", "spider:move", "fox:move",
-  "raccoon:small_run", "raccoon:small_jump", "raccoon:small_fall", "raccoon:small_land", "raccoon:small_hurt", "raccoon:small_skid", "raccoon:small_defeat",
-  "raccoon:large_run", "raccoon:large_jump", "raccoon:large_fall", "raccoon:large_land", "raccoon:large_tail_swipe", "raccoon:large_hurt", "raccoon:large_shrink", "raccoon:large_skid", "raccoon:large_victory",
-  "jimothy:small_run", "jimothy:small_jump", "jimothy:small_fall", "jimothy:small_land", "jimothy:small_hurt", "jimothy:small_skid", "jimothy:small_defeat",
-  "jimothy:large_run", "jimothy:large_jump", "jimothy:large_fall", "jimothy:large_land", "jimothy:large_tail_swipe", "jimothy:large_hurt", "jimothy:large_shrink", "jimothy:large_skid", "jimothy:large_victory",
-  "squirrel:locomotion", "squirrel:telegraph", "squirrel:attack", "squirrel:hit", "squirrel:defeat",
-  "terrier:locomotion", "terrier:sleep", "terrier:telegraph", "terrier:attack", "terrier:hit", "terrier:stunned", "terrier:recover", "terrier:defeat",
-  "skunk:locomotion", "skunk:telegraph", "skunk:attack", "skunk:hit", "skunk:defeat",
-  "moth:locomotion", "moth:telegraph", "moth:attack", "moth:hit", "moth:defeat",
-  "trash-heap-tyrant:windup", "trash-heap-tyrant:charge", "trash-heap-tyrant:recover", "trash-heap-tyrant:hit", "trash-heap-tyrant:rage", "trash-heap-tyrant:defeat",
+// Exact measured alpha-crop → runtime-destination mismatches. The recipes are
+// literal committed geometry, deliberately independent of inventory output:
+// changing a crop, destination, or one animation frame must fail the audit.
+const distortionFrame = (id, state, frame, source, destination, issue) => Object.freeze({
+  id, state, frame, source: Object.freeze({ ...source }), destination: Object.freeze({ ...destination }), issue,
+});
+const distortionCells = ({ id, state, row, frames, destination, issue, cellW = 192, cellH = 192, startFrame = 0 }) => (
+  Array.from({ length: frames }, (_, frame) => distortionFrame(
+    id,
+    state,
+    frame,
+    rect((startFrame + frame) * cellW, row * cellH, cellW, cellH),
+    destination,
+    issue,
+  ))
+);
+const actorDistortions = (id, specs, issue, cellW = 192, cellH = 192) => (
+  specs.flatMap(([state, row, frames, w, h, startFrame = 0]) => distortionCells({
+    id, state, row, frames, destination: { w, h }, issue, cellW, cellH, startFrame,
+  }))
+);
+
+export const MEASURED_RUNTIME_DISTORTION_FRAMES = Object.freeze([
+  distortionFrame("tires", "idle", 0, rect(528, 373, 224, 115), { w: 112, h: 58 }, "VIS-007"),
+  distortionFrame("cap", "idle", 0, rect(385, 615, 58, 48), { w: 50, h: 42 }, "VIS-007"),
+  distortionFrame("charge-obstacle", "idle", 0, rect(0, 128, 128, 128), { w: 84, h: 112 }, "VIS-007"),
+  ...distortionCells({ id: "sprinkler-water", state: "spray", row: 2, frames: 3, destination: { w: 120, h: 96 }, issue: "VIS-007", cellW: 128, cellH: 128, startFrame: 1 }),
+  distortionFrame("sprinkler-water", "spray", 3, rect(0, 384, 128, 128), { w: 120, h: 96 }, "VIS-007"),
+  distortionFrame("hydrant-body", "idle", 0, rect(128, 384, 128, 128), { w: 72, h: 108 }, "VIS-007"),
+  distortionFrame("brutus-platform-left", "idle", 0, rect(128, 128, 128, 128), { w: 104, h: 96 }, "VIS-007"),
+  distortionFrame("brutus-platform-right", "idle", 0, rect(256, 128, 128, 128), { w: 104, h: 96 }, "VIS-007"),
+  ...actorDistortions("snake", [["move", 4, 4, 74, 64]], "VIS-006"),
+  ...actorDistortions("spider", [["move", 5, 4, 70, 64]], "VIS-006"),
+  ...actorDistortions("fox", [["move", 8, 4, 82, 72]], "VIS-006"),
+  ...actorDistortions("raccoon", [
+    ["small_run", 2, 6, 88, 84], ["small_jump", 3, 2, 86, 88], ["small_fall", 4, 2, 86, 88], ["small_land", 5, 2, 88, 82], ["small_hurt", 6, 3, 96, 84], ["small_skid", 7, 3, 90, 84], ["small_defeat", 8, 4, 96, 84],
+    ["large_run", 12, 6, 116, 110], ["large_jump", 13, 2, 112, 114], ["large_fall", 14, 2, 112, 114], ["large_land", 15, 2, 118, 104], ["large_tail_swipe", 16, 5, 142, 112], ["large_hurt", 17, 3, 126, 100], ["large_shrink", 18, 4, 120, 108], ["large_skid", 20, 3, 120, 108], ["large_victory", 21, 4, 116, 114],
+  ], "VIS-005"),
+  ...actorDistortions("jimothy", [
+    ["small_run", 2, 4, 88, 84], ["small_jump", 3, 4, 86, 88], ["small_fall", 4, 4, 86, 88], ["small_land", 5, 4, 88, 82], ["small_hurt", 6, 4, 96, 84], ["small_skid", 7, 4, 90, 84], ["small_defeat", 8, 4, 96, 84],
+    ["large_run", 12, 4, 116, 110], ["large_jump", 13, 4, 112, 114], ["large_fall", 14, 4, 112, 114], ["large_land", 15, 4, 118, 104], ["large_tail_swipe", 16, 4, 142, 112], ["large_hurt", 17, 4, 126, 100], ["large_shrink", 18, 4, 120, 108], ["large_skid", 20, 4, 120, 108], ["large_victory", 21, 4, 116, 114],
+  ], "VIS-005"),
+  ...actorDistortions("squirrel", [["locomotion", 0, 4, 78, 76], ["telegraph", 1, 4, 78, 76], ["attack", 2, 4, 78, 76], ["hit", 3, 2, 78, 76], ["defeat", 4, 2, 78, 76]], "VIS-006"),
+  ...actorDistortions("terrier", [["locomotion", 5, 4, 94, 82], ["sleep", 6, 1, 94, 82], ["telegraph", 6, 4, 94, 82], ["attack", 7, 4, 94, 82], ["hit", 8, 2, 94, 82], ["stunned", 8, 2, 94, 82], ["recover", 8, 1, 94, 82, 1], ["defeat", 9, 2, 94, 82]], "VIS-006"),
+  ...actorDistortions("skunk", [["locomotion", 10, 4, 90, 78], ["telegraph", 11, 4, 90, 78], ["attack", 12, 4, 90, 78], ["hit", 13, 2, 90, 78], ["defeat", 14, 2, 90, 78]], "VIS-006"),
+  ...actorDistortions("moth", [["locomotion", 15, 4, 84, 82], ["telegraph", 16, 4, 84, 82], ["attack", 17, 4, 84, 82], ["hit", 18, 2, 84, 82], ["defeat", 19, 2, 84, 82]], "VIS-006"),
+  ...actorDistortions("trash-heap-tyrant", [["windup", 2, 3, 172, 158], ["charge", 3, 4, 184, 152], ["recover", 4, 3, 176, 158], ["hit", 5, 4, 174, 166], ["rage", 6, 4, 180, 170], ["defeat", 7, 6, 184, 160]], "VIS-006", 256, 256),
 ]);
 
 const immutableRoute = (route) => Object.freeze({ ...route });

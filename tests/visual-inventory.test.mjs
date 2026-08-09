@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { LEVEL_TWO } from "../app/level-two.mjs";
 import {
   IMPLEMENTED_VISUAL_INVENTORY,
   RUNTIME_DRAW_FAMILY_MANIFEST,
@@ -62,7 +63,13 @@ test("inventory covers every implemented level, hero, enemy roster, boss and ren
 test("renderer draw-family manifest binds every named runtime path to canonical inventory records", () => {
   const ids = new Set(IMPLEMENTED_VISUAL_INVENTORY.map(({ id }) => id));
   const families = new Set(RUNTIME_DRAW_FAMILY_MANIFEST.map(({ id }) => id));
-  for (const id of ["victory-dumpster", "level-two-legacy-props", "ordinary-bin-lid", "brutus-rolling-can", "players", "bosses"]) {
+  const expectedFamilies = [
+    "decorative-props", "level-one-enemies", "level-two-enemies", "players", "bosses", "pickups",
+    "victory-dumpster", "level-two-legacy-props", "level-two-visual-platforms", "bin-lid-source",
+    "ordinary-bin-lid", "brutus-rolling-can", "procedural-effects",
+  ];
+  assert.deepEqual([...families].sort(), expectedFamilies.sort(), "renderer draw families are exhaustive");
+  for (const id of expectedFamilies) {
     assert.ok(families.has(id), id);
   }
   for (const family of RUNTIME_DRAW_FAMILY_MANIFEST) {
@@ -70,9 +77,47 @@ test("renderer draw-family manifest binds every named runtime path to canonical 
     assert.ok(family.recordIds.length > 0, `${family.id}: record coverage`);
     for (const recordId of family.recordIds) assert.ok(ids.has(recordId), `${family.id}:${recordId}`);
   }
+  const platformFamily = RUNTIME_DRAW_FAMILY_MANIFEST.find(({ id }) => id === "level-two-visual-platforms");
+  assert.deepEqual(
+    platformFamily.recordIds.slice().sort(),
+    LEVEL_TWO.surfaces.filter(({ visual }) => visual).map(({ id }) => id).sort(),
+    "every Level 2 surface.visual draw is bound to its own inventory record",
+  );
+  const boundRecordIds = new Set(RUNTIME_DRAW_FAMILY_MANIFEST.flatMap(({ recordIds }) => recordIds));
+  for (const { id, category, assetSource } of IMPLEMENTED_VISUAL_INVENTORY) {
+    if (assetSource && ["projectile", "effect"].includes(category)) assert.ok(boundRecordIds.has(id), `explicit ${category}: ${id}`);
+  }
   const dumpster = IMPLEMENTED_VISUAL_INVENTORY.find(({ id }) => id === "victory-dumpster");
   assert.deepEqual(Object.keys(dumpster.sourceRects), ["sealed", "holy"]);
   assert.deepEqual(dumpster.requiredStates, ["sealed", "holy"]);
+});
+
+test("animated prop consumers bind all committed source frames to runtime destinations", () => {
+  const record = (id) => IMPLEMENTED_VISUAL_INVENTORY.find((candidate) => candidate.id === id);
+  const binLid = record("bin-lid-source");
+  assert.deepEqual(binLid.sourceRects.active, [
+    { x: 0, y: 0, w: 128, h: 128 }, { x: 128, y: 0, w: 128, h: 128 },
+    { x: 256, y: 0, w: 128, h: 128 }, { x: 384, y: 0, w: 128, h: 128 },
+  ]);
+  assert.deepEqual(binLid.runtimeDestinations.active, Array.from({ length: 4 }, () => ({ w: 44, h: 44 })));
+  const sprinklerWater = record("sprinkler-water");
+  assert.deepEqual(sprinklerWater.sourceRects.spray, [
+    { x: 128, y: 256, w: 128, h: 128 }, { x: 256, y: 256, w: 128, h: 128 },
+    { x: 384, y: 256, w: 128, h: 128 }, { x: 0, y: 384, w: 128, h: 128 },
+  ]);
+  assert.deepEqual(sprinklerWater.runtimeDestinations.spray, Array.from({ length: 4 }, () => ({ w: 120, h: 96 })));
+});
+
+test("Level 2 visual platforms are fixed-aspect records with their source cells and runtime rectangles", () => {
+  const platforms = IMPLEMENTED_VISUAL_INVENTORY.filter(({ id }) => id === "brutus-platform-left" || id === "brutus-platform-right");
+  assert.equal(platforms.length, 2);
+  for (const platform of platforms) {
+    assert.equal(platform.contract.scalePolicy.kind, "CANONICAL_WORLD_SIZE", `${platform.id}: fixed aspect`);
+    assert.deepEqual(platform.runtimeDestinations, { idle: [{ w: 104, h: 96 }] }, `${platform.id}: runtime draw rect`);
+    assert.deepEqual(platform.sourceRects.idle[0], platform.id.endsWith("left")
+      ? { x: 128, y: 128, w: 128, h: 128 }
+      : { x: 256, y: 128, w: 128, h: 128 });
+  }
 });
 
 test("every implemented inventory record satisfies placement, scale, layer and animation contracts", () => {

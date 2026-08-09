@@ -367,6 +367,27 @@ Verification:
   bin-lid source, Brutus can, and procedural paths to inventory records.
   The ordinary lid is truthfully 34×34; the Brutus rolling can is 42×42.
 
+### 2026-08-09 — Frame-complete source-to-runtime follow-up
+
+- RED proved that `bin-lid-source` and `sprinkler-water` declared only one
+  crop/destination despite their committed four-frame renderer paths; it also
+  showed the generic tiled-surface exemption hiding the two Brutus platform
+  sprites. The renderer-family check was extended from a sampled list to an
+  exact family manifest, dynamically binding every `LEVEL_TWO.surfaces`
+  `visual` record and every asset-backed projectile/effect record.
+- GREEN records all four `acorn` source-bin-lid crops at 44×44, all four
+  committed `sprinkler-spray` crops at 120×96, and separate
+  `brutus-platform-left/right` source cells at their actual 104×96 runtime
+  destination. Source/destination mismatches are now compared as immutable
+  per-frame identities: record, state, frame index, source rectangle, and
+  destination rectangle. A new/vanished/distorted frame cannot pass under a
+  state-level allowlist.
+- The exact alpha measurements reproduce the four water-frame and two platform
+  non-uniform transforms. They are deliberately opened under VIS-007 rather
+  than normalized in metadata. No renderer code changed: its props/runtime
+  implementation is separate dirty work, so runtime browser QA is not claimed
+  for this contract-only update.
+
 ### VIS-005: Player animation axis distortion (Task 3)
 
 - Observed source/runtime evidence: measured alpha crops in the 192×192
@@ -376,7 +397,8 @@ Verification:
 - Root cause: per-state runtime draw widths/heights are not a uniform transform
   of all visible alpha frames.
 - Owner: Task 3 player renderer/animation pass. Task 2 records and detects the
-  exact state set but does not alter the shared dirty runtime renderer.
+  exact per-frame state/crop/destination set but does not alter the shared
+  dirty runtime renderer.
 
 ### VIS-006: Enemy and boss animation axis distortion (Task 4)
 
@@ -389,13 +411,15 @@ Verification:
 
 ### VIS-007: Prop and pickup residual axis distortion (separate prop/runtime pass)
 
-- Observed source/runtime evidence: charge obstacle 128²→84×112,
-  sprinkler water 128²→120×96, hydrant body 128²→72×108, tires' rounded
-  224×115→112×58 destination, and cap 58×48→50×42 destination are explicit
-  allowlisted mismatches.
+- Observed source/runtime evidence: charge obstacle 128²→84×112; all four
+  sprinkler-water cells 128²→120×96; hydrant body 128²→72×108; both Brutus
+  platform cells 128²→104×96; tires' rounded 224×115→112×58 destination; and
+  cap 58×48→50×42 destination are exact frame-allowlisted mismatches.
 - The Level 2 prop entries remain owned by the separate prop/runtime pass. Cap
   shares the dirty gameplay renderer; the tires deviation is a one-pixel
-  rounding decision. Neither runtime change is staged in Task 2.
+  rounding decision. Neither runtime change is staged in Task 2. The platform
+  and water records narrow the issue to their actual renderer draws rather
+  than obscuring them behind a tiled-surface exemption.
 
 ### 2026-08-09 — Post-normalization visual verification
 

@@ -10,7 +10,7 @@ import {
   DUMPSTER_DRAW_WIDTH,
   dumpsterDrawRect,
 } from "../app/dumpster-render.mjs";
-import { IMPLEMENTED_VISUAL_INVENTORY, MEASURED_RUNTIME_DISTORTION_STATES } from "../app/visual-inventory.mjs";
+import { IMPLEMENTED_VISUAL_INVENTORY, MEASURED_RUNTIME_DISTORTION_FRAMES } from "../app/visual-inventory.mjs";
 import { SCALE_POLICIES, validateAspectRatio, validateVisibleAnchor } from "../app/visual-contract.mjs";
 
 const publicAssetUrl = (source) => new URL(`../public/${source}`, import.meta.url);
@@ -32,7 +32,7 @@ const sourceRuntimeMappingsFor = (record) => Object.entries(record.sourceRects ?
   const destinations = record.runtimeDestinations?.[state];
   assert.ok(Array.isArray(destinations), `${record.id}:${state}: missing runtime destinations`);
   assert.equal(destinations.length, sources.length, `${record.id}:${state}: source/destination frame count`);
-  return sources.map((source, index) => ({ state, source, destination: destinations[index] }));
+  return sources.map((source, frame) => ({ state, frame, source, destination: destinations[frame] }));
 });
 
 const visibleBoundsForCell = ({ data, info }, { x, y, w, h }) => {
@@ -118,7 +118,7 @@ test("complete visual inventory measures every fixed-aspect source crop through 
       const mappings = sourceRuntimeMappingsFor(record);
       assert.ok(mappings.length > 0, `${record.id}: fixed-aspect asset requires source rectangles`);
       const atlas = await sharp(fileURLToPath(publicAssetUrl(record.assetSource))).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-      for (const { state, source, destination } of mappings) {
+      for (const { state, frame, source, destination } of mappings) {
         const visible = visibleBoundsForCell(atlas, source);
         assert.ok(visible.w > 0 && visible.h > 0, `${record.id}:${state}: source crop has visible alpha`);
         const transformedVisible = {
@@ -126,7 +126,13 @@ test("complete visual inventory measures every fixed-aspect source crop through 
           h: visible.h * destination.h / source.h,
         };
         const diagnostics = validateAspectRatio({ source: visible, destination: transformedVisible });
-        if (diagnostics.length > 0) measuredDistortions.add(`${record.id}:${state}`);
+        if (diagnostics.length > 0) measuredDistortions.add(JSON.stringify({
+          id: record.id,
+          state,
+          frame,
+          source,
+          destination,
+        }));
       }
     }
     if (record.anchorPolicy === "GROUND_CONTACT") {
@@ -137,17 +143,37 @@ test("complete visual inventory measures every fixed-aspect source crop through 
     }
   }
   assert.deepEqual(errors, []);
-  assert.deepEqual([...measuredDistortions].sort(), [...MEASURED_RUNTIME_DISTORTION_STATES].sort());
+  assert.deepEqual(
+    [...measuredDistortions].sort().map((entry) => JSON.parse(entry)),
+    [...MEASURED_RUNTIME_DISTORTION_FRAMES]
+      .map(({ id, state, frame, source, destination }) => ({ id, state, frame, source, destination }))
+      .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right))),
+  );
 });
 
-test("overlapping legacy prop renderer defects remain explicit until their owner repairs the runtime", () => {
+test("every allowlisted distortion carries its owning visual issue", () => {
+  const allowedIssues = new Set(["VIS-005", "VIS-006", "VIS-007"]);
+  assert.ok(MEASURED_RUNTIME_DISTORTION_FRAMES.length > 0);
+  for (const entry of MEASURED_RUNTIME_DISTORTION_FRAMES) {
+    assert.ok(allowedIssues.has(entry.issue), `${entry.id}:${entry.state}:${entry.frame}: issue`);
+    assert.equal(Object.isFrozen(entry.source), true, `${entry.id}:${entry.state}:${entry.frame}: frozen source`);
+    assert.equal(Object.isFrozen(entry.destination), true, `${entry.id}:${entry.state}:${entry.frame}: frozen destination`);
+  }
+});
+
+test("overlapping prop renderer defects remain explicit until their owner repairs the runtime", () => {
   const errors = IMPLEMENTED_VISUAL_INVENTORY
     .filter(({ runtimeOwner }) => runtimeOwner === "level-two-prop-render")
     .flatMap((record) => sourceRectanglesFor(record).flatMap((source) => (
       validateAspectRatio({ source, destination: renderedGeometryFor(record) }).map((error) => `${record.id}: ${error}`)
     )));
   assert.deepEqual(errors, [
+    "brutus-platform-left: source aspect 1.00 does not match destination aspect 1.08",
+    "brutus-platform-right: source aspect 1.00 does not match destination aspect 1.08",
     "charge-obstacle: source aspect 1.00 does not match destination aspect 0.75",
+    "sprinkler-water: source aspect 1.00 does not match destination aspect 1.25",
+    "sprinkler-water: source aspect 1.00 does not match destination aspect 1.25",
+    "sprinkler-water: source aspect 1.00 does not match destination aspect 1.25",
     "sprinkler-water: source aspect 1.00 does not match destination aspect 1.25",
     "hydrant-body: source aspect 1.00 does not match destination aspect 0.67",
   ]);
@@ -183,6 +209,13 @@ test("authoritative inventory source rectangles have opaque source pixels and fr
   }, TypeError);
   assert.throws(() => {
     dumpster.sourceRects.sealed.w = 1;
+  }, TypeError);
+  const binLidSource = IMPLEMENTED_VISUAL_INVENTORY.find(({ id }) => id === "bin-lid-source");
+  assert.equal(Object.isFrozen(binLidSource.sourceRects.active), true, "animated source frame array is frozen");
+  assert.equal(Object.isFrozen(binLidSource.sourceRects.active[3]), true, "animated source frame is frozen");
+  assert.equal(Object.isFrozen(binLidSource.runtimeDestinations.active[3]), true, "animated runtime destination is frozen");
+  assert.throws(() => {
+    binLidSource.runtimeDestinations.active[3].w = 1;
   }, TypeError);
   assert.deepEqual(dumpster.renderedSize, { w: DUMPSTER_DRAW_WIDTH, h: DUMPSTER_DRAW_HEIGHT });
 });
