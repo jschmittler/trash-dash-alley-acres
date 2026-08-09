@@ -414,10 +414,23 @@ Verification:
   matrix passed 40/40; the two-build SHA-256 comparison matched all five player
   atlas/contact/selection artifacts. `MEASURED_RUNTIME_DISTORTION_FRAMES` no
   longer contains a `VIS-005` player entry.
+- Controller-attributed runtime evidence: at 1280×720 DPR 2, the exact normal
+  spawn routes `/?backgroundTest=woodland&visualQa=task3-trashy-spawn&debugVisuals=1`
+  and `/?backgroundTest=woodland&visualQa=task3-jimothy-spawn&debugVisuals=1`
+  were entered through title and character confirmation. Trashy and Jimothy
+  each rendered as visibly grounded `small_idle` inside their debug bounds; the
+  controller recorded no warning/error logs. Evidence:
+  `docs/superpowers/reports/2026-08-09-level1-level2-integrity/after/task3-trashy-idle-1280x720.png`
+  and
+  `docs/superpowers/reports/2026-08-09-level1-level2-integrity/after/task3-jimothy-idle-1280x720.png`.
+- Controller note: the taco/recovery route briefly hides Jimothy during the
+  intended hurt/invulnerability flash, then renders normally; this is not an
+  atlas defect.
 - Runtime QA required before closure: direct and normal-play routes must still
   exercise both characters through idle, walk/run, skid, ascent/apex/fall/land,
   glide, tail swipe, hurt/shrink, checkpoint recovery, pit defeat, victory, and
-  repeated left/right transitions when a browser backend is available.
+  repeated left/right transitions. Keyboard action automation was unavailable,
+  so these action and both-facing sequences remain `CANNOT VERIFY`.
 
 ### VIS-006: Enemy and boss animation axis distortion (Task 4)
 

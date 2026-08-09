@@ -2,9 +2,9 @@
 
 ## Status
 
-`DONE_WITH_CONCERNS` — deterministic/player-contract evidence is green; live
-browser state verification is `CANNOT VERIFY` because this session exposes no
-browser-control backend.
+`DONE_WITH_CONCERNS` — deterministic/player-contract evidence is green;
+controller-attributed normal-spawn idle verification passed, while
+keyboard-driven action and both-facing runtime sequences remain `CANNOT VERIFY`.
 
 ## RED evidence
 
@@ -42,6 +42,16 @@ browser-control backend.
 - Static contact-sheet QA: inspected both regenerated sheets at native size;
   complete silhouettes stay inset and share the baseline. Both-facing behavior
   is covered by the destination-center flip contract and regression.
+- Controller-attributed browser QA: at 1280×720 DPR 2, entered
+  `/?backgroundTest=woodland&visualQa=task3-trashy-spawn&debugVisuals=1` and
+  `/?backgroundTest=woodland&visualQa=task3-jimothy-spawn&debugVisuals=1`
+  through title/character confirmation. Both `small_idle` characters were
+  visibly grounded inside debug bounds; browser warning/error logs were empty.
+  Evidence: `after/task3-trashy-idle-1280x720.png` and
+  `after/task3-jimothy-idle-1280x720.png` in the Task 3 report evidence folder.
+- Controller note: Jimothy is briefly hidden during the intended taco/recovery
+  hurt/invulnerability flash, then renders normally; this is not an atlas
+  failure.
 
 ## Visual QA ledger
 
@@ -50,7 +60,8 @@ browser-control backend.
 | Source alpha/contact-sheet inspection | PASS — complete inset frames; no source redraw needed |
 | Atlas bounds, one-shot completion, envelopes, baselines, facings | PASS — automated |
 | VIS-005 measured source/destination/anchor checks | PASS — zero remaining player mismatch entries |
-| Running-game direct routes and normal play, both facings | CANNOT VERIFY — browser backend unavailable |
+| Controller normal-spawn idle route, Trashy and Jimothy | PASS — 1280×720 DPR 2 debug-bound screenshots; no browser warning/error logs |
+| Keyboard-driven actions and repeated both-facing runtime sequences | CANNOT VERIFY — keyboard action automation unavailable |
 
 `docs/visual-audit.md` narrows VIS-005 accordingly and retains the complete
 runtime route/state matrix for a browser-equipped follow-up.
