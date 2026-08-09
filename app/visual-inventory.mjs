@@ -27,6 +27,9 @@ const canonicalScale = (min = 1, max = 1) => ({
   preserveAspectRatio: true,
 });
 
+const GROUND_CONTACT = "GROUND_CONTACT";
+const FREE_ANCHOR = "FREE_ANCHOR";
+
 const placementCategoryFor = (record) => {
   if (record.category === "boss") return PLACEMENT_SIZE_CLASSES.BOSS_ARENA;
   if (record.category === "interactive-prop" || record.category === "hazard") return PLACEMENT_SIZE_CLASSES.INTERACTIVE;
@@ -54,6 +57,8 @@ const makeRecord = (record, geometry) => {
   const gap = COMPOSITION_GAPS[placementCategory] ?? 0;
   return Object.freeze({
   ...record,
+  visibleSourceSize: record.visibleSourceSize ?? null,
+  anchorPolicy: geometry.anchorPolicy ?? FREE_ANCHOR,
   contract: createVisualContract({
     id: record.id,
     category: record.category,
@@ -87,6 +92,7 @@ const grounded = (drawW, drawH, collisionW, collisionH, extraX = 0, extraTop = 0
   forbiddenZones: ["solid-platform-interior", "hazard", "exit-clearance", "other-entity-footprint"],
   minimumClearance: clearance(6),
   scalePolicy: canonicalScale(1, 1),
+  anchorPolicy: GROUND_CONTACT,
 });
 
 const flying = (drawW, drawH, collisionW, collisionH) => ({
@@ -99,12 +105,13 @@ const flying = (drawW, drawH, collisionW, collisionH) => ({
   forbiddenZones: ["terrain", "platform-interior", "viewport-edge", "other-entity-footprint"],
   minimumClearance: clearance(8),
   scalePolicy: canonicalScale(1, 1),
+  anchorPolicy: FREE_ANCHOR,
 });
 
 const playerRecords = Object.values(PLAYABLE_CHARACTERS).map((profile) => {
   const animations = profile.animations;
   const frameBounds = Object.values(animations).map(({ drawWidth, drawHeight, offsetY = 0 }) => (
-    rect(-drawWidth / 2, -drawHeight + offsetY, drawWidth, drawHeight)
+    rect(-drawWidth / 2, -drawHeight + offsetY, drawWidth, drawHeight - offsetY)
   ));
   const envelope = motionEnvelope(frameBounds);
   return makeRecord({
@@ -115,6 +122,7 @@ const playerRecords = Object.values(PLAYABLE_CHARACTERS).map((profile) => {
     renderedSize: { small: [84, 84], large: [110, 110], maximum: [envelope.w, envelope.h] },
     origin: "destination center-bottom",
     facing: "right-authored; horizontal flip around destination center",
+    visibleSourceSize: { w: envelope.w, h: envelope.h },
     animations,
     requiredStates: Object.freeze([...PLAYER_FORM_STATES.small.map((state) => `small_${state}`), ...PLAYER_FORM_STATES.large.map((state) => `large_${state}`)]),
   }, {
@@ -127,6 +135,7 @@ const playerRecords = Object.values(PLAYABLE_CHARACTERS).map((profile) => {
     forbiddenZones: ["solid-platform-interior", "out-of-world"],
     minimumClearance: clearance(0),
     scalePolicy: canonicalScale(1, 1),
+    anchorPolicy: GROUND_CONTACT,
   });
 });
 
@@ -148,6 +157,7 @@ const levelOneEnemyRecords = LEVEL_ONE_ENEMY_KINDS.map((kind) => {
     levelIds: ["level-1"],
     assetSource: kind === "pigeon" || kind === "possum" ? "assets/enemy-motion.png" : "assets/generated/enemy-variety-motion.png",
     nativeSize: { cellW: 192, cellH: 192, frames: 4 },
+    visibleSourceSize: { w: drawW, h: drawH },
     renderedSize: { w: drawW, h: drawH },
     origin: isFlying ? "destination center" : "destination center-bottom",
     facing: "right-authored; horizontal flip around destination center",
@@ -171,6 +181,7 @@ const levelTwoEnemyRecords = LEVEL_TWO_ENEMY_KINDS.map((kind) => {
     levelIds: ["level-2"],
     assetSource: "assets/generated/level2-enemy-motion.png",
     nativeSize: { w: 768, h: 3840, cellW: 192, cellH: 192, rows: 20, columns: 4 },
+    visibleSourceSize: { w: drawW, h: drawH },
     renderedSize: { w: drawW, h: drawH },
     origin: kind === "moth" ? "destination center" : "source baseline row 176 to destination ground",
     facing: "right-authored; horizontal flip around destination center with dead-zone facing",
@@ -182,14 +193,14 @@ const levelTwoEnemyRecords = LEVEL_TWO_ENEMY_KINDS.map((kind) => {
 const bossRecords = [
   makeRecord({
     id: "trash-heap-tyrant", category: "boss", levelIds: ["level-1"],
-    assetSource: "assets/generated/boss-motion.png", nativeSize: { cellW: 256, cellH: 256, rows: 8, columns: 6 },
+    assetSource: "assets/generated/boss-motion.png", nativeSize: { cellW: 256, cellH: 256, rows: 8, columns: 6 }, visibleSourceSize: { w: 184, h: 170 },
     renderedSize: { maximum: [184, 170] }, origin: "destination center-bottom",
     facing: "right-authored; centered horizontal flip", animations: BOSS_ANIMATIONS,
     requiredStates: ["idle", "walk", "windup", "charge", "recover", "hit", "rage", "defeat"],
   }, grounded(184, 170, 96, 96, 64, 16)),
   makeRecord({
     id: "brutus-bin-hound", category: "boss", levelIds: ["level-2"],
-    assetSource: "assets/generated/brutus-motion.png", nativeSize: { w: 1024, h: 2112, cellW: 256, cellH: 192 },
+    assetSource: "assets/generated/brutus-motion.png", nativeSize: { w: 1024, h: 2112, cellW: 256, cellH: 192 }, visibleSourceSize: { w: BRUTUS_RENDER_METRICS.drawWidth, h: BRUTUS_RENDER_METRICS.drawHeight },
     renderedSize: { w: BRUTUS_RENDER_METRICS.drawWidth, h: BRUTUS_RENDER_METRICS.drawHeight },
     origin: "audited source baseline inset to destination ground", facing: "right-authored; centered horizontal flip",
     animations: BRUTUS_ANIMATIONS, requiredStates: Object.keys(BRUTUS_ANIMATIONS),
@@ -229,7 +240,7 @@ const surfaceRecords = [LEVEL_ONE, LEVEL_TWO].flatMap((level) => level.surfaces.
 const decorativeRecords = Object.entries(DECORATIVE_PROPS).map(([id, meta]) => makeRecord({
   id, category: id === "checkpoint" ? "interactive-prop" : "decorative-prop", levelIds: ["level-1", "level-2"],
   assetSource: "assets/generated/decorative-atlas.png", nativeSize: { w: 768, h: 512, cellW: 256, cellH: 256 },
-  visibleSourceSize: { w: meta.sourceWidth, h: meta.sourceHeight },
+  visibleSourceSize: id === "tires" ? { w: 112, h: 58 } : { w: meta.sourceWidth, h: meta.sourceHeight },
   renderedSize: { w: Math.round(meta.sourceWidth * 0.5), h: Math.round(meta.sourceHeight * 0.5) },
   origin: "audited source baseline to destination ground", facing: "not applicable", animations: null, requiredStates: [],
 }, {
@@ -245,7 +256,7 @@ const propRecords = [
   ["lamp-post", "interactive-prop", 96, 208, "REAR_ENVIRONMENT"],
 ].map(([id, category, w, h, renderLayer]) => makeRecord({
   id, category, levelIds: ["level-2"], assetSource: id === "lamp-post" ? LEVEL_TWO_LAMP_POST_ASSET : LEVEL_TWO_PROP_ASSET,
-  nativeSize: id === "lamp-post" ? { w: 192, h: 256 } : { cellW: LEVEL_TWO_PROP_ATLAS.cell, cellH: LEVEL_TWO_PROP_ATLAS.cell }, renderedSize: { w, h },
+  nativeSize: id === "lamp-post" ? { w: 192, h: 256 } : { cellW: LEVEL_TWO_PROP_ATLAS.cell, cellH: LEVEL_TWO_PROP_ATLAS.cell }, visibleSourceSize: { w, h }, renderedSize: { w, h },
   origin: "named source baseline or attachment origin", facing: "mirrored around named attachment origin",
   animations: id === "sprinkler" ? { idle: LEVEL_TWO_PROP_FRAMES["sprinkler-idle"], start: LEVEL_TWO_PROP_FRAMES["sprinkler-start"], spray: LEVEL_TWO_PROP_FRAMES["sprinkler-spray"], stop: LEVEL_TWO_PROP_FRAMES["sprinkler-stop"] }
     : id === "hydrant" ? { idle: LEVEL_TWO_PROP_FRAMES["hydrant-idle"], build: LEVEL_TWO_PROP_FRAMES["hydrant-build"], spray: LEVEL_TWO_PROP_FRAMES["hydrant-spray"], recover: LEVEL_TWO_PROP_FRAMES["hydrant-recover"] }
@@ -262,6 +273,7 @@ const pickupRecords = [["trash", 46, 46], ["taco", 58, 58], ["cap", 50, 42]].map
   id, category: "pickup", levelIds: ["level-1", "level-2"],
   assetSource: id === "trash" ? "assets/generated/trash-pickups-motion.png" : id === "taco" ? "assets/generated/taco-power-motion.png" : "assets/raccoon-sprites.png",
   nativeSize: id === "cap" ? null : { cellW: 192, cellH: 192 }, renderedSize: { w, h }, origin: "destination center", facing: "not applicable",
+  visibleSourceSize: id === "cap" ? { w, h } : null,
   animations: id === "cap" ? null : { idle: { row: 0, frames: 4, fps: 5, loop: true } }, requiredStates: id === "cap" ? [] : ["idle"],
 }, {
   visualBounds: rect(-w / 2, -h / 2 - 2, w, h + 4), collisionBounds: rect(-14, -14, 28, 28), placementFootprint: rect(-w / 2 - 4, -h / 2 - 8, w + 8, h + 16),

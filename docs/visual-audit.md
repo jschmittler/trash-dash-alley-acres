@@ -274,6 +274,51 @@ Every new or modified asset must pass all applicable checks before approval.
 
 ## Completed fixes
 
+### 2026-08-09 — Shared render-aspect and visible-anchor contract
+
+Applicable canonical skills declared and applied:
+
+- Rendering / Asset Integrity
+- Sprite / Art Asset
+- Animation / Motion Sprites
+- Environment Placement / Z-Order
+- Overlap Prevention / Spatial QA
+- Visual QA
+
+Contract repair:
+
+- Added pure fixed-aspect and visible-ground-anchor validators. Fixed-aspect
+  comparisons use a `0.01` tolerance; ground contact uses the same 2-pixel
+  tolerance as world placement.
+- Completed source-geometry declarations for fixed-aspect inventory families,
+  rather than treating square atlas cells and transparent padding as their
+  visible source shape. Tiled/nine-slice and viewport-cover records continue
+  to validate their declared policy but are intentionally not aspect-compared.
+- Marked grounded records explicitly and corrected Jimothy's inventory visible
+  envelope to exclude the transparent baseline inset. Its visible bottom now
+  meets the shared ground anchor, without moving the runtime character.
+
+Measured contract evidence (source geometry → rendered geometry):
+
+| Audited record/family | Source/native frame | Declared visible geometry | Rendered geometry |
+| --- | --- | --- | --- |
+| Decorative tires | 256×256 atlas cell | 112×58 normalized visible frame | 112×58 |
+| Charge obstacle | 128×128 atlas cell | 84×112 visible frame | 84×112 |
+| Sprinkler water envelope | 128×128 atlas cell | 132×96 independent effect envelope | 132×96 |
+| Hydrant water envelope | 128×128 atlas cell | 144×96 independent effect envelope | 144×96 |
+| Lamp post | 192×256 PNG | 96×208 grounded visible frame | 96×208 |
+| Player maximum envelopes | 192×192 atlas cells | Trashy 142×140; Jimothy 142×134 | same |
+| Level 1 / Level 2 enemy families | 192×192 atlas cells | declared per-family visible frames | same per-family rendered dimensions |
+| Trash Heap Tyrant | 256×256 atlas cell | 184×170 maximum visible frame | 184×170 |
+
+Verification:
+
+- `node --test tests/visual-contract.test.mjs tests/visual-asset-integrity.test.mjs tests/player-hero-atlas.test.mjs tests/jimothy-player-atlas.test.mjs tests/level-two-props.test.mjs tests/boss-atlas.test.mjs tests/brutus-atlas.test.mjs` passes (39 tests).
+- No renderer, asset family, atlas manifest, builder, or runtime draw call
+  changed in this repair. Therefore no new localhost route sweep or screenshots
+  were required; prior runtime evidence remains historical context, not a claim
+  of a newly observed visual result.
+
 ### 2026-08-09 — Post-normalization visual verification
 
 Applicable canonical skills declared and applied:
