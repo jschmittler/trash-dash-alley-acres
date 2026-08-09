@@ -264,7 +264,7 @@ export function updateLevelTwoEnemy(enemy, context) {
   throw new RangeError(`Unknown Level 2 enemy kind "${enemy.kind}"`);
 }
 
-const animation = (row, frames, fps = 7, loop = false) => Object.freeze({ row, frames, fps, loop });
+const animation = (row, frames, fps = 7, loop = false, startFrame = 0) => Object.freeze({ row, frames, fps, loop, startFrame });
 
 export const LEVEL_TWO_ENEMY_ANIMATIONS = Object.freeze({
   squirrel: Object.freeze({
@@ -273,7 +273,7 @@ export const LEVEL_TWO_ENEMY_ANIMATIONS = Object.freeze({
   }),
   terrier: Object.freeze({
     locomotion: animation(5, 4, 9, true), sleep: animation(6, 1, 1), telegraph: animation(6, 4, 7), attack: animation(7, 4, 12, true),
-    hit: animation(8, 2, 9), defeat: animation(9, 2, 5),
+    hit: animation(8, 2, 9), stunned: animation(8, 2, 6), recover: animation(8, 1, 1, false, 1), defeat: animation(9, 2, 5),
   }),
   skunk: Object.freeze({
     locomotion: animation(10, 4, 7, true), telegraph: animation(11, 4, 7), attack: animation(12, 4, 12),
@@ -287,9 +287,10 @@ export const LEVEL_TWO_ENEMY_ANIMATIONS = Object.freeze({
 
 export function enemyAnimationFrame(animationState, elapsed) {
   const rawFrame = Math.floor(Math.max(0, elapsed) * animationState.fps);
-  return animationState.loop
+  const localFrame = animationState.loop
     ? rawFrame % animationState.frames
     : Math.min(animationState.frames - 1, rawFrame);
+  return (animationState.startFrame ?? 0) + localFrame;
 }
 
 export function beginLevelTwoEnemyHit(enemy) {
@@ -329,6 +330,8 @@ export function levelTwoEnemyAnimation(kind, state) {
   if (state === "defeated") return animations.defeat;
   if (state === "hit") return animations.hit;
   if (kind === "terrier" && state === "sleep") return animations.sleep;
+  if (kind === "terrier" && state === "stunned") return animations.stunned;
+  if (kind === "terrier" && state === "recover") return animations.recover;
   if (state === "telegraph" || state === "wake") return animations.telegraph;
   if (state === "throw" || state === "charge" || state === "spray" || state === "dive") return animations.attack;
   if (state === "stunned" || state === "recover" || (kind === "moth" && state === "climb")) return animations.hit;

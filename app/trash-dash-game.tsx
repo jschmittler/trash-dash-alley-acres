@@ -61,6 +61,7 @@ import {
   brutusAnimationFrame,
   brutusArenaHazards,
   createBrutusState,
+  isBrutusTopHit,
   moveBrutusInArena,
   updateBrutus,
 } from "./brutus-boss.mjs";
@@ -109,6 +110,7 @@ import {
   updateLevelTwoEnemy,
   updateSprinkler,
 } from "./level-two-enemies.mjs";
+import { levelTwoPlatformDrawRect, levelTwoPropFrame } from "./level-two-props.mjs";
 
 type Screen = "title" | "characterSelect" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
@@ -187,6 +189,7 @@ interface Rect {
 
 interface Platform extends Rect {
   kind: PlatformKind;
+  visual?: "boss-platform-left" | "boss-platform-right";
 }
 
 interface Pickup extends Rect {
@@ -507,12 +510,13 @@ const mapLevelSurfacesToPlatforms = (
   surfaces: CampaignLevelDefinition["surfaces"],
 ): Platform[] => surfaces
   .filter(({ hazard }) => !hazard)
-  .map(({ x, y, w, h, kind }) => ({
+  .map(({ x, y, w, h, kind, visual }) => ({
     x,
     y,
     w,
     h,
     kind: kind === "crate" || (kind as string) === "box" ? "crate" : kind,
+    visual,
   }));
 
 const scenery = [
@@ -754,6 +758,7 @@ export function TrashDashGame() {
   const enemyMotionRef = useRef<HTMLImageElement | null>(null);
   const varietyEnemyMotionRef = useRef<HTMLImageElement | null>(null);
   const levelTwoEnemyMotionRef = useRef<HTMLImageElement | null>(null);
+  const levelTwoPropMotionRef = useRef<HTMLImageElement | null>(null);
   const trashPickupMotionRef = useRef<HTMLImageElement | null>(null);
   const tacoPowerMotionRef = useRef<HTMLImageElement | null>(null);
   const dumpsterAtlasRef = useRef<HTMLImageElement | null>(null);
@@ -829,7 +834,7 @@ export function TrashDashGame() {
     return request;
   }, []);
   const loadLevelEnemyAtlas = useCallback((activeLevel: CampaignLevelDefinition) => {
-    if (activeLevel.id !== "level-2" || (levelTwoEnemyMotionRef.current && brutusMotionRef.current)) return Promise.resolve();
+    if (activeLevel.id !== "level-2" || (levelTwoEnemyMotionRef.current && brutusMotionRef.current && levelTwoPropMotionRef.current)) return Promise.resolve();
     const pending = levelEnemyLoadPromisesRef.current.get(activeLevel.id);
     if (pending) return pending;
     const loadImage = (source: string) => new Promise<HTMLImageElement>((resolve, reject) => {
@@ -841,9 +846,11 @@ export function TrashDashGame() {
     const request = Promise.all([
       loadImage("assets/generated/level2-enemy-motion.png"),
       loadImage("assets/generated/brutus-motion.png"),
-    ]).then(([enemyAtlas, brutusAtlas]) => {
+      loadImage("assets/generated/level2-props.png"),
+    ]).then(([enemyAtlas, brutusAtlas, propAtlas]) => {
       levelTwoEnemyMotionRef.current = enemyAtlas;
       brutusMotionRef.current = brutusAtlas;
+      levelTwoPropMotionRef.current = propAtlas;
     }).catch((error) => {
       levelEnemyLoadPromisesRef.current.delete(activeLevel.id);
       throw error;
@@ -2024,7 +2031,9 @@ export function TrashDashGame() {
               || (enemy.animationState === "charge" && isBossChargeActive(bossFrame))
           : !levelTwoEnemyKinds.has(enemy.kind)
             || levelTwoEnemyCanContactDamage(enemy.kind, enemy.behaviorState);
-        const stomped = player.vy > 80 && previousBottom <= enemy.y + 16;
+        const stomped = enemy.brutusState
+          ? isBrutusTopHit(player, enemy, previousBottom)
+          : player.vy > 80 && previousBottom <= enemy.y + 16;
         if (stomped) {
           player.vy = -360;
           damageEnemy(world, enemy, true);
@@ -2366,6 +2375,18 @@ export function TrashDashGame() {
             }
           }
           context.restore();
+        } else if (platform.visual) {
+          const draw = levelTwoPlatformDrawRect(platform);
+          drawSprite(
+            levelTwoPropFrame(platform.visual, world.elapsed) as Frame,
+            draw.x - camera,
+            draw.y,
+            draw.w,
+            draw.h,
+            false,
+            1,
+            levelTwoPropMotionRef.current,
+          );
         } else if (platform.kind === "branch") {
           drawPlatformStrip("branch", x, platform.y, platform.w);
         } else if (platform.kind === "metal") {
@@ -2449,46 +2470,67 @@ export function TrashDashGame() {
           const sprinklerActive = item.encounterId === "brutus"
             ? Boolean(activeSide && activeSide === authoredSide)
             : Math.sin(world.elapsed * 2.4 + item.x) > -0.15;
-          context.fillStyle = "#173e3b";
-          context.fillRect(x, item.y, item.w, item.h);
-          context.fillStyle = "#9ddfd1";
-          context.fillRect(x + 8, item.y - 4, item.w - 16, 6);
+          const direction = authoredSide === "right" ? -1 : 1;
+          drawSprite(
+            levelTwoPropFrame("sprinkler-idle", world.elapsed) as Frame,
+            x + item.w / 2 - 41,
+            item.y + item.h - 72,
+            82,
+            82,
+            direction < 0,
+            1,
+            levelTwoPropMotionRef.current,
+          );
           if (sprinklerActive) {
-            context.strokeStyle = "#9ddfd1";
-            context.lineWidth = 3;
-            context.beginPath();
-            context.moveTo(x + item.w / 2, item.y);
-            const direction = authoredSide === "right" ? -1 : 1;
-            context.lineTo(x + item.w / 2 + direction * 74, item.y - 94);
-            context.stroke();
+            drawSprite(
+              levelTwoPropFrame("sprinkler-spray", world.elapsed) as Frame,
+              direction > 0 ? x + item.w / 2 - 8 : x + item.w / 2 - 112,
+              item.y - 84,
+              120,
+              96,
+              direction < 0,
+              1,
+              levelTwoPropMotionRef.current,
+            );
           }
         } else if (item.kind === "charge-obstacle") {
-          context.fillStyle = "#173e3b";
-          context.fillRect(x, item.y, item.w, item.h);
-          context.fillStyle = "#6d8791";
-          context.fillRect(x + 6, item.y + 7, item.w - 12, item.h - 14);
+          drawSprite(
+            levelTwoPropFrame("charge-obstacle", world.elapsed) as Frame,
+            x + item.w / 2 - 42,
+            item.y + item.h - 98,
+            84,
+            112,
+            false,
+            1,
+            levelTwoPropMotionRef.current,
+          );
         } else if (item.kind === "bin-lid-source") {
-          context.fillStyle = "#173e3b";
-          context.beginPath();
-          context.ellipse(x + item.w / 2, item.y + item.h / 2, item.w / 2, item.h / 2, 0, 0, Math.PI * 2);
-          context.fill();
-          context.fillStyle = "#9fb0b4";
-          context.beginPath();
-          context.ellipse(x + item.w / 2, item.y + item.h / 2, item.w / 2 - 3, item.h / 2 - 3, 0, 0, Math.PI * 2);
-          context.fill();
+          drawSprite(
+            levelTwoPropFrame("acorn", world.elapsed + item.x * 0.001) as Frame,
+            x + item.w / 2 - 22,
+            item.y + item.h / 2 - 22,
+            44,
+            44,
+            false,
+            1,
+            levelTwoPropMotionRef.current,
+          );
         } else if (item.kind === "porch-light") {
           context.fillStyle = "#173e3b";
           context.fillRect(x + 6, item.y - 8, 8, item.h + 12);
           context.fillStyle = "#ffd86a";
           context.fillRect(x + 2, item.y, 16, 12);
         } else if (item.kind === "hydrant") {
-          context.fillStyle = "#172b46";
-          context.fillRect(x + 5, item.y + 10, item.w - 10, item.h - 10);
-          context.fillStyle = "#d9584d";
-          context.fillRect(x + 9, item.y + 5, item.w - 18, item.h - 12);
-          context.fillRect(x, item.y + 22, item.w, 15);
-          context.fillStyle = "#ffd36a";
-          context.fillRect(x + 14, item.y, item.w - 28, 7);
+          drawSprite(
+            levelTwoPropFrame("hydrant", world.elapsed) as Frame,
+            x + item.w / 2 - 36,
+            item.y + item.h - 95,
+            72,
+            108,
+            false,
+            1,
+            levelTwoPropMotionRef.current,
+          );
         }
         context.restore();
       }
@@ -2515,25 +2557,18 @@ export function TrashDashGame() {
         context.save();
         context.translate(x + lid.w / 2, lid.y + lid.h / 2);
         context.rotate(world.elapsed * (lid.reflected ? 15 : lid.ownerId === "brutus-can" ? 5 : 10));
-        if (lid.ownerId === "brutus-can") {
-          context.fillStyle = "#172b46";
-          context.fillRect(-lid.w / 2, -lid.h / 2, lid.w, lid.h);
-          context.fillStyle = "#708695";
-          context.fillRect(-lid.w / 2 + 4, -lid.h / 2 + 3, lid.w - 8, lid.h - 8);
-          context.fillStyle = "#172b46";
-          context.fillRect(-lid.w / 2 + 7, lid.h / 2 - 5, 6, 6);
-          context.fillRect(lid.w / 2 - 13, lid.h / 2 - 5, 6, 6);
-          context.restore();
-          continue;
-        }
-        context.fillStyle = "#173e3b";
-        context.beginPath();
-        context.ellipse(0, 0, lid.w / 2, lid.h / 2, 0, 0, Math.PI * 2);
-        context.fill();
-        context.fillStyle = lid.reflected ? "#c7f170" : "#aebbc2";
-        context.beginPath();
-        context.ellipse(0, 0, lid.w / 2 - 3, lid.h / 2 - 2, 0, 0, Math.PI * 2);
-        context.fill();
+        const propName = lid.ownerId === "brutus-can" ? "rolling-can" : "acorn";
+        const drawSize = lid.ownerId === "brutus-can" ? Math.max(lid.w, lid.h) + 10 : Math.max(lid.w, lid.h) + 6;
+        drawSprite(
+          levelTwoPropFrame(propName, world.elapsed + (lid.reflected ? 0.2 : 0)) as Frame,
+          -drawSize / 2,
+          -drawSize / 2,
+          drawSize,
+          drawSize,
+          false,
+          lid.reflected ? 0.96 : 1,
+          levelTwoPropMotionRef.current,
+        );
         context.restore();
       }
 

@@ -58,6 +58,27 @@ export const BRUTUS_CHARGE_SPEED = Object.freeze({ 1: 310, 2: 360, 3: 420 });
 export const BRUTUS_RECOVERY_SPEED = 760;
 export const BRUTUS_EXIT_SPEED = 360;
 
+export function brutusTopHitRegion(boss) {
+  const inset = 18;
+  return {
+    x: boss.x + inset,
+    y: boss.y,
+    w: Math.max(0, boss.w - inset * 2),
+    h: 18,
+  };
+}
+
+export function isBrutusTopHit(player, boss, previousBottom) {
+  const region = brutusTopHitRegion(boss);
+  const currentBottom = player.y + player.h;
+  return player.vy > 80
+    && previousBottom <= region.y
+    && currentBottom >= region.y
+    && player.y < region.y + region.h
+    && player.x < region.x + region.w
+    && player.x + player.w > region.x;
+}
+
 export function moveBrutusInArena(actor, state, { dt = 0, boss }) {
   const elapsed = Math.max(0, dt);
   const width = actor.w ?? 96;

@@ -4,8 +4,10 @@ import test from "node:test";
 
 import {
   BRUTUS_ANIMATIONS,
+  brutusTopHitRegion,
   brutusArenaHazards,
   createBrutusState,
+  isBrutusTopHit,
   moveBrutusInArena,
   updateBrutus,
 } from "../app/brutus-boss.mjs";
@@ -43,6 +45,15 @@ test("ordinary collisions and attacks against closed armor cannot damage Brutus"
   assert.equal(wallCrash.hp, 3);
   const closedHit = updateBrutus({ ...charging, mode: "recover" }, { dt: 0.1, playerAttackHit: true });
   assert.equal(closedHit.hp, 3);
+});
+
+test("Brutus stomp requires a downward crossing of the narrow authored top band", () => {
+  const boss = { x: 6100, y: 372, w: 96, h: 96 };
+  assert.deepEqual(brutusTopHitRegion(boss), { x: 6118, y: 372, w: 60, h: 18 });
+  assert.equal(isBrutusTopHit({ x: 6130, y: 340, w: 38, h: 58, vy: 220 }, boss, 370), true);
+  assert.equal(isBrutusTopHit({ x: 6130, y: 340, w: 38, h: 58, vy: -20 }, boss, 370), false);
+  assert.equal(isBrutusTopHit({ x: 6130, y: 390, w: 38, h: 58, vy: 220 }, boss, 400), false);
+  assert.equal(isBrutusTopHit({ x: 6090, y: 340, w: 20, h: 58, vy: 220 }, boss, 370), false);
 });
 
 test("each damage reaction completes before advancing to the next phase", () => {

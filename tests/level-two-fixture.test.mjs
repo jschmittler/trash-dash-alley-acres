@@ -94,3 +94,23 @@ test("the upper utility route has a no-glider precision approach", () => {
     ["culvert-route", "utility-approach", "utility-route"],
   );
 });
+
+test("Brutus arena has two authored normal-jump utility platforms with safe separation", () => {
+  const [left, right] = ["brutus-platform-left", "brutus-platform-right"].map((id) => (
+    LEVEL_TWO.surfaces.find((surface) => surface.id === id)
+  ));
+  assert.ok(left);
+  assert.ok(right);
+  assert.deepEqual([left.visual, right.visual], ["boss-platform-left", "boss-platform-right"]);
+
+  const unassistedJumpApex = (615 ** 2) / (2 * 1750);
+  const bossTop = LEVEL_TWO.surfaces.find(({ id }) => id === LEVEL_TWO.boss.surfaceId).y - 96;
+  for (const platform of [left, right]) {
+    assert.ok(468 - platform.y < unassistedJumpApex, `${platform.id} unreachable from ground`);
+    assert.ok(platform.y - bossTop < unassistedJumpApex, `${platform.id} cannot reach Brutus top`);
+    assert.ok(platform.w >= 72, `${platform.id} landing width is too narrow`);
+  }
+  assert.ok(horizontalGap(left, right) > 96 + 38, "Brutus could block both platforms at once");
+  assert.ok(left.x >= LEVEL_TWO.boss.arenaStartX + 24);
+  assert.ok(right.x + right.w <= LEVEL_TWO.boss.arenaEndX - 24);
+});

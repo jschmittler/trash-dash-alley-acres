@@ -15,6 +15,7 @@ import {
   facingFromVelocity,
   LEVEL_TWO_ENEMY_ANIMATIONS,
   LEVEL_TWO_ENEMY_COLLISION,
+  levelTwoEnemyAnimation,
   levelTwoEnemyCanContactDamage,
   levelTwoEnemyCanReceiveAttack,
   MOTH_STATES,
@@ -211,6 +212,25 @@ test("authored animation playback exposes key frames and clamps one-shots", () =
   assert.equal(enemyAnimationFrame(LEVEL_TWO_ENEMY_ANIMATIONS.squirrel.attack, 0.16), 3);
   assert.equal(enemyAnimationFrame(LEVEL_TWO_ENEMY_ANIMATIONS.skunk.attack, 0.26), 3);
   assert.equal(enemyAnimationFrame(LEVEL_TWO_ENEMY_ANIMATIONS.terrier.sleep, 99), 0);
+});
+
+test("terrier pause playback uses a short ordered impact then a stable grounded settle", () => {
+  const stunned = levelTwoEnemyAnimation("terrier", "stunned");
+  const recover = levelTwoEnemyAnimation("terrier", "recover");
+  assert.equal(stunned.row, LEVEL_TWO_ENEMY_ANIMATIONS.terrier.hit.row);
+  assert.deepEqual([
+    enemyAnimationFrame(stunned, 0),
+    enemyAnimationFrame(stunned, 0.2),
+    enemyAnimationFrame(stunned, 9),
+  ], [0, 1, 1]);
+  assert.deepEqual([
+    enemyAnimationFrame(recover, 0),
+    enemyAnimationFrame(recover, 0.2),
+    enemyAnimationFrame(recover, 9),
+  ], [1, 1, 1]);
+  assert.notEqual(stunned, recover);
+  assert.equal(stunned.loop, false);
+  assert.equal(recover.loop, false);
 });
 
 test("every Level 2 enemy enters reachable local hit playback before defeat", () => {
