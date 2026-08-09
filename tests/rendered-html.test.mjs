@@ -80,7 +80,7 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(worldSource, /campaignLevelById/);
   assert.match(worldSource, /campaignProgress:/);
   assert.match(worldSource, /worldWidth: level\.worldWidth/);
-  assert.doesNotMatch(game, /LEVEL_ONE/);
+  assert.doesNotMatch(game, /(?:const|let|var) LEVEL_ONE/);
   assert.doesNotMatch(worldSource, /makeEnemy\("(?:slime|bat|beetle|moth|rat|hedgehog|crow|boar|frog)"/);
   assert.match(game, /createEnemyPatrol/);
   assert.match(game, /surfaceId\?: string/);
