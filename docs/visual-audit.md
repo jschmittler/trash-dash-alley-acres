@@ -339,6 +339,19 @@ Verification:
   connector reported `No browser is available`. This audit makes no new
   rendered-route pass claim.
 
+### 2026-08-09 — Controller-verified dumpster victory follow-up
+
+- Controller-run browser QA at 1280×720, DPR 2 visited
+  `/?victoryTest=1&visualQa=task2-dumpster-after` through the title screen and
+  **Start as Trashy**. The victory scene showed the repaired dumpster grounded
+  and uniformly proportioned at its 180×180 destination.
+- Browser warnings and errors were checked with `tab.dev.logs(warn/warning/error)`
+  and returned `[]`.
+- Captured full-frame evidence:
+  `docs/superpowers/reports/2026-08-09-level1-level2-integrity/after/task2-dumpster-victory-1280x720.png`.
+  The similarly named `task2-dumpster-victory-close.png` is an incorrect crop
+  and is deliberately excluded from this audit evidence.
+
 ### 2026-08-09 — Post-normalization visual verification
 
 Applicable canonical skills declared and applied:
