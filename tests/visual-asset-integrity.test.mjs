@@ -4,6 +4,12 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import sharp from "sharp";
 
+import {
+  DUMPSTER_CELL,
+  DUMPSTER_DRAW_HEIGHT,
+  DUMPSTER_DRAW_WIDTH,
+  dumpsterDrawRect,
+} from "../app/dumpster-render.mjs";
 import { IMPLEMENTED_VISUAL_INVENTORY } from "../app/visual-inventory.mjs";
 import { SCALE_POLICIES, validateAspectRatio, validateVisibleAnchor } from "../app/visual-contract.mjs";
 
@@ -13,12 +19,31 @@ const EXEMPT_ASPECT_POLICIES = new Set([
   SCALE_POLICIES.VIEWPORT_COVER,
 ]);
 
-const sourceGeometryFor = (record) => record.visibleSourceSize ?? record.contract.nativePixelSize;
 const renderedGeometryFor = (record) => {
   const { w, h } = record.renderedSize ?? {};
   return Number.isFinite(w) && Number.isFinite(h)
     ? { w, h }
     : { w: record.contract.visualBounds.w, h: record.contract.visualBounds.h };
+};
+const sourceRectanglesFor = (record) => Object.values(record.sourceRects ?? {})
+  .flatMap((value) => Array.isArray(value) ? value : [value]);
+
+const visibleBoundsForCell = ({ data, info }, { x, y, w, h }) => {
+  let left = w;
+  let top = h;
+  let right = -1;
+  let bottom = -1;
+  for (let row = 0; row < h; row += 1) {
+    for (let column = 0; column < w; column += 1) {
+      const offset = ((y + row) * info.width + x + column) * info.channels;
+      if (data[offset + 3] === 0) continue;
+      left = Math.min(left, column);
+      top = Math.min(top, row);
+      right = Math.max(right, column);
+      bottom = Math.max(bottom, row);
+    }
+  }
+  return { x: left, y: top, w: right - left + 1, h: bottom - top + 1 };
 };
 
 test("every inventoried asset reference exists and declared native dimensions match shipped bytes", async () => {
@@ -51,17 +76,38 @@ test("all explicit sprite rectangles fit inside their declared atlas", () => {
   }
 });
 
+test("dumpster source cells reach their runtime destination through uniform axes", async () => {
+  const atlas = await sharp(fileURLToPath(publicAssetUrl("assets/generated/dumpster-holy-atlas.png")))
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  assert.equal(atlas.info.width, DUMPSTER_CELL * 4);
+  assert.equal(atlas.info.height, DUMPSTER_CELL * 2);
+  const sourceRect = { x: 0, y: 0, w: DUMPSTER_CELL, h: DUMPSTER_CELL };
+  const sourceVisible = visibleBoundsForCell(atlas, sourceRect);
+  assert.ok(sourceVisible.w > 0 && sourceVisible.h > 0, "sealed dumpster source crop has visible pixels");
+  const runtimeDestination = dumpsterDrawRect(4200, 300, 468);
+  assert.deepEqual(validateAspectRatio({
+    source: sourceVisible,
+    destination: {
+      w: sourceVisible.w * runtimeDestination.width / sourceRect.w,
+      h: sourceVisible.h * runtimeDestination.height / sourceRect.h,
+    },
+  }), []);
+  assert.deepEqual(
+    { w: runtimeDestination.width, h: runtimeDestination.height },
+    { w: DUMPSTER_DRAW_WIDTH, h: DUMPSTER_DRAW_HEIGHT },
+  );
+});
+
 test("complete visual inventory preserves declared fixed aspects and ground contact anchors", () => {
   const errors = [];
   for (const record of IMPLEMENTED_VISUAL_INVENTORY) {
     const { scalePolicy } = record.contract;
     assert.equal(scalePolicy.preserveAspectRatio, true, `${record.id}: declared aspect policy`);
     if (!EXEMPT_ASPECT_POLICIES.has(scalePolicy.kind)) {
-      const source = sourceGeometryFor(record);
-      if (record.assetSource) {
-        assert.ok(source, `${record.id}: declares visible or native source geometry`);
-      }
-      if (source) {
+      for (const source of sourceRectanglesFor(record)) {
+        if (record.runtimeOwner) continue;
         errors.push(...validateAspectRatio({ source, destination: renderedGeometryFor(record) })
           .map((error) => `${record.id}: ${error}`));
       }
@@ -74,6 +120,46 @@ test("complete visual inventory preserves declared fixed aspects and ground cont
     }
   }
   assert.deepEqual(errors, []);
+});
+
+test("overlapping legacy prop renderer defects remain explicit until their owner repairs the runtime", () => {
+  const errors = IMPLEMENTED_VISUAL_INVENTORY
+    .filter(({ runtimeOwner }) => runtimeOwner === "level-two-prop-render")
+    .flatMap((record) => sourceRectanglesFor(record).flatMap((source) => (
+      validateAspectRatio({ source, destination: renderedGeometryFor(record) }).map((error) => `${record.id}: ${error}`)
+    )));
+  assert.deepEqual(errors, [
+    "charge-obstacle: source aspect 1.00 does not match destination aspect 0.75",
+    "sprinkler-water: source aspect 1.00 does not match destination aspect 1.25",
+    "hydrant-body: source aspect 1.00 does not match destination aspect 0.67",
+  ]);
+});
+
+test("authoritative inventory source rectangles have opaque source pixels and frozen runtime geometry", async () => {
+  for (const record of IMPLEMENTED_VISUAL_INVENTORY) {
+    const sourceRects = sourceRectanglesFor(record);
+    if (sourceRects.length === 0) continue;
+    const atlas = await sharp(fileURLToPath(publicAssetUrl(record.assetSource)))
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    for (const sourceRect of sourceRects) {
+      assert.ok(sourceRect.x >= 0 && sourceRect.y >= 0 && sourceRect.x + sourceRect.w <= atlas.info.width && sourceRect.y + sourceRect.h <= atlas.info.height, `${record.id}: source rect fits atlas`);
+      const visible = visibleBoundsForCell(atlas, sourceRect);
+      assert.ok(visible.w > 0 && visible.h > 0, `${record.id}: source rect has visible alpha`);
+    }
+    assert.equal(Object.isFrozen(record.sourceRects), true, `${record.id}: source rects frozen`);
+    assert.equal(Object.isFrozen(record.renderedSize), true, `${record.id}: rendered geometry frozen`);
+  }
+  const dumpster = IMPLEMENTED_VISUAL_INVENTORY.find(({ id }) => id === "victory-dumpster");
+  assert.ok(dumpster, "victory dumpster is inventoried");
+  assert.throws(() => {
+    dumpster.renderedSize.w = 1;
+  }, TypeError);
+  assert.throws(() => {
+    dumpster.sourceRects.sealed.w = 1;
+  }, TypeError);
+  assert.deepEqual(dumpster.renderedSize, { w: DUMPSTER_DRAW_WIDTH, h: DUMPSTER_DRAW_HEIGHT });
 });
 
 test("renderer keeps pixel smoothing disabled and exposes only a development visual-contract overlay", async () => {

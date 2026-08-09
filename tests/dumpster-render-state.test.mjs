@@ -37,7 +37,7 @@ test("one grounded destination rect is shared by both visual states", () => {
   assert.equal(rect.y + rect.height, 468);
   assert.equal(rect.width, DUMPSTER_DRAW_WIDTH);
   assert.equal(rect.height, DUMPSTER_DRAW_HEIGHT);
-  assert.notEqual(rect.width, rect.height);
+  assert.equal(rect.width, rect.height);
 });
 
 test("holy reveal progress is eased, clamped, and monotonic", () => {

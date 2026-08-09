@@ -5,7 +5,7 @@
  */
 export const DUMPSTER_CELL = 192;
 export const DUMPSTER_FRAME_COUNT = 4;
-export const DUMPSTER_DRAW_WIDTH = 220;
+export const DUMPSTER_DRAW_WIDTH = 180;
 export const DUMPSTER_DRAW_HEIGHT = 180;
 export const DUMPSTER_HOLY_FPS = 1.25;
 export const DUMPSTER_REVEAL_DURATION = 0.8;

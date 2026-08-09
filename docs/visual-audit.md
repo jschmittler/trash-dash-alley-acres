@@ -319,6 +319,26 @@ Verification:
   were required; prior runtime evidence remains historical context, not a claim
   of a newly observed visual result.
 
+### 2026-08-09 — Source-truthful dumpster and legacy-prop follow-up
+
+- Measured the sealed dumpster's nontransparent source bounds as 163×176
+  inside its declared 192×192 source crop. The former 220×180 destination
+  transformed those bounds to 186.77×165, changing the aspect from 0.93 to
+  1.13. `DUMPSTER_DRAW_WIDTH` is now 180, matching the 180-pixel destination
+  height and preserving both source axes at the same scale.
+- Added the rendered victory dumpster to the canonical inventory with sealed
+  and holy source rectangles, state coverage, a bottom-grounded anchor, and
+  destination geometry read from the runtime constants. Source rectangles and
+  destination geometry are cloned and recursively frozen before publication.
+- Split the committed four-row Level 2 prop atlas into body and effect records.
+  The live legacy renderer's charge obstacle (84×112), sprinkler-water
+  (120×96), and hydrant-body (72×108) destinations remain explicit aspect
+  defects against 128×128 source crops. Their repair belongs to the separately
+  owned Level 2 prop/runtime work and was not folded into this change.
+- Browser route verification is **CANNOT VERIFY**: the available browser
+  connector reported `No browser is available`. This audit makes no new
+  rendered-route pass claim.
+
 ### 2026-08-09 — Post-normalization visual verification
 
 Applicable canonical skills declared and applied:

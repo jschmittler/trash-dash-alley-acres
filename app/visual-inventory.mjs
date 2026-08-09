@@ -1,10 +1,11 @@
 import { DECORATIVE_PROPS } from "../concepts/decorative/decorative-manifest.mjs";
 import { BOSS_ANIMATIONS } from "./boss-animation.mjs";
 import { BRUTUS_ANIMATIONS, BRUTUS_RENDER_METRICS } from "./brutus-boss.mjs";
+import { DUMPSTER_CELL, DUMPSTER_DRAW_HEIGHT, DUMPSTER_DRAW_WIDTH, DUMPSTER_STATES } from "./dumpster-render.mjs";
 import { LEVEL_ONE, LEVEL_ONE_ENEMY_KINDS } from "./level-one.mjs";
 import { LEVEL_TWO, LEVEL_TWO_ENEMY_KINDS } from "./level-two.mjs";
 import { LEVEL_TWO_ENEMY_ANIMATIONS, LEVEL_TWO_ENEMY_COLLISION, LEVEL_TWO_ENEMY_RENDER } from "./level-two-enemies.mjs";
-import { LEVEL_TWO_LAMP_POST_ASSET, LEVEL_TWO_PROP_ASSET, LEVEL_TWO_PROP_ATLAS, LEVEL_TWO_PROP_FRAMES } from "./level-two-props.mjs";
+import { LEVEL_TWO_PROP_ASSET, LEVEL_TWO_PROP_ATLAS, LEVEL_TWO_PROP_FRAMES } from "./level-two-props.mjs";
 import { PLAYER_FORM_STATES } from "./player-animation.mjs";
 import { PLAYABLE_CHARACTERS } from "./playable-character.mjs";
 import {
@@ -20,6 +21,11 @@ import {
 
 const rect = (x, y, w, h) => ({ x, y, w, h });
 const clearance = (all = 0) => ({ left: all, right: all, top: all, bottom: all });
+const cloneAndFreeze = (value) => {
+  if (Array.isArray(value)) return Object.freeze(value.map(cloneAndFreeze));
+  if (value && typeof value === "object") return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, item]) => [key, cloneAndFreeze(item)])));
+  return value;
+};
 const canonicalScale = (min = 1, max = 1) => ({
   kind: SCALE_POLICIES.CANONICAL_WORLD_SIZE,
   min,
@@ -57,7 +63,10 @@ const makeRecord = (record, geometry) => {
   const gap = COMPOSITION_GAPS[placementCategory] ?? 0;
   return Object.freeze({
   ...record,
-  visibleSourceSize: record.visibleSourceSize ?? null,
+  nativeSize: cloneAndFreeze(record.nativeSize ?? null),
+  visibleSourceSize: cloneAndFreeze(record.visibleSourceSize ?? null),
+  renderedSize: cloneAndFreeze(record.renderedSize ?? null),
+  sourceRects: cloneAndFreeze(record.sourceRects ?? null),
   anchorPolicy: geometry.anchorPolicy ?? FREE_ANCHOR,
   contract: createVisualContract({
     id: record.id,
@@ -249,25 +258,36 @@ const decorativeRecords = Object.entries(DECORATIVE_PROPS).map(([id, meta]) => m
   allowedZones: ["walkable-surface"], forbiddenZones: ["platform-interior", "hazard", "pickup-clearance", "enemy-footprint"], minimumClearance: clearance(6),
 }));
 
-const propRecords = [
-  ["charge-obstacle", "interactive-prop", 84, 112, "GAMEPLAY"],
-  ["sprinkler", "hazard", 132, 96, "GAMEPLAY_EFFECTS"],
-  ["hydrant", "interactive-prop", 144, 96, "GAMEPLAY_EFFECTS"],
-  ["lamp-post", "interactive-prop", 96, 208, "REAR_ENVIRONMENT"],
-].map(([id, category, w, h, renderLayer]) => makeRecord({
-  id, category, levelIds: ["level-2"], assetSource: id === "lamp-post" ? LEVEL_TWO_LAMP_POST_ASSET : LEVEL_TWO_PROP_ASSET,
-  nativeSize: id === "lamp-post" ? { w: 192, h: 256 } : { cellW: LEVEL_TWO_PROP_ATLAS.cell, cellH: LEVEL_TWO_PROP_ATLAS.cell }, visibleSourceSize: { w, h }, renderedSize: { w, h },
-  origin: "named source baseline or attachment origin", facing: "mirrored around named attachment origin",
-  animations: id === "sprinkler" ? { idle: LEVEL_TWO_PROP_FRAMES["sprinkler-idle"], start: LEVEL_TWO_PROP_FRAMES["sprinkler-start"], spray: LEVEL_TWO_PROP_FRAMES["sprinkler-spray"], stop: LEVEL_TWO_PROP_FRAMES["sprinkler-stop"] }
-    : id === "hydrant" ? { idle: LEVEL_TWO_PROP_FRAMES["hydrant-idle"], build: LEVEL_TWO_PROP_FRAMES["hydrant-build"], spray: LEVEL_TWO_PROP_FRAMES["hydrant-spray"], recover: LEVEL_TWO_PROP_FRAMES["hydrant-recover"] }
-      : null,
-  requiredStates: id === "sprinkler" ? ["idle", "start", "spray", "stop"] : id === "hydrant" ? ["idle", "build", "spray", "recover"] : [],
+const legacyPropRecord = ({ id, category, sourceRect, renderedSize, renderLayer, effectOrigin = null, runtimeOwner = null }) => makeRecord({
+  id,
+  category,
+  levelIds: ["level-2"],
+  assetSource: LEVEL_TWO_PROP_ASSET,
+  nativeSize: { cellW: LEVEL_TWO_PROP_ATLAS.cell, cellH: LEVEL_TWO_PROP_ATLAS.cell },
+  sourceRects: { idle: sourceRect },
+  renderedSize,
+  runtimeOwner,
+  origin: effectOrigin ? "named emitter origin" : "source baseline to destination ground",
+  facing: "mirrored around named attachment origin",
+  animations: null,
+  requiredStates: [],
 }, {
-  ...grounded(w, h, Math.min(w, 84), Math.min(h, 68), id === "hydrant" ? 144 : 8), renderLayer,
+  ...grounded(renderedSize.w, renderedSize.h, Math.min(renderedSize.w, 84), Math.min(renderedSize.h, 68), 8),
+  renderLayer,
   allowedZones: ["walkable-surface"],
-  forbiddenZones: ["unrelated-platform-interior", "player-spawn"], minimumClearance: clearance(4),
-  effectOrigin: id === "sprinkler" ? { x: 6, y: -50 } : id === "hydrant" ? { x: 18, y: -56 } : id === "lamp-post" ? { x: 20, y: -150 } : null,
-}));
+  forbiddenZones: ["unrelated-platform-interior", "player-spawn"],
+  minimumClearance: clearance(4),
+  effectOrigin,
+});
+
+// These are the committed four-row atlas records. Later prop-state work owns
+// its expanded manifest separately and must not become an implicit dependency.
+const propRecords = [
+  legacyPropRecord({ id: "charge-obstacle", category: "interactive-prop", sourceRect: rect(0, 128, 128, 128), renderedSize: { w: 84, h: 112 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
+  legacyPropRecord({ id: "sprinkler-body", category: "hazard", sourceRect: rect(0, 256, 128, 128), renderedSize: { w: 82, h: 82 }, renderLayer: "GAMEPLAY" }),
+  legacyPropRecord({ id: "sprinkler-water", category: "effect", sourceRect: rect(128, 256, 128, 128), renderedSize: { w: 120, h: 96 }, renderLayer: "GAMEPLAY_EFFECTS", effectOrigin: { x: 0, y: 0 }, runtimeOwner: "level-two-prop-render" }),
+  legacyPropRecord({ id: "hydrant-body", category: "interactive-prop", sourceRect: rect(128, 384, 128, 128), renderedSize: { w: 72, h: 108 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
+];
 
 const pickupRecords = [["trash", 46, 46], ["taco", 58, 58], ["cap", 50, 42]].map(([id, w, h]) => makeRecord({
   id, category: "pickup", levelIds: ["level-1", "level-2"],
@@ -280,6 +300,32 @@ const pickupRecords = [["trash", 46, 46], ["taco", 58, 58], ["cap", 50, 42]].map
   groundAnchor: { x: 0, y: h / 2 + 4 }, renderLayer: "GAMEPLAY", allowedZones: ["authored-reward-zone"],
   forbiddenZones: ["solid-platform-interior", "hazard", "enemy-footprint"], minimumClearance: clearance(4), scalePolicy: canonicalScale(1, 1),
 }));
+
+const dumpsterRecord = makeRecord({
+  id: "victory-dumpster",
+  category: "interactive-prop",
+  levelIds: ["level-1", "level-2"],
+  assetSource: "assets/generated/dumpster-holy-atlas.png",
+  nativeSize: { w: DUMPSTER_CELL * 4, h: DUMPSTER_CELL * 2, cellW: DUMPSTER_CELL, cellH: DUMPSTER_CELL, rows: 2, columns: 4 },
+  sourceRects: {
+    sealed: rect(0, DUMPSTER_STATES.sealed.row * DUMPSTER_CELL, DUMPSTER_CELL, DUMPSTER_CELL),
+    holy: Array.from({ length: 4 }, (_, column) => rect(column * DUMPSTER_CELL, DUMPSTER_STATES.holy.row * DUMPSTER_CELL, DUMPSTER_CELL, DUMPSTER_CELL)),
+  },
+  renderedSize: { w: DUMPSTER_DRAW_WIDTH, h: DUMPSTER_DRAW_HEIGHT },
+  origin: "destination center-bottom; both reveal rows share one grounded rect",
+  facing: "not applicable",
+  animations: {
+    sealed: { row: DUMPSTER_STATES.sealed.row, frames: 1, fps: 1, loop: false },
+    holy: { row: DUMPSTER_STATES.holy.row, frames: 4, fps: 1.25, loop: true },
+  },
+  requiredStates: ["sealed", "holy"],
+}, {
+  ...grounded(DUMPSTER_DRAW_WIDTH, DUMPSTER_DRAW_HEIGHT, DUMPSTER_DRAW_WIDTH, DUMPSTER_DRAW_HEIGHT, 8),
+  renderLayer: "GAMEPLAY",
+  allowedZones: ["goal-zone", "post-boss-arena"],
+  forbiddenZones: ["active-boss-arena", "solid-platform-interior"],
+  minimumClearance: clearance(8),
+});
 
 const miscRecords = [
   makeRecord({ id: "acorn", category: "projectile", levelIds: ["level-2"], assetSource: LEVEL_TWO_PROP_ASSET, nativeSize: { cellW: 128, cellH: 128 }, renderedSize: { w: 28, h: 28 }, origin: "center", facing: "velocity-controlled rotation", animations: { active: LEVEL_TWO_PROP_FRAMES.acorn }, requiredStates: ["active"] }, {
@@ -301,7 +347,7 @@ const miscRecords = [
 
 export const IMPLEMENTED_VISUAL_INVENTORY = Object.freeze([
   ...backgroundRecords, ...surfaceRecords, ...decorativeRecords, ...propRecords, ...pickupRecords,
-  ...miscRecords, ...playerRecords, ...levelOneEnemyRecords, ...levelTwoEnemyRecords, ...bossRecords,
+  dumpsterRecord, ...miscRecords, ...playerRecords, ...levelOneEnemyRecords, ...levelTwoEnemyRecords, ...bossRecords,
 ]);
 
 const immutableRoute = (route) => Object.freeze({ ...route });

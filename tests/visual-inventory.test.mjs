@@ -58,6 +58,16 @@ test("inventory covers every implemented level, hero, enemy roster, boss and ren
   ]) assert.ok(summary.categories.includes(category), category);
 });
 
+test("inventory includes every contract-owned runtime family, including the victory dumpster and split prop effects", () => {
+  const ids = new Set(IMPLEMENTED_VISUAL_INVENTORY.map(({ id }) => id));
+  for (const id of ["victory-dumpster", "charge-obstacle", "sprinkler-body", "sprinkler-water", "hydrant-body"]) {
+    assert.ok(ids.has(id), id);
+  }
+  const dumpster = IMPLEMENTED_VISUAL_INVENTORY.find(({ id }) => id === "victory-dumpster");
+  assert.deepEqual(Object.keys(dumpster.sourceRects), ["sealed", "holy"]);
+  assert.deepEqual(dumpster.requiredStates, ["sealed", "holy"]);
+});
+
 test("every implemented inventory record satisfies placement, scale, layer and animation contracts", () => {
   assert.deepEqual(validateImplementedVisualInventory(), []);
 });

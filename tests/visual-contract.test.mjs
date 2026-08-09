@@ -32,6 +32,9 @@ test("fixed-aspect rendering rejects independently distorted destination axes", 
   assert.deepEqual(validateAspectRatio({ source: { w: 48, h: 64 }, destination: { w: 96, h: 96 } }), [
     "source aspect 0.75 does not match destination aspect 1.00",
   ]);
+  assert.deepEqual(validateAspectRatio({ source: { w: 48, h: 64 }, destination: { w: 72, h: 112 } }), [
+    "source aspect 0.75 does not match destination aspect 0.64",
+  ]);
   assert.deepEqual(validateAspectRatio({ source: { w: 48, h: 64 }, destination: { w: 72, h: 96 } }), []);
 });
 
