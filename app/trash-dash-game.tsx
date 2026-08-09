@@ -25,7 +25,7 @@ import {
   resolvePitFall,
 } from "./gameplay-animation-state.mjs";
 import {
-  LEVEL_ONE_ENEMY_ANIMATIONS,
+  LEVEL_ONE_ENEMY_ANIMATIONS as levelOneEnemyAnimations,
   levelOneEnemyAnimationFrame,
 } from "./level-one-enemy-animation.mjs";
 import {
@@ -2602,7 +2602,7 @@ export function TrashDashGame() {
         if (!enemy.active) continue;
         const x = enemy.x - camera;
         if (x < -150 || x > WIDTH + 150) continue;
-        const frameIndex = Object.hasOwn(LEVEL_ONE_ENEMY_ANIMATIONS, enemy.kind)
+        const frameIndex = Object.hasOwn(levelOneEnemyAnimations, enemy.kind)
           ? levelOneEnemyAnimationFrame(enemy.kind, "move", enemy.stateElapsed, enemy.animationOffset)
           : Math.floor(enemy.phase) % 4;
         const flip = enemy.facing < 0;
