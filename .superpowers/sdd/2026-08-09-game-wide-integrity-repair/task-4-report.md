@@ -78,3 +78,18 @@ recorded as `CANNOT VERIFY`.
   and weak-point geometry were already truthful.
 - Runtime browser input coverage remains the single concern and requires a
   follow-up visual pass before a rendered PASS claim.
+
+## Controller supplemental browser QA
+
+At 1280×720 DPR 2 after title → Trashy confirmation, the controller observed
+grounded squirrel/skunk debug bounds on
+`/?encounterTest=interaction&visualQa=task4-interaction&debugVisuals=1`, a
+grounded complete terrier on
+`/?encounterTest=terrier&visualQa=task4-terrier&debugVisuals=1`, the grounded
+Trash Heap Tyrant idle on `/?bossTest=1&visualQa=task4-boss1&debugVisuals=1`,
+and grounded proportional Brutus walking on
+`/?bossTest=brutus&visualQa=task4-brutus&debugVisuals=1`. The named screenshot
+evidence is committed alongside this supplement. All route logs were empty.
+
+This closes representative idle/grounding route QA only. Both facings and
+full tell/action/recovery/hit/defeat/exit sequences remain `CANNOT VERIFY`.

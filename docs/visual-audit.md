@@ -477,6 +477,24 @@ Verification:
   sequences are **CANNOT VERIFY** at runtime. Automated state/atlas/geometry
   coverage is not a substitute for that route evidence.
 
+#### Controller supplemental runtime evidence — 1280×720 DPR 2
+
+- After title → **Start as Trashy** confirmation, the controller entered
+  `/?encounterTest=interaction&visualQa=task4-interaction&debugVisuals=1` and
+  observed the grounded squirrel and skunk inside their debug bounds:
+  `docs/superpowers/reports/2026-08-09-level1-level2-integrity/after/task4-interaction-idle-1280x720.png`.
+- `/?encounterTest=terrier&visualQa=task4-terrier&debugVisuals=1` showed a
+  grounded, complete terrier. `/?bossTest=1&visualQa=task4-boss1&debugVisuals=1`
+  showed the grounded complete Trash Heap Tyrant at idle (partially at the
+  arena screen edge by its authored spawn), and
+  `/?bossTest=brutus&visualQa=task4-brutus&debugVisuals=1` showed grounded,
+  proportional Brutus at walking. Evidence:
+  `.../after/task4-trash-heap-idle-1280x720.png` and
+  `.../after/task4-brutus-idle-1280x720.png`.
+- All four routes returned empty browser warning/error logs. This verifies
+  representative grounded idle presentation only; both facings and full
+  action/hit/recovery/defeat sequences remain **CANNOT VERIFY**.
+
 ### VIS-007: Prop and pickup residual axis distortion (separate prop/runtime pass)
 
 - Observed source/runtime evidence: charge obstacle 128²→84×112; all four
