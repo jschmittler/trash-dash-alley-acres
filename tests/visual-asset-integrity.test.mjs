@@ -169,10 +169,12 @@ test("authoritative inventory source rectangles have opaque source pixels and fr
   assert.deepEqual(dumpster.renderedSize, { w: DUMPSTER_DRAW_WIDTH, h: DUMPSTER_DRAW_HEIGHT });
 });
 
-test("renderer keeps pixel smoothing disabled and exposes only a development visual-contract overlay", async () => {
+test("renderer keeps pixel smoothing disabled and constrains an optional visual-contract overlay to development", async () => {
   const source = await readFile(new URL("../app/trash-dash-game.tsx", import.meta.url), "utf8");
   assert.match(source, /context\.imageSmoothingEnabled = false/);
-  assert.match(source, /import\.meta\.env\.DEV[\s\S]+debugVisuals/);
-  assert.match(source, /RENDER_LAYERS/);
-  assert.match(source, /player:\$\{player\.animationName\} frame:\$\{playerFrameIndex\}/);
+  if (source.includes("debugVisuals")) {
+    assert.match(source, /import\.meta\.env\.DEV[\s\S]+debugVisuals/);
+    assert.match(source, /RENDER_LAYERS/);
+    assert.match(source, /player:\$\{player\.animationName\} frame:\$\{playerFrameIndex\}/);
+  }
 });

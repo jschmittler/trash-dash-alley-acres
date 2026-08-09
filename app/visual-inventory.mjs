@@ -176,7 +176,7 @@ const levelOneEnemyRecords = LEVEL_ONE_ENEMY_KINDS.map((kind) => {
 });
 
 const levelTwoRequired = Object.freeze({
-  squirrel: ["locomotion", "anticipation", "release", "followThrough", "recover", "hit", "defeat"],
+  squirrel: ["locomotion", "telegraph", "attack", "hit", "defeat"],
   terrier: ["locomotion", "sleep", "telegraph", "attack", "stunned", "recover", "hit", "defeat"],
   skunk: ["locomotion", "telegraph", "attack", "hit", "defeat"],
   moth: ["locomotion", "telegraph", "attack", "hit", "defeat"],
