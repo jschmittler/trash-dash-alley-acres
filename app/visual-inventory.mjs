@@ -4,7 +4,7 @@ import { BRUTUS_ANIMATIONS, BRUTUS_RENDER_METRICS } from "./brutus-boss.mjs";
 import { DUMPSTER_CELL, DUMPSTER_DRAW_HEIGHT, DUMPSTER_DRAW_WIDTH, DUMPSTER_STATES } from "./dumpster-render.mjs";
 import { LEVEL_ONE, LEVEL_ONE_ENEMY_KINDS } from "./level-one.mjs";
 import { LEVEL_TWO, LEVEL_TWO_ENEMY_KINDS } from "./level-two.mjs";
-import { LEVEL_TWO_ENEMY_ANIMATIONS, LEVEL_TWO_ENEMY_COLLISION, LEVEL_TWO_ENEMY_RENDER } from "./level-two-enemies.mjs";
+import { LEVEL_TWO_ENEMY_ANIMATIONS, LEVEL_TWO_ENEMY_COLLISION } from "./level-two-enemies.mjs";
 import { LEVEL_TWO_PROP_ASSET, LEVEL_TWO_PROP_ATLAS, LEVEL_TWO_PROP_FRAMES } from "./level-two-props.mjs";
 import { PLAYER_FORM_STATES } from "./player-animation.mjs";
 import { PLAYABLE_CHARACTERS } from "./playable-character.mjs";
@@ -181,8 +181,16 @@ const levelTwoRequired = Object.freeze({
   skunk: ["locomotion", "telegraph", "attack", "hit", "defeat"],
   moth: ["locomotion", "telegraph", "attack", "hit", "defeat"],
 });
+// The committed renderer's drawSizes table. Keep this base-runtime geometry
+// here rather than importing an optional later render-metrics export.
+const LEVEL_TWO_ENEMY_DRAW_GEOMETRY = Object.freeze({
+  squirrel: Object.freeze({ w: 78, h: 76 }),
+  terrier: Object.freeze({ w: 94, h: 82 }),
+  skunk: Object.freeze({ w: 90, h: 78 }),
+  moth: Object.freeze({ w: 84, h: 82 }),
+});
 const levelTwoEnemyRecords = LEVEL_TWO_ENEMY_KINDS.map((kind) => {
-  const { drawWidth: drawW, drawHeight: drawH } = LEVEL_TWO_ENEMY_RENDER[kind];
+  const { w: drawW, h: drawH } = LEVEL_TWO_ENEMY_DRAW_GEOMETRY[kind];
   const [collisionW, collisionH] = LEVEL_TWO_ENEMY_COLLISION[kind];
   return makeRecord({
     id: kind,

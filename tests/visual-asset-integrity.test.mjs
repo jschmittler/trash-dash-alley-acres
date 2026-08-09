@@ -135,6 +135,13 @@ test("overlapping legacy prop renderer defects remain explicit until their owner
   ]);
 });
 
+test("canonical inventory does not require optional future prop or render-metric exports", async () => {
+  const source = await readFile(new URL("../app/visual-inventory.mjs", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /LEVEL_TWO_LAMP_POST_ASSET/);
+  assert.doesNotMatch(source, /LEVEL_TWO_ENEMY_RENDER/);
+  assert.match(source, /LEVEL_TWO_ENEMY_DRAW_GEOMETRY/);
+});
+
 test("authoritative inventory source rectangles have opaque source pixels and frozen runtime geometry", async () => {
   for (const record of IMPLEMENTED_VISUAL_INVENTORY) {
     const sourceRects = sourceRectanglesFor(record);
