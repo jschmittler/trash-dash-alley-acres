@@ -565,6 +565,26 @@ Browser diagnostics:
 - Detailed report:
   `docs/superpowers/reports/2026-08-09-level-one-two-visual-integrity.md`
 
+### 2026-08-09 — Task 4 review repair: committed animation truth
+
+- C1 clean archive: Task 4 now commits the complete Level 2 semantic state
+  contract and squirrel runtime-release path; focused archive verification is
+  83/83 and full archive verification is 205/205. Unrelated Level 2 placement,
+  prop, asset, and route changes remain outside these commits.
+- I1 state truth: skunk recovery uses its own row-12 follow-through cell;
+  moth climb loops its own row-15 flight frames; squirrel throw beats map to
+  source row 2 frames 0–3. Reachable states map explicitly; unknown pairs
+  throw instead of falling back to locomotion or hit.
+- I2 timing: Level 1 actor frames are selected from declared local FPS and
+  state elapsed time. A deterministic phase seed only selects an initial frame.
+- I3 geometry: Trash Heap Tyrant's contract visual bounds and placement
+  footprint are now 166×166, exactly matching its uniform runtime destination;
+  collision and authored arena clearance are unchanged.
+- Assets: no rebuild performed—opaque-source and atlas tests confirmed the
+  compatible actor cells already existed. Existing controller idle/grounding
+  screenshots remain the only browser evidence; full action/facing sequences
+  remain **CANNOT VERIFY**.
+
 ## Future audit items
 
 - Perform a real-device mobile portrait and landscape visual pass.

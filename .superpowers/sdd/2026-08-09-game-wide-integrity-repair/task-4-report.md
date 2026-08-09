@@ -93,3 +93,25 @@ evidence is committed alongside this supplement. All route logs were empty.
 
 This closes representative idle/grounding route QA only. Both facings and
 full tell/action/recovery/hit/defeat/exit sequences remain `CANNOT VERIFY`.
+
+## Round 1 review repair — C1 / I1 / I2 / I3
+
+- C1: the committed Task 4 archive now owns every required Level 2 semantic
+  animation/state hunk and runtime squirrel release wiring; no Level 2
+  placement, prop, or route changes were absorbed. A clean `git archive HEAD`
+  passes the focused matrix (83/83) and complete suite (205/205).
+- I1: reachable Level 2 mappings are explicit and unknown combinations throw.
+  Skunk recovery selects its own row-12 spray follow-through frame; moth climb
+  selects its own looping row-15 flight frames; neither is relabelled as hit.
+  Squirrel anticipation/release/follow-through/recovery select source row 2,
+  frames 0/1/2/3 respectively.
+- I2: Level 1 has a pure, declared-FPS frame selector. Runtime rendering uses
+  elapsed local state time plus a phase seed only for deterministic initial
+  desynchronization, rather than phase velocity for playback speed.
+- I3: Trash Heap Tyrant's visual bounds and placement footprint are 166×166,
+  matching the maximum actual runtime destination while collision and arena
+  clearance remain unchanged.
+- RED evidence: the first focused run failed with the missing Level 1 selector
+  module; it is now covered by selector, runtime-wiring, semantic-mapping, and
+  Tyrant-bound regressions. No asset/source rebuild was needed because the
+  required compatible source cells already exist in their respective atlases.
