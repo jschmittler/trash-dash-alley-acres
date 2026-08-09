@@ -51,11 +51,13 @@ recorded as `CANNOT VERIFY`.
 
 ## Verification
 
-- Focused matrix plus gameplay/hit/Task 2 contracts: 80 passing, 0 failing.
-- `npm run validate:skills`: passed.
-- `npm run lint`: 0 errors; one existing Next `<img>` advisory at
-  `app/trash-dash-game.tsx:2927`.
-- `npm test`: 258 passing, 0 failing, including production build.
+- Clean archive focused matrix: 83 passing, 0 failing.
+- Clean archive `npm test`: 205 passing, 0 failing, including production build.
+- Shared-worktree `npm run validate:skills`: passed for all seven canonical
+  skills and references.
+- Shared-worktree `npm run lint`: 0 errors; one existing Next `<img>` advisory
+  at `app/trash-dash-game.tsx:2937`.
+- Shared-worktree `npm test`: 261 passing, 0 failing, including production build.
 - `git diff --check`: passed.
 - Asset hashes/rebuild: not applicable; no source, builder, atlas, or contact
   sheet changed.
