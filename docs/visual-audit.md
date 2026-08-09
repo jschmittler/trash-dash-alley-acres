@@ -225,6 +225,10 @@ Screenshot references:
   their exact immutable metadata. The corrected per-URL console and dedicated
   landscape/portrait recheck remains explicitly pending because the in-app
   browser backend became unavailable after the baseline session finalized.
+- Controller correction: the 27 exact URLs were subsequently entered at
+  1280×720 DPR 2, each producing `[]` warning/error diagnostics, including
+  `l1-start`. Only the corrected aliases' exact 844×390/390×844 responsive
+  reruns remain unverified.
 
 ## Asset quality checklist
 

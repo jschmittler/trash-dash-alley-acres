@@ -42,6 +42,44 @@
   rerun the desktop/landscape/portrait evidence sweep when browser access is
   restored.
 
+Controller follow-up supersedes the unavailable-browser statement above: all
+current routes were entered through title → **Start as Trashy** at
+browser-measured 1280×720, DPR 2. Every route resolved to its exact URL, and
+`tab.dev.logs({ levels: ["warn", "warning", "error"] })` returned `[]` for
+every route, including `l1-start`.
+
+### Controller follow-up — per-URL console evidence (1280×720, DPR 2)
+
+| Catalog ID | Exact URL entered | Warning/error console result |
+| --- | --- | --- |
+| l1-start | `/?backgroundTest=woodland&visualQa=l1-start` | `[]` |
+| l1-creek | `/?backgroundTest=creek&visualQa=l1-creek` | `[]` |
+| l1-highway | `/?backgroundTest=highway&visualQa=l1-highway` | `[]` |
+| l1-industrial | `/?backgroundTest=industrial&visualQa=l1-industrial` | `[]` |
+| l1-park | `/?backgroundTest=park&visualQa=l1-park` | `[]` |
+| l1-middle | `/?backgroundTest=highway&visualQa=l1-middle` | `[]` |
+| l1-end | `/?backgroundTest=park&visualQa=l1-end` | `[]` |
+| l1-boss | `/?bossTest=1&visualQa=l1-boss` | `[]` |
+| l1-victory | `/?victoryTest=1&visualQa=l1-victory` | `[]` |
+| l2-backyard | `/?level=2&levelTest=backyard&visualQa=l2-backyard` | `[]` |
+| l2-street | `/?level=2&levelTest=street&visualQa=l2-street` | `[]` |
+| l2-obstacle | `/?level=2&levelTest=obstacle&visualQa=l2-obstacle` | `[]` |
+| l2-drainage | `/?level=2&levelTest=drainage&visualQa=l2-drainage` | `[]` |
+| l2-runway | `/?level=2&levelTest=runway&visualQa=l2-runway` | `[]` |
+| l2-main-street | `/?level=2&levelTest=main-street&visualQa=l2-main-street` | `[]` |
+| l2-start | `/?level=2&levelTest=backyard&visualQa=l2-start` | `[]` |
+| l2-middle | `/?level=2&levelTest=obstacle&visualQa=l2-middle` | `[]` |
+| l2-end | `/?level=2&levelTest=main-street&visualQa=l2-end` | `[]` |
+| l2-squirrel | `/?encounterTest=squirrel&visualQa=l2-squirrel` | `[]` |
+| l2-terrier | `/?encounterTest=terrier&visualQa=l2-terrier` | `[]` |
+| l2-skunk | `/?encounterTest=skunk&visualQa=l2-skunk` | `[]` |
+| l2-moth | `/?encounterTest=moth&visualQa=l2-moth` | `[]` |
+| l2-interaction | `/?encounterTest=interaction&visualQa=l2-interaction` | `[]` |
+| l2-boss | `/?bossTest=brutus&visualQa=l2-boss` | `[]` |
+| l2-victory | `/?victoryTest=level2&visualQa=l2-victory` | `[]` |
+| player-states | `/?powerupTest=taco&visualQa=player-states&debugVisuals=1` | `[]` |
+| enemy-states | `/?encounterTest=interaction&visualQa=enemy-states&debugVisuals=1` | `[]` |
+
 ## Desktop route sweep (1440×900)
 
 All listed URLs reached active gameplay or the intended victory overlay after
@@ -87,6 +125,12 @@ the entry protocol. Screenshot path is `none — no visible defect` for each.
 The catalog now designates `l1-end` and `l2-end` for future mobile-landscape
 evidence and `l2-start` for mobile-portrait evidence; the corrected designated
 viewport sweep is pending the browser-backend recovery noted above.
+
+Correction: the controller's 1280×720 DPR 2 route/console sweep above is
+complete. The catalog now designates `l1-end` and `l2-end` as
+mobile-landscape aliases and `l2-start` as a mobile-portrait alias. The initial
+`l1-park`/`l2-main-street` 844×390 evidence remains historical; the aliases'
+exact 844×390 and 390×844 reruns were not performed and remain unverified.
 
 ## Historical-item recheck
 
