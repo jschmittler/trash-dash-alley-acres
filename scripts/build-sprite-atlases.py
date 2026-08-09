@@ -273,18 +273,14 @@ def place_player_pose(
     row: int,
     column: int,
     max_size: tuple[int, int],
-    grounded: bool = True,
-    x_offset: int = 0,
-    y_offset: int = 0,
 ) -> None:
     scale = min(max_size[0] / pose.width, max_size[1] / pose.height)
     size = (max(1, round(pose.width * scale)), max(1, round(pose.height * scale)))
-    frame = nearest(pose, size)
-    x = column * CELL + (CELL - frame.width) // 2 + x_offset
-    if grounded:
-        y = (row + 1) * CELL - BASELINE_MARGIN - frame.height + y_offset
-    else:
-        y = row * CELL + (CELL - frame.height) // 2 + y_offset
+    frame = alpha_pose(nearest(pose, size))
+    x = column * CELL + (CELL - frame.width) // 2
+    # The alpha pose retains its authored proportions; every runtime state is
+    # merely translated to the shared feet baseline inside its square cell.
+    y = (row + 1) * CELL - BASELINE_MARGIN - frame.height
     atlas.alpha_composite(frame, (x, y))
 
 
@@ -297,50 +293,41 @@ def build_player_hero_atlas() -> None:
     small = [cell_pose(motion, CELL, column, 0) for column in range(6)]
     large = [cell_pose(motion, CELL, column, 1) for column in range(6)]
     glides = [cell_pose(glider, 256, column) for column in range(6)]
-    small_hurt = source.crop((1307, 100, 1412, 183))
-    large_hurt = source.crop((1328, 225, 1428, 308))
+    small_hurt = alpha_pose(source.crop((1307, 100, 1412, 183)))
+    large_hurt = alpha_pose(source.crop((1328, 225, 1428, 308)))
     swipe_sources = [strip_pose(tail_swipe, column, 5) for column in range(5)]
 
     atlas = Image.new("RGBA", (CELL * 6, CELL * 22), (0, 0, 0, 0))
 
     recipes = {
-        0: (small, [0, 1, 0, 5], (100, 100), True),
-        1: (small, [0, 1, 2, 3, 4, 5], (100, 100), True),
-        2: (small, [0, 2, 4, 1, 3, 5], (104, 100), True),
-        3: (small, [2, 3], (102, 104), False),
-        4: (small, [3, 4], (102, 104), False),
-        5: ([adjusted_pose(small[5], 1.05, .88), small[0]], [0, 1], (104, 92), True),
-        6: ([small_hurt, small_hurt, small_hurt], [0, 1, 2], (108, 92), True),
-        7: (small, [4, 3, 2], (106, 98), True),
-        8: ([small_hurt] * 4, [0, 1, 2, 3], (108, 92), True),
-        9: (small, [0, 2, 4, 2], (102, 104), True),
-        10: (large, [0, 1, 0, 5], (128, 126), True),
-        11: (large, [0, 1, 2, 3, 4, 5], (128, 126), True),
-        12: (large, [0, 2, 4, 1, 3, 5], (134, 126), True),
-        13: (large, [2, 3], (130, 132), False),
-        14: (large, [3, 4], (130, 132), False),
-        15: ([adjusted_pose(large[5], 1.06, .88), large[0]], [0, 1], (134, 116), True),
-        16: (swipe_sources, [0, 1, 2, 3, 4], (150, 126), True),
-        17: ([large_hurt] * 3, [0, 1, 2], (138, 112), True),
-        18: ([large_hurt, large_hurt, large_hurt, small[0]], [0, 1, 2, 3], (138, 112), True),
-        19: (glides, [0, 1, 2, 3, 4, 5], (164, 150), False),
-        20: (large, [4, 3, 2], (136, 124), True),
-        21: (large, [0, 2, 4, 2], (132, 132), True),
+        0: (small, [0, 1, 0, 5], (100, 100)),
+        1: (small, [0, 1, 2, 3, 4, 5], (100, 100)),
+        2: (small, [0, 2, 4, 1, 3, 5], (104, 100)),
+        3: (small, [2, 3], (102, 104)),
+        4: (small, [3, 4], (102, 104)),
+        5: ([small[5], small[0]], [0, 1], (104, 92)),
+        6: ([small_hurt, small_hurt, small_hurt], [0, 1, 2], (108, 92)),
+        7: (small, [4, 3, 2], (106, 98)),
+        8: ([small_hurt] * 4, [0, 1, 2, 3], (108, 92)),
+        9: (small, [0, 2, 4, 2], (102, 104)),
+        10: (large, [0, 1, 0, 5], (128, 126)),
+        11: (large, [0, 1, 2, 3, 4, 5], (128, 126)),
+        12: (large, [0, 2, 4, 1, 3, 5], (134, 126)),
+        13: (large, [2, 3], (130, 132)),
+        14: (large, [3, 4], (130, 132)),
+        15: ([large[5], large[0]], [0, 1], (134, 116)),
+        16: (swipe_sources, [0, 1, 2, 3, 4], (150, 126)),
+        17: ([large_hurt] * 3, [0, 1, 2], (138, 112)),
+        18: ([large_hurt, adjusted_pose(large_hurt, .84, .84), adjusted_pose(large_hurt, .68, .68), adjusted_pose(small[0], .78, .78)], [0, 1, 2, 3], (138, 112)),
+        19: (glides, [0, 1, 2, 3, 4, 5], (164, 150)),
+        20: (large, [4, 3, 2], (136, 124)),
+        21: (large, [0, 2, 4, 2], (132, 132)),
     }
 
-    for row, (poses, indexes, max_size, grounded) in recipes.items():
+    for row, (poses, indexes, max_size) in recipes.items():
         for column, index in enumerate(indexes):
             pose = poses[index]
-            x_offset = 0
-            y_offset = 0
-            if row in (6, 8, 17):
-                x_offset = (-2, 0, 2, 0)[column]
-            if row in (9, 21):
-                y_offset = (0, -5, -9, -4)[column]
-            if row == 18:
-                scale = (1, .84, .68, .78)[column]
-                pose = adjusted_pose(pose, scale, scale)
-            place_player_pose(atlas, pose, row, column, max_size, grounded, x_offset, y_offset)
+            place_player_pose(atlas, pose, row, column, max_size)
 
     atlas.save(OUTPUT / "player-hero-motion.png", optimize=True)
 

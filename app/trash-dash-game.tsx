@@ -2697,12 +2697,11 @@ export function TrashDashGame() {
       ] as Frame;
       const drawW = playerAnimation.drawWidth;
       const drawH = playerAnimation.drawHeight;
-      const groundedVisualOffset = player.grounded ? (player.large ? 5 : 4) : 0;
 
       drawSprite(
         frame,
         playerX + player.w / 2 - drawW / 2,
-        player.y + player.h - drawH + playerAnimation.offsetY + groundedVisualOffset,
+        player.y + player.h - drawH + playerAnimation.offsetY,
         drawW,
         drawH,
         player.facing < 0,

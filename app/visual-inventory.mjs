@@ -505,14 +505,6 @@ export const MEASURED_RUNTIME_DISTORTION_FRAMES = Object.freeze([
   ...actorDistortions("snake", [["move", 4, 4, 74, 64]], "VIS-006"),
   ...actorDistortions("spider", [["move", 5, 4, 70, 64]], "VIS-006"),
   ...actorDistortions("fox", [["move", 8, 4, 82, 72]], "VIS-006"),
-  ...actorDistortions("raccoon", [
-    ["small_run", 2, 6, 88, 84], ["small_jump", 3, 2, 86, 88], ["small_fall", 4, 2, 86, 88], ["small_land", 5, 2, 88, 82], ["small_hurt", 6, 3, 96, 84], ["small_skid", 7, 3, 90, 84], ["small_defeat", 8, 4, 96, 84],
-    ["large_run", 12, 6, 116, 110], ["large_jump", 13, 2, 112, 114], ["large_fall", 14, 2, 112, 114], ["large_land", 15, 2, 118, 104], ["large_tail_swipe", 16, 5, 142, 112], ["large_hurt", 17, 3, 126, 100], ["large_shrink", 18, 4, 120, 108], ["large_skid", 20, 3, 120, 108], ["large_victory", 21, 4, 116, 114],
-  ], "VIS-005"),
-  ...actorDistortions("jimothy", [
-    ["small_run", 2, 4, 88, 84], ["small_jump", 3, 4, 86, 88], ["small_fall", 4, 4, 86, 88], ["small_land", 5, 4, 88, 82], ["small_hurt", 6, 4, 96, 84], ["small_skid", 7, 4, 90, 84], ["small_defeat", 8, 4, 96, 84],
-    ["large_run", 12, 4, 116, 110], ["large_jump", 13, 4, 112, 114], ["large_fall", 14, 4, 112, 114], ["large_land", 15, 4, 118, 104], ["large_tail_swipe", 16, 4, 142, 112], ["large_hurt", 17, 4, 126, 100], ["large_shrink", 18, 4, 120, 108], ["large_skid", 20, 4, 120, 108], ["large_victory", 21, 4, 116, 114],
-  ], "VIS-005"),
   ...actorDistortions("squirrel", [["locomotion", 0, 4, 78, 76], ["telegraph", 1, 4, 78, 76], ["attack", 2, 4, 78, 76], ["hit", 3, 2, 78, 76], ["defeat", 4, 2, 78, 76]], "VIS-006"),
   ...actorDistortions("terrier", [["locomotion", 5, 4, 94, 82], ["sleep", 6, 1, 94, 82], ["telegraph", 6, 4, 94, 82], ["attack", 7, 4, 94, 82], ["hit", 8, 2, 94, 82], ["stunned", 8, 2, 94, 82], ["recover", 8, 1, 94, 82, 1], ["defeat", 9, 2, 94, 82]], "VIS-006"),
   ...actorDistortions("skunk", [["locomotion", 10, 4, 90, 78], ["telegraph", 11, 4, 90, 78], ["attack", 12, 4, 90, 78], ["hit", 13, 2, 90, 78], ["defeat", 14, 2, 90, 78]], "VIS-006"),

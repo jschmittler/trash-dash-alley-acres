@@ -7,6 +7,7 @@ const privateAtlas = path.join(root, "jimothy-animation-atlas.png");
 const publicDir = path.resolve(root, "../../public/assets/generated");
 const CELL = 192;
 const columns = 6;
+const BASELINE_MARGIN = 8;
 
 // Existing concept rows are reused as clean source poses until bespoke
 // full-parity drawings are available. Every output state still has explicit
@@ -73,6 +74,32 @@ const clearCellEdge = async (buffer) => {
   return sharp(data, { raw: info }).png().toBuffer();
 };
 
+const normalizeToBaseline = async (buffer) => {
+  const { data, info } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  let left = CELL;
+  let top = CELL;
+  let right = -1;
+  let bottom = -1;
+  for (let y = 0; y < CELL; y += 1) {
+    for (let x = 0; x < CELL; x += 1) {
+      if (data[(y * info.width + x) * info.channels + 3] === 0) continue;
+      left = Math.min(left, x);
+      top = Math.min(top, y);
+      right = Math.max(right, x);
+      bottom = Math.max(bottom, y);
+    }
+  }
+  if (right < left || bottom < top) throw new Error("Jimothy source frame is empty");
+  const pose = await sharp(buffer).extract({ left, top, width: right - left + 1, height: bottom - top + 1 }).png().toBuffer();
+  const width = right - left + 1;
+  const height = bottom - top + 1;
+  if (width > CELL - 2 || height > CELL - BASELINE_MARGIN - 1) throw new Error("Jimothy source frame exceeds the safe baseline cell");
+  return sharp({ create: { width: CELL, height: CELL, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .composite([{ input: pose, left: Math.floor((CELL - width) / 2), top: CELL - BASELINE_MARGIN - height }])
+    .png()
+    .toBuffer();
+};
+
 const makeFrames = async (state) => {
   const [, sourceRow, frames] = state;
   const [file, row] = sourceFor(sourceRow);
@@ -80,7 +107,7 @@ const makeFrames = async (state) => {
   for (let column = 0; column < frames; column += 1) {
     const sourceColumn = column % 4;
     out.push({
-      input: await clearCellEdge(await sharp(file).ensureAlpha().extract({ left: sourceColumn * CELL, top: row * CELL, width: CELL, height: CELL }).png().toBuffer()),
+      input: await normalizeToBaseline(await clearCellEdge(await sharp(file).ensureAlpha().extract({ left: sourceColumn * CELL, top: row * CELL, width: CELL, height: CELL }).png().toBuffer())),
       left: (column % columns) * CELL,
       top: 0,
     });

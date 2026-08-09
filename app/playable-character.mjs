@@ -2,6 +2,15 @@ import { JIMOTHY_ANIMATIONS } from "../concepts/jimothy/jimothy-animation.mjs";
 import { PLAYER_ANIMATIONS, selectPlayerAnimation } from "./player-animation.mjs";
 
 const atlas = (path) => path;
+const animationEnvelope = (animations) => {
+  const left = Math.min(...Object.values(animations).map(({ drawWidth }) => -drawWidth / 2));
+  const top = Math.min(...Object.values(animations).map(({ drawHeight, offsetY }) => -drawHeight + offsetY));
+  const right = Math.max(...Object.values(animations).map(({ drawWidth }) => drawWidth / 2));
+  const bottom = Math.max(...Object.values(animations).map(({ offsetY }) => offsetY));
+  return Object.freeze({ x: left, y: top, w: right - left, h: bottom - top });
+};
+
+const facing = Object.freeze({ authored: "right", flipAnchor: "destination-center" });
 
 const raccoon = {
   id: "raccoon",
@@ -23,6 +32,8 @@ const raccoon = {
     hitbox: { x: 4, y: 4, w: 30, h: 54 },
   },
   animations: PLAYER_ANIMATIONS,
+  animationEnvelope: animationEnvelope(PLAYER_ANIMATIONS),
+  facing,
   attackFrames: [1, 2],
 };
 
@@ -46,6 +57,8 @@ const jimothy = {
     hitbox: { x: 4, y: 4, w: 30, h: 54 },
   },
   animations: JIMOTHY_ANIMATIONS,
+  animationEnvelope: animationEnvelope(JIMOTHY_ANIMATIONS),
+  facing,
   attackFrames: [1, 2],
 };
 

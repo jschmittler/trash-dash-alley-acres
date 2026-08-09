@@ -390,15 +390,34 @@ Verification:
 
 ### VIS-005: Player animation axis distortion (Task 3)
 
-- Observed source/runtime evidence: measured alpha crops in the 192×192
-  Trashy and Jimothy animation cells differ from the fixed runtime
-  destination axes for the allowlisted run, jump/fall, land, hurt, skid,
-  defeat, and large-form action states.
-- Root cause: per-state runtime draw widths/heights are not a uniform transform
-  of all visible alpha frames.
-- Owner: Task 3 player renderer/animation pass. Task 2 records and detects the
-  exact per-frame state/crop/destination set but does not alter the shared
-  dirty runtime renderer.
+- Status: 🟨 Automated repair complete; running-game verification `CANNOT VERIFY`
+  because the browser backend was unavailable in this execution.
+- RED source/runtime evidence: every 192×192 player cell was nonempty and inset,
+  but Trashy's generated air/victory rows and Jimothy's copied concept rows had
+  incompatible alpha bottoms (Jimothy measured 106–179 where the authored
+  baseline is 184). The manifests also rendered square source cells through
+  unequal destination axes, including Trashy `large_tail_swipe` at 142×112 and
+  Jimothy `small_run` at 88×84.
+- Root cause: generated runtime atlas registration and manifest destination
+  dimensions were state-specific output patches rather than a shared square-cell
+  transform. The renderer then added a second grounded-only vertical offset.
+- GREEN measured source/destination/anchor result: both deterministic builders
+  now translate complete opaque poses to a source baseline of 184 (visible
+  bottom 183) inside every used 192×192 cell, preserving each pose's own aspect
+  ratio. Every runtime destination is square (82×82 through 140×140, according
+  to the form/state), `offsetY` is derived from that same 184 baseline, and the
+  bottom-center renderer no longer applies a grounded-only compensation. Right
+  is authored and left flips around the unchanged destination center.
+- Automated verification: the shared reachable-state contract covers all small
+  and large states, atlas bounds, one-shot clamping, maximum envelopes, and
+  both-facing anchors. The focused player plus visual-contract/asset/inventory
+  matrix passed 40/40; the two-build SHA-256 comparison matched all five player
+  atlas/contact/selection artifacts. `MEASURED_RUNTIME_DISTORTION_FRAMES` no
+  longer contains a `VIS-005` player entry.
+- Runtime QA required before closure: direct and normal-play routes must still
+  exercise both characters through idle, walk/run, skid, ascent/apex/fall/land,
+  glide, tail swipe, hurt/shrink, checkpoint recovery, pit defeat, victory, and
+  repeated left/right transitions when a browser backend is available.
 
 ### VIS-006: Enemy and boss animation axis distortion (Task 4)
 

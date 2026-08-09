@@ -37,6 +37,7 @@ test("Jimothy production atlas has the six-column, 22-row contract", async () =>
       }
       assert.ok(right >= left && bottom >= top, `${name}:${column} is empty`);
       assert.ok(left > 0 && top > 0 && right < CELL - 1 && bottom < CELL - 1, `${name}:${column} clips a cell edge`);
+      assert.equal(bottom, animation.baseline - 1, `${name}:${column} feet drift from the shared baseline`);
     }
   }
 });

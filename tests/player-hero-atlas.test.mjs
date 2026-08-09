@@ -31,6 +31,7 @@ test("canonical hero atlas matches manifest dimensions and transparent margins",
       }
       assert.ok(right >= left && bottom >= top, `${state}:${column} is empty`);
       assert.ok(left > 0 && top > 0 && right < CELL - 1 && bottom < CELL - 1, `${state}:${column} clips a cell edge`);
+      assert.equal(bottom, animation.baseline - 1, `${state}:${column} feet drift from the shared baseline`);
     }
   }
 });
@@ -41,4 +42,3 @@ test("hero contact sheet is generated for visual review", async () => {
   assert.ok(metadata.width >= CELL * 6);
   assert.ok(metadata.height >= CELL * 22);
 });
-

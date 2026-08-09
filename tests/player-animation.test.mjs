@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  PLAYER_ATLAS,
   PLAYER_ANIMATIONS,
+  PLAYER_FORM_STATES,
   animationFrame,
   isTailSwipeActive,
   selectPlayerAnimation,
 } from "../app/player-animation.mjs";
+import { PLAYABLE_CHARACTERS } from "../app/playable-character.mjs";
 
 const base = {
   form: "small",
@@ -53,3 +56,36 @@ test("one-shot animations clamp and loops wrap", () => {
   assert.equal(animationFrame(walk, 99), Math.floor(99 * walk.fps) % walk.frames);
 });
 
+test("every reachable player state has an in-bounds atlas row, local completion, and a feet-registered envelope", () => {
+  for (const profile of Object.values(PLAYABLE_CHARACTERS)) {
+    const bounds = [];
+    for (const form of ["small", "large"]) {
+      for (const state of PLAYER_FORM_STATES[form]) {
+        const name = `${form}_${state}`;
+        const animation = profile.animations[name];
+        assert.ok(animation, `${profile.id} missing ${name}`);
+        assert.ok(animation.frames > 0 && animation.frames <= PLAYER_ATLAS.columns, `${profile.id}:${name} frame count`);
+        assert.ok(animation.row >= 0 && animation.row < PLAYER_ATLAS.rows, `${profile.id}:${name} atlas row`);
+        assert.ok(animation.drawWidth > 0 && animation.drawHeight > 0, `${profile.id}:${name} draw dimensions`);
+        assert.ok(Number.isFinite(animation.offsetY), `${profile.id}:${name} vertical offset`);
+        assert.ok(Number.isFinite(animation.baseline), `${profile.id}:${name} source baseline`);
+        assert.equal(animationFrame(animation, 999), animation.loop
+          ? Math.floor(999 * animation.fps) % animation.frames
+          : animation.frames - 1, `${profile.id}:${name} local completion`);
+        bounds.push({
+          x: -animation.drawWidth / 2,
+          y: -animation.drawHeight + animation.offsetY,
+          w: animation.drawWidth,
+          h: animation.drawHeight - animation.offsetY,
+        });
+      }
+    }
+    const envelope = profile.animationEnvelope;
+    assert.ok(envelope, `${profile.id} missing maximum animation envelope`);
+    for (const bound of bounds) {
+      assert.ok(bound.x >= envelope.x && bound.y >= envelope.y, `${profile.id} envelope start`);
+      assert.ok(bound.x + bound.w <= envelope.x + envelope.w && bound.y + bound.h <= envelope.y + envelope.h, `${profile.id} envelope end`);
+    }
+    assert.deepEqual(profile.facing, { authored: "right", flipAnchor: "destination-center" }, `${profile.id} facing anchor`);
+  }
+});
