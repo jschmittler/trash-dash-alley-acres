@@ -41,10 +41,9 @@ test("deleted sprinkler feature has no shipped runtime, configuration, builder, 
 
 test("every Level 2 prop cell has one exact reachable runtime owner", async () => {
   assert.deepEqual(LEVEL_TWO_PROP_RUNTIME_OWNERS, {
-    acorn: "bin-lid-source",
-    "charge-obstacle": "level-two-environment",
-    "boss-platform-left": "brutus-platform-left",
-    "boss-platform-right": "brutus-platform-right",
+    acorn: "squirrel-acorn-projectile",
+    "loose-acorn-pile": "level-two-environment",
+    "residential-trash-can": "level-two-environment",
     "rolling-can": "brutus-rolling-can",
     "hydrant-idle": "brutus-crash-mechanic",
   });
@@ -52,11 +51,7 @@ test("every Level 2 prop cell has one exact reachable runtime owner", async () =
 
   const runtime = await source("../app/trash-dash-game.tsx");
   for (const frame of Object.keys(LEVEL_TWO_PROP_RUNTIME_OWNERS)) {
-    if (frame.startsWith("boss-platform-")) {
-      assert.ok(LEVEL_TWO.surfaces.some(({ visual }) => visual === frame), `${frame}: surface owner`);
-    } else if (frame === "acorn") {
-      assert.match(runtime, /levelTwoPropFrame\("acorn"/);
-    } else if (frame === "rolling-can") {
+    if (frame === "acorn" || frame === "rolling-can") {
       assert.match(runtime, /propName = lid\.ownerId === "brutus-can" \? "rolling-can" : "acorn"/);
     } else {
       assert.match(runtime, new RegExp(`levelTwoPropFrame\\("${frame}"`), `${frame}: runtime draw`);

@@ -101,7 +101,8 @@ test("Brutus arena has two authored normal-jump utility platforms with safe sepa
   ));
   assert.ok(left);
   assert.ok(right);
-  assert.deepEqual([left.visual, right.visual], ["boss-platform-left", "boss-platform-right"]);
+  assert.deepEqual([left.kind, right.kind], ["crate", "crate"]);
+  assert.deepEqual([left.w, left.h, right.w, right.h], [112, 85, 112, 85]);
 
   const unassistedJumpApex = (615 ** 2) / (2 * 1750);
   const bossTop = LEVEL_TWO.surfaces.find(({ id }) => id === LEVEL_TWO.boss.surfaceId).y - 96;

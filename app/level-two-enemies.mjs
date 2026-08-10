@@ -387,11 +387,11 @@ export function levelTwoEnemyAnimation(kind, state) {
 export const ENCOUNTER_TEST_ROUTES = Object.freeze({
   squirrel: Object.freeze({
     encounterId: "backyard-squirrel-tutorial", playerX: 620, playerSurfaceId: "backyard-lawn", cameraX: 430,
-    environment: Object.freeze([{ id: "backyard-bin-lids", kind: "bin-lid-source", x: 900, y: 306, w: 46, h: 18, placementType: "ON_SURFACE", surfaceId: "backyard-fence" }]),
+    environment: Object.freeze([{ id: "backyard-loose-acorns", kind: "loose-acorn-pile", x: 884, y: 298, w: 78, h: 34, placementType: "ON_SURFACE", surfaceId: "backyard-fence" }]),
   }),
   terrier: Object.freeze({
     encounterId: "street-terrier-tutorial", playerX: 1370, playerSurfaceId: "street-ground", cameraX: 1230,
-    environment: Object.freeze([{ id: "street-charge-bin", kind: "charge-obstacle", x: 2440, y: 400, w: 54, h: 68, placementType: "ON_SURFACE", surfaceId: "street-ground" }]),
+    environment: Object.freeze([{ id: "street-residential-trash-can", kind: "residential-trash-can", x: 1750, y: 356, w: 88, h: 112, placementType: "ON_SURFACE", surfaceId: "street-ground" }]),
   }),
   skunk: Object.freeze({
     encounterId: "obstacle-skunk-tutorial", playerX: 2780, playerSurfaceId: "obstacle-lawn", cameraX: 2660,
@@ -404,7 +404,7 @@ export const ENCOUNTER_TEST_ROUTES = Object.freeze({
   interaction: Object.freeze({
     encounterId: "obstacle-interaction-test", playerX: 3260, playerSurfaceId: "obstacle-lawn", cameraX: 3120,
     environment: Object.freeze([
-      { id: "interaction-bin-lids", kind: "bin-lid-source", x: 3700, y: 226, w: 46, h: 18, placementType: "ON_SURFACE", surfaceId: "treehouse-platform" },
+      { id: "interaction-loose-acorns", kind: "loose-acorn-pile", x: 3684, y: 218, w: 78, h: 34, placementType: "ON_SURFACE", surfaceId: "treehouse-platform" },
     ]),
   }),
 });

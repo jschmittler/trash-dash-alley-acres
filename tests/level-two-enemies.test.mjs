@@ -134,11 +134,11 @@ test("terrier charge remains committed before an edge or obstacle", () => {
 
 test("terrier resolves its full authored width to the obstacle contact edge", () => {
   const obstacle = selectEncounterTestRoute(LEVEL_TWO, "terrier").environment.find(
-    ({ kind }) => kind === "charge-obstacle",
+    ({ kind }) => kind === "residential-trash-can",
   );
   assert.ok(obstacle);
   const [width, height] = LEVEL_TWO_ENEMY_COLLISION.terrier;
-  const terrier = { state: "charge", x: 2350, y: 468 - height, w: width, h: height, vx: 420, facing: 1 };
+  const terrier = { state: "charge", x: 1670, y: 468 - height, w: width, h: height, vx: 420, facing: 1 };
   assert.equal(selectChargeObstacle(terrier, [obstacle], 0.1), obstacle);
   const next = updateTerrier(terrier, {
     dt: 0.1, patrolMinX: 1420, patrolMaxX: 2480, obstacle,

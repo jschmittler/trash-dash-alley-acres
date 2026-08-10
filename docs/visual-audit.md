@@ -882,3 +882,29 @@ worktree-preservation evidence is recorded in
   envelope rather than a walkable surface. Focused tests are mutation-sensitive
   to helper/dimension changes. Post-correction browser appearance remains
   `CANNOT VERIFY` unless separately recorded after this change.
+
+### 2026-08-10 — V2 Task 2 environmental-art remediation
+
+- **Source classification:** the existing Level 2 prop sheet remains the authored
+  source for projectile acorns, which are recomposed into a three-piece loose
+  pile. No reusable classic residential can existed, so one source was generated
+  once with the built-in image generator and committed in the project. The boss
+  platforms now reuse the canonical Level 1 decorative-crate renderer directly.
+- **RED evidence:** the initial focused run produced 15 passes and 7 expected
+  failures for missing pile/can identity, residual lamp components, bespoke boss
+  platform art, and stale inventory ownership.
+- **Asset inspection:** native atlas/contact-sheet inspection found three
+  separated acorns grounded at the common baseline, a round galvanized can with
+  an overhanging lid and visible trash, one connected hard-alpha lamp body, and
+  empty former utility-platform cells. Gameplay-scale fixtures showed grounded,
+  readable props without matte pixels or overlap.
+- **Runtime inspection:** fresh squirrel, terrier, moth, and Brutus fixtures
+  loaded through the title/character flow with empty warning/error logs. The
+  moth fixture preserves its intentional warm radial light while removing the
+  accidental purple/cyan fringe; both Brutus platforms use matching 112x85
+  wooden crates with reachable one-way collision tops.
+- **Determinism:** two consecutive prop/lamp builds produced byte-identical
+  atlas and contact-sheet SHA-256 hashes. The focused acceptance matrix passed
+  79/79, the exact staged snapshot passed 292/292, and lint completed with zero
+  errors. A 293rd test belongs to preserved unrelated work and is not claimed by
+  this task.

@@ -48,8 +48,8 @@ const surfaces = [
   { id: "drainage-landing", x: 4920, y: 468, w: 630, h: 90, kind: "ground" },
   { id: "boss-runway", x: 5300, y: 468, w: 400, h: 90, kind: "ground" },
   { id: "cul-de-sac", x: 5700, y: 468, w: 850, h: 90, kind: "ground" },
-  { id: "brutus-platform-left", x: 5736, y: 404, w: 72, h: 64, kind: "crate", visual: "boss-platform-left" },
-  { id: "brutus-platform-right", x: 6442, y: 404, w: 72, h: 64, kind: "crate", visual: "boss-platform-right" },
+  { id: "brutus-platform-left", x: 5724, y: 383, w: 112, h: 85, kind: "crate" },
+  { id: "brutus-platform-right", x: 6414, y: 383, w: 112, h: 85, kind: "crate" },
   { id: "victory-street", x: 6550, y: 468, w: 650, h: 90, kind: "ground" },
 ];
 

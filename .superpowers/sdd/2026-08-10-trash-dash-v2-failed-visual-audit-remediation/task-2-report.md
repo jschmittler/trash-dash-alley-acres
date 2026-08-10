@@ -1,0 +1,146 @@
+# Task 2 Report: Level 2 Environmental Art
+
+## Status
+
+DONE. The unreadable singleton nut, electrical utility cabinet, lamp/moth alpha
+fringe, and bespoke boss utility platforms have been replaced with authored,
+deterministically built environmental art. Runtime fixtures, asset contracts,
+the complete test suite, lint, and two-build hash proof are green.
+
+## Skills and references used
+
+- Project rendering/asset integrity, sprite art, environment placement,
+  overlap prevention, and visual QA skills and their required references.
+- Pixel-art skill for source resolution, palette, hard-edge, scale, and native
+  inspection constraints.
+- Image generation skill for the single missing classic residential trash-can
+  source and its required source/output provenance.
+
+These skills drove the hard-alpha source treatment, nearest-neighbor scaling,
+canonical decorative-crate reuse, measured attachment/baseline contracts,
+contact-sheet inspection, and runtime fixture pass.
+
+## RED-first evidence
+
+Before implementation:
+
+```text
+node --test tests/level-two-props.test.mjs tests/visual-asset-integrity.test.mjs
+15 passed, 7 failed
+```
+
+The seven expected failures covered the absent loose-pile identity, absent
+residential-can identity/source, eight lamp alpha components, retained bespoke
+boss-platform cells/draw family, and stale visual-inventory ownership.
+
+## Implementation
+
+- Rebuilt the environment's former single projectile-frame decoration as a
+  grounded pile of three individually connected and mutually separated authored
+  acorns. Projectile animation ownership remains with the squirrel.
+- Added a classic side-on galvanized round residential trash can, with a crooked
+  circular lid and a small amount of visible paper/warm-colored trash. Its body
+  is tapered and ribbed, contains no wheels, and no longer reads as an electrical
+  or industrial utility enclosure.
+- Added deterministic green-key removal, bounded despill, hard alpha, palette
+  reduction, largest-body cleanup, nearest-neighbor resizing, transparent
+  margins, and common-baseline placement to the Level 2 atlas builder.
+- Removed accidental purple/cyan/magenta lamp source fringe with bounded color
+  cleanup and connected-component filtering. The runtime-owned warm radial glow
+  remains attached to the measured lamp emitter.
+- Removed the two bespoke boss-platform atlas cells and renderer. Both platform
+  surfaces now use the canonical Level 1 wooden recycle-crate family at 112x85,
+  without stretching, while preserving symmetric, reachable one-way geometry.
+- Updated environment identities, runtime branches, render metrics, inventory,
+  placement fixtures, and remediation regressions to match the authored assets.
+
+The legacy supplied `level2-props-reference.png` and
+`level2-lamp-post-source.png` source masters were deliberately left byte-stable.
+The deterministic builder composes/cleans from those masters into generated
+outputs, following the project skill's source-preservation rule. The dedicated
+new can source is stored separately in the workspace.
+
+## Generated asset provenance
+
+One image-generation call was needed because repository inspection found no
+reusable authored classic round residential can. Existing alternatives were a
+wheeled recycling bin, utility cabinets, a dumpster, and an open rolling boss
+can, none of which met the requested identity.
+
+- Tool: built-in `image_gen` (`image_gen.imagegen`), one generation; no CLI.
+- Final project source:
+  `concepts/level-two/source/level2-residential-trash-can-source.png`
+- Raw source SHA-256:
+  `171308e6bfd4a838302467716d152722bd3803a4e7ee31edfa2b6b2ca20f2231`
+- Reference inputs:
+  `concepts/level-two/source/level2-props-reference.png` and
+  `concepts/decorative/source/decorative-props-key.png`
+
+Final prompt:
+
+```text
+Use case: stylized-concept
+Asset type: single game prop source sprite for Trash Dash
+Input images: Image 1 is the approved Level 2 metal-prop style and palette reference; Image 2 is the approved game decorative-prop pixel density and side-on viewpoint reference.
+Primary request: Create exactly one classic old-fashioned galvanized round residential trash can, viewed strictly side-on for a 2D side-scrolling game. The can has a tapered cylindrical/ribbed metal body, two small side handles, and a classic circular lid sitting slightly crooked/ajar on top. Show just a little readable household trash peeking from under the lid: one crumpled off-white paper and one small warm orange/brown scrap. It must unmistakably read as a residential garbage can.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for removal, uniform edge to edge.
+Style/medium: polished late-16-bit pixel art, crisp hard-edged pixel clusters, dark navy-blue-gray contour, limited 3-to-4-value shading, no antialiasing, no blur, no smooth gradients.
+Composition/framing: one isolated complete prop centered with generous padding, complete silhouette, grounded bottom edge, orthographic-feeling side view, no cast shadow.
+Lighting/mood: subdued moonlit Level 2 palette with restrained warm highlight from upper left.
+Color palette: galvanized blue-gray/silver metal, dark navy contour, off-white and warm brown/orange trash accents; do not use #00ff00 in the subject.
+Constraints: background is one uniform #00ff00 color with no shadows, gradients, texture, reflections, floor plane, or lighting variation; lid, round tapered body, and visible trash must all remain readable after nearest-neighbor downscaling to about 80x104 pixels.
+Avoid: wheels, wheeled bin, recycling bin, dumpster, utility cabinet, transformer box, electrical panel, industrial enclosure, square rectangular body, front-on perspective, three-quarter perspective, scenery, grass, text, label, recycling logo, watermark, soft edges, fringe pixels, glow, reflection.
+```
+
+The generated chroma-key image is a source input only. The deterministic builder
+performs the final alpha, palette, component, resize, and baseline treatment.
+
+## Native and gameplay-scale inspection
+
+- Loose-acorn atlas bounds: x19, y78, 89x35; three separate readable bodies;
+  common bottom baseline y112.
+- Residential-can atlas bounds: x26, y9, 77x104; round lid overhang and tapered
+  body remain readable at the 112x112 gameplay destination.
+- Lamp output bounds: x43, y7, 106x248 in a 192x256 texture; exactly one
+  meaningful alpha component and hard 0/255 alpha.
+- Canonical crate source bounds: x16, y63, 224x169 in its 256px source cell;
+  runtime destinations are uniformly 112x85.
+- Squirrel fixture: three distinct grounded loose acorns, no blob.
+- Terrier fixture: classic round can is grounded and unobscured.
+- Moth fixture: no colored fringe; restrained warm halo remains.
+- Brutus fixture: matching canonical wooden crates align with both collision
+  tops and leave the center lane open.
+- All four fresh browser fixtures had empty warning/error logs.
+
+## Deterministic build proof
+
+Two consecutive `npm run build:level2-props` runs produced identical hashes:
+
+```text
+aa0c68035e4f354c21e674e299d91eaae5af3564091e6b50b552f04e86fda86b  public/assets/generated/level2-props.png
+632d3734edc2b83ee77fcb4eea7dfa237bdb7f999c7475c7ce4e9eafdd638cd3  public/assets/generated/level2-lamp-post.png
+1ce0e1619bbd73342c7539abc7a4cb7377316b8299f94961751a61edeec280af  concepts/level-two/level2-props-contact-sheet.png
+7c47a7482025cafa76a50e4cefa3ee73ac8bf13dedcfdc73c11b630c37b7a6b8  concepts/level-two/level2-lamp-post-contact-sheet.png
+```
+
+## Final verification
+
+```text
+node --test tests/level-two-props.test.mjs tests/visual-asset-integrity.test.mjs tests/level-two-enemies.test.mjs tests/level-two-fixture.test.mjs tests/world-placement.test.mjs tests/visual-inventory.test.mjs tests/v2-visual-remediation.test.mjs
+79 passed, 0 failed
+
+npm test (exact staged snapshot reconstructed from HEAD + cached binary patch)
+292 passed, 0 failed; production build passed
+
+npm run lint
+0 errors, 1 pre-existing warning at app/trash-dash-game.tsx:2805 in the exact
+staged snapshot (Next no-img-element)
+```
+
+## Concerns
+
+None blocking. Unrelated dirty and untracked work was preserved. Existing
+unrelated hunks in `app/trash-dash-game.tsx` and the unrelated modified
+`tests/rendered-html.test.mjs` were excluded from Task 2 staging.
+A 293rd passing test visible in the shared working tree belongs to that preserved
+unrelated test edit and is intentionally not claimed by this commit.

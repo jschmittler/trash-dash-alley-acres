@@ -17,13 +17,15 @@ import { LEVEL_ONE } from "../app/level-one.mjs";
 import { LEVEL_TWO } from "../app/level-two.mjs";
 import { IMPLEMENTED_VISUAL_INVENTORY } from "../app/visual-inventory.mjs";
 import { sceneryForLevel, sceneryVisualBounds } from "../app/world-scenery.mjs";
+import { decorativeCollisionRect } from "../app/decorative-render.mjs";
 import { pickupYAboveSurface } from "../app/pickup-layout.mjs";
 import { levelTwoEnvironmentRecords } from "../app/level-two-enemies.mjs";
 import {
   hydrantDrawRect,
   lampPostVisibleDrawRect,
   LEVEL_TWO_PROP_FRAMES,
-  levelTwoPlatformDrawRect,
+  looseAcornPileDrawRect,
+  residentialTrashCanDrawRect,
 } from "../app/level-two-props.mjs";
 
 const ledge = Object.freeze({ id: "ledge", x: 100, y: 200, w: 120, h: 40 });
@@ -303,12 +305,8 @@ test("every Level 2 environment and boss prop uses legal full visual bounds", as
     };
   };
   const visual = (item) => {
-    if (item.kind === "bin-lid-source") return projected("acorn", {
-      x: item.x + item.w / 2 - 22, y: item.y + item.h / 2 - 22, w: 44, h: 44,
-    });
-    if (item.kind === "charge-obstacle") return projected("charge-obstacle", {
-      x: item.x + item.w / 2 - 42, y: item.y + item.h - 98, w: 84, h: 112,
-    });
+    if (item.kind === "loose-acorn-pile") return projected("loose-acorn-pile", looseAcornPileDrawRect(item));
+    if (item.kind === "residential-trash-can") return projected("residential-trash-can", residentialTrashCanDrawRect(item));
     if (item.kind === "lamp-post") return lampPostVisibleDrawRect(item);
     if (item.kind === "porch-light") return item;
     return projected(LEVEL_TWO_PROP_FRAMES["hydrant-idle"] ? "hydrant-idle" : "hydrant", hydrantDrawRect(item));
@@ -329,40 +327,18 @@ test("every Level 2 environment and boss prop uses legal full visual bounds", as
   }
 });
 
-test("boss utility-platform art, collision tops, floor contacts, and symmetry agree", async () => {
-  const atlasPath = fileURLToPath(new URL("../public/assets/generated/level2-props.png", import.meta.url));
-  const { data, info } = await sharp(atlasPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+test("boss utility-platform art, collision tops, floor contacts, and symmetry agree", () => {
   const platforms = ["brutus-platform-left", "brutus-platform-right"].map((id) => (
     LEVEL_TWO.surfaces.find((surface) => surface.id === id)
   ));
   const arena = LEVEL_TWO.surfaces.find(({ id }) => id === "cul-de-sac");
   for (const platform of platforms) {
     assert.ok(platform);
-    const [sourceX, sourceY, width, height] = LEVEL_TWO_PROP_FRAMES[platform.visual].frames[0];
-    let left = width;
-    let top = height;
-    let right = -1;
-    let bottom = -1;
-    for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) {
-      if (data[((sourceY + y) * info.width + sourceX + x) * 4 + 3] === 0) continue;
-      left = Math.min(left, x);
-      top = Math.min(top, y);
-      right = Math.max(right, x);
-      bottom = Math.max(bottom, y);
-    }
-    const draw = levelTwoPlatformDrawRect(platform);
-    const visible = {
-      x: draw.x + left / width * draw.w,
-      y: draw.y + top / height * draw.h,
-      w: (right - left + 1) / width * draw.w,
-      h: (bottom - top + 1) / height * draw.h,
-    };
-    assert.ok(Math.abs(visible.y - platform.y) <= 2,
-      `${platform.id} opaque top ${visible.y} disagrees with collision ${platform.y}`);
-    assert.ok(Math.abs(visible.y + visible.h - arena.y) <= 2,
-      `${platform.id} opaque base ${visible.y + visible.h} floats above floor ${arena.y}`);
-    assert.ok(visible.x <= platform.x && visible.x + visible.w >= platform.x + platform.w,
-      `${platform.id} collision extends beyond its visible body`);
+    assert.deepEqual(
+      decorativeCollisionRect("crate", platform.x, arena.y),
+      { x: platform.x, y: platform.y, w: platform.w, h: platform.h },
+      `${platform.id} uses canonical crate art and collision geometry`,
+    );
   }
   const arenaCenter = LEVEL_TWO.boss.arenaStartX + (LEVEL_TWO.boss.arenaEndX - LEVEL_TWO.boss.arenaStartX) / 2;
   const leftOffset = arenaCenter - (platforms[0].x + platforms[0].w / 2);

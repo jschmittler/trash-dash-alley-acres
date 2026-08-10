@@ -124,12 +124,12 @@ import {
   createLevelTwoEnvironmentRuntime,
 } from "./level-two-environment.mjs";
 import {
-  chargeObstacleDrawRect,
   hydrantDrawRect,
   lampEmitterOrigin,
   lampPostDrawRect,
-  levelTwoPlatformDrawRect,
+  looseAcornPileDrawRect,
   levelTwoPropFrame,
+  residentialTrashCanDrawRect,
 } from "./level-two-props.mjs";
 import { RENDER_LAYERS } from "./visual-contract.mjs";
 
@@ -210,7 +210,6 @@ interface Rect {
 
 interface Platform extends Rect {
   kind: PlatformKind;
-  visual?: "boss-platform-left" | "boss-platform-right";
 }
 
 interface Pickup extends Rect {
@@ -260,7 +259,7 @@ interface BinLid extends Rect {
 
 interface EnvironmentCollision extends Rect {
   id: string;
-  kind: "bin-lid-source" | "charge-obstacle" | "lamp-post" | "hydrant";
+  kind: "loose-acorn-pile" | "residential-trash-can" | "lamp-post" | "hydrant";
   encounterId: string;
   flightBand?: string;
 }
@@ -1951,7 +1950,7 @@ export function TrashDashGame() {
             const obstacle = enemy.kind === "terrier"
               ? selectChargeObstacle(
                   enemy,
-                  world.environment.filter(({ kind }) => kind === "charge-obstacle"),
+                  world.environment.filter(({ kind }) => kind === "residential-trash-can"),
                   dt,
                 )
               : null;
@@ -2371,18 +2370,6 @@ export function TrashDashGame() {
             }
           }
           context.restore();
-        } else if (platform.visual) {
-          const draw = levelTwoPlatformDrawRect(platform);
-          drawSprite(
-            levelTwoPropFrame(platform.visual, world.elapsed) as Frame,
-            draw.x - camera,
-            draw.y,
-            draw.w,
-            draw.h,
-            false,
-            1,
-            levelTwoPropMotionRef.current,
-          );
         } else if (platform.kind === "branch") {
           drawPlatformStrip("branch", x, platform.y, platform.w);
         } else if (platform.kind === "metal") {
@@ -2459,10 +2446,10 @@ export function TrashDashGame() {
         const x = item.x - camera;
         if (x < -180 || x > WIDTH + 180) continue;
         context.save();
-        if (item.kind === "charge-obstacle") {
-          const draw = chargeObstacleDrawRect(item);
+        if (item.kind === "residential-trash-can") {
+          const draw = residentialTrashCanDrawRect(item);
           drawSprite(
-            levelTwoPropFrame("charge-obstacle", world.elapsed) as Frame,
+            levelTwoPropFrame("residential-trash-can", world.elapsed) as Frame,
             draw.x - camera,
             draw.y,
             draw.w,
@@ -2471,13 +2458,14 @@ export function TrashDashGame() {
             1,
             levelTwoPropMotionRef.current,
           );
-        } else if (item.kind === "bin-lid-source") {
+        } else if (item.kind === "loose-acorn-pile") {
+          const draw = looseAcornPileDrawRect(item);
           drawSprite(
-            levelTwoPropFrame("acorn", world.elapsed + item.x * 0.001) as Frame,
-            x + item.w / 2 - 22,
-            item.y + item.h / 2 - 22,
-            44,
-            44,
+            levelTwoPropFrame("loose-acorn-pile", world.elapsed) as Frame,
+            draw.x - camera,
+            draw.y,
+            draw.w,
+            draw.h,
             false,
             1,
             levelTwoPropMotionRef.current,

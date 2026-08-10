@@ -6,6 +6,7 @@ import sharp from "sharp";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourcePath = path.join(root, "concepts/level-two/source/level2-props-reference.png");
 const hydrantSourcePath = path.join(root, "concepts/level-two/source/level2-hydrant-idle-source.png");
+const residentialCanSourcePath = path.join(root, "concepts/level-two/source/level2-residential-trash-can-source.png");
 const lampPostSourcePath = path.join(root, "concepts/level-two/source/level2-lamp-post-source.png");
 const outputPath = path.join(root, "public/assets/generated/level2-props.png");
 const contactPath = path.join(root, "concepts/level-two/level2-props-contact-sheet.png");
@@ -19,9 +20,8 @@ const slots = [
   { name: "acorn-1", col: 1, row: 0, crop: [98, 75, 64, 88], fit: [58, 58] },
   { name: "acorn-2", col: 2, row: 0, crop: [165, 76, 68, 87], fit: [58, 58] },
   { name: "acorn-3", col: 3, row: 0, crop: [240, 75, 69, 89], fit: [58, 58] },
-  { name: "charge-obstacle", col: 0, row: 1, crop: [740, 248, 112, 158], fit: [72, 96] },
-  { name: "boss-platform-left", col: 1, row: 1, crop: [341, 246, 187, 161], fit: [108, 88] },
-  { name: "boss-platform-right", col: 2, row: 1, crop: [540, 246, 174, 161], fit: [96, 88] },
+  { name: "residential-trash-can", col: 0, row: 1, source: "residential-can", fit: [84, 104], mode: "residential-can" },
+  { name: "loose-acorn-pile", col: 1, row: 1, source: "loose-acorn-pile" },
   { name: "rolling-can", col: 3, row: 1, crop: [902, 798, 130, 163], fit: [84, 104] },
   { name: "hydrant-idle", col: 0, row: 2, source: "hydrant", fit: [72, 92], mode: "hydrant-body" },
 ];
@@ -52,7 +52,11 @@ function hardKeyGenerated(raw, slot) {
     const green = raw[index + 1];
     const blue = raw[index + 2];
     const magenta = red > 170 && blue > 145 && green < Math.min(red, blue) * 0.62;
-    if (magenta) {
+    const lampPurpleFringe = slot.mode === "lamp-post"
+      && red > 54 && blue > 48 && red > green * 1.28 && blue > green * 1.15;
+    const lampCyanFringe = slot.mode === "lamp-post"
+      && green > 105 && blue > 118 && red < Math.min(green, blue) * 0.52;
+    if (magenta || lampPurpleFringe || lampCyanFringe) {
       raw[index + 3] = 0;
       continue;
     }
@@ -60,6 +64,14 @@ function hardKeyGenerated(raw, slot) {
       const water = blue > 110 && green > 95 && blue > red * 1.08 && green > red * 1.02;
       const grass = green > red * 1.08 && green > blue * 0.92;
       raw[index + 3] = water || grass ? 0 : 255;
+      continue;
+    }
+    if (slot.mode === "residential-can") {
+      const greenKey = green > 150 && green > red * 1.32 && green > blue * 1.25;
+      raw[index + 3] = greenKey ? 0 : 255;
+      if (!greenKey && green > red * 1.1 && green > blue * 1.05) {
+        raw[index + 1] = Math.max(red, blue);
+      }
       continue;
     }
     raw[index + 3] = raw[index + 3] === 0 ? 0 : 255;
@@ -104,16 +116,53 @@ function keepLargestComponent(raw, info) {
 }
 
 async function generatedInput(slot) {
-  const inputPath = hydrantSourcePath;
+  const inputPath = slot.source === "residential-can" ? residentialCanSourcePath : hydrantSourcePath;
   const metadata = await sharp(inputPath).metadata();
   const extraction = { left: 0, top: 0, width: metadata.width, height: metadata.height };
   const result = await sharp(inputPath).extract(extraction).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const keyed = hardKeyGenerated(result.data, slot);
-  if (slot.mode === "hydrant-body") keepLargestComponent(keyed, result.info);
+  if (slot.mode === "hydrant-body" || slot.mode === "residential-can") keepLargestComponent(keyed, result.info);
   return { data: keyed, info: result.info };
 }
 
+async function looseAcornPileSprite() {
+  const positions = [
+    { crop: slots[0].crop, width: 27, height: 38, left: 7 },
+    { crop: slots[1].crop, width: 27, height: 38, left: 38 },
+    { crop: slots[3].crop, width: 27, height: 38, left: 69 },
+  ];
+  const sprites = [];
+  for (const position of positions) {
+    const input = await sharp(sourcePath)
+      .extract({ left: position.crop[0], top: position.crop[1], width: position.crop[2], height: position.crop[3] })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const cleaned = despill(input.data, { name: "acorn-pile-part" });
+    const sprite = await sharp(cleaned, { raw: input.info })
+      .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .resize({ width: position.width, height: position.height, fit: "inside", kernel: "nearest" })
+      .png()
+      .toBuffer();
+    const metadata = await sharp(sprite).metadata();
+    sprites.push({ input: sprite, left: position.left, top: 46 - metadata.height });
+  }
+  return sharp({ create: { width: 104, height: 46, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .composite(sprites)
+    .png()
+    .toBuffer();
+}
+
 async function normalizedSprite(slot) {
+  if (slot.source === "loose-acorn-pile") {
+    const sprite = await looseAcornPileSprite();
+    const metadata = await sharp(sprite).metadata();
+    return {
+      input: sprite,
+      left: slot.col * cell + Math.round((cell - metadata.width) / 2),
+      top: slot.row * cell + baseline - metadata.height + 1,
+    };
+  }
   const [maxWidth, maxHeight] = slot.fit;
   const input = slot.source
     ? await generatedInput(slot)
@@ -154,6 +203,7 @@ await sharp(Buffer.from(checkerSvg))
 
 const lampInput = await sharp(lampPostSourcePath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
 const lampKeyed = hardKeyGenerated(lampInput.data, { mode: "lamp-post" });
+keepLargestComponent(lampKeyed, lampInput.info);
 const lampSprite = await sharp(lampKeyed, { raw: lampInput.info })
   .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 } })
   .resize({ width: 184, height: 248, fit: "inside", kernel: "nearest" })

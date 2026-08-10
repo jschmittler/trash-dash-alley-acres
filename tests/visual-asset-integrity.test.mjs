@@ -201,7 +201,7 @@ test("authoritative inventory source rectangles have opaque source pixels and fr
   assert.throws(() => {
     dumpster.sourceRects.sealed.w = 1;
   }, TypeError);
-  const binLidSource = IMPLEMENTED_VISUAL_INVENTORY.find(({ id }) => id === "bin-lid-source");
+  const binLidSource = IMPLEMENTED_VISUAL_INVENTORY.find(({ id }) => id === "ordinary-bin-lid");
   assert.equal(Object.isFrozen(binLidSource.sourceRects.active), true, "animated source frame array is frozen");
   assert.equal(Object.isFrozen(binLidSource.sourceRects.active[3]), true, "animated source frame is frozen");
   assert.equal(Object.isFrozen(binLidSource.runtimeDestinations.active[3]), true, "animated runtime destination is frozen");
@@ -209,6 +209,20 @@ test("authoritative inventory source rectangles have opaque source pixels and fr
     binLidSource.runtimeDestinations.active[3].w = 1;
   }, TypeError);
   assert.deepEqual(dumpster.renderedSize, { w: DUMPSTER_DRAW_WIDTH, h: DUMPSTER_DRAW_HEIGHT });
+});
+
+test("Level 2 environmental identities own exact authored sources and destinations", () => {
+  const byId = (id) => IMPLEMENTED_VISUAL_INVENTORY.find((record) => record.id === id);
+  const pile = byId("loose-acorn-pile");
+  const can = byId("residential-trash-can");
+  assert.ok(pile, "loose acorn pile is inventoried independently from projectile acorns");
+  assert.ok(can, "residential trash can is inventoried independently from the Brutus rolling can");
+  assert.equal(pile.assetSource, "assets/generated/level2-props.png");
+  assert.deepEqual(pile.runtimeDestinations.idle, [{ w: 96, h: 96 }]);
+  assert.deepEqual(can.runtimeDestinations.idle, [{ w: 112, h: 112 }]);
+  assert.equal(can.contract.groundAnchor.y, 0);
+  assert.ok(IMPLEMENTED_VISUAL_INVENTORY.every(({ id }) => !id.includes("charge-obstacle")), "utility-cabinet identity removed");
+  assert.ok(IMPLEMENTED_VISUAL_INVENTORY.every(({ id }) => !id.startsWith("brutus-platform-")), "boss crates use the decorative crate record");
 });
 
 test("renderer keeps pixel smoothing disabled and constrains an optional visual-contract overlay to development", async () => {

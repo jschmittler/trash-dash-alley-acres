@@ -313,7 +313,7 @@ const surfaceRecords = [LEVEL_ONE, LEVEL_TWO].flatMap((level) => level.surfaces
   id: `${level.id}-${surface.id}`,
   entityId: surface.id,
   category: surface.kind === "ground" ? "terrain" : "platform",
-  levelIds: [level.id], assetSource: surface.kind === "ground" ? "assets/ground-seamless.png" : surface.kind === "box" ? "assets/generated/decorative-atlas.png" : `assets/generated/${surface.kind}-platform-strip.png`,
+  levelIds: [level.id], assetSource: surface.kind === "ground" ? "assets/ground-seamless.png" : ["box", "crate"].includes(surface.kind) ? "assets/generated/decorative-atlas.png" : `assets/generated/${surface.kind}-platform-strip.png`,
   nativeSize: null, renderedSize: { w: surface.w, h: surface.h },
   origin: "world rectangle top-left", facing: "not applicable", animations: null, requiredStates: [],
 }, {
@@ -322,44 +322,7 @@ const surfaceRecords = [LEVEL_ONE, LEVEL_TWO].flatMap((level) => level.surfaces
   minimumClearance: clearance(0), scalePolicy: { kind: SCALE_POLICIES.NINE_SLICE_OR_TILE, min: 1, max: 1, preserveAspectRatio: true },
 })));
 
-// These are atlas sprites, despite also supplying collision surfaces. Their
-// renderer uses a distinct fixed 104×104 destination, so they cannot inherit
-// the tiled-surface exemption used by ordinary authored platforms.
-const levelTwoVisualPlatformRecords = LEVEL_TWO.surfaces
-  .filter((surface) => surface.visual)
-  .map((surface) => {
-    const [x, y, w, h] = LEVEL_TWO_PROP_FRAMES[surface.visual].frames[0];
-    const drawSize = 128 * surface.w / 96;
-    const visualTop = surface.h - 112 / 128 * drawSize;
-    const footprintTop = Math.min(visualTop, -surface.h);
-    const footprintBottom = Math.max(visualTop + drawSize, 0);
-    return makeRecord({
-      id: surface.id,
-      category: "platform",
-      levelIds: ["level-2"],
-      assetSource: LEVEL_TWO_PROP_ASSET,
-      nativeSize: { cellW: 128, cellH: 128 },
-      renderedSize: { w: drawSize, h: drawSize },
-      sourceRects: { idle: [rect(x, y, w, h)] },
-      runtimeDestinations: { idle: [{ w: drawSize, h: drawSize }] },
-      origin: "levelTwoPlatformDrawRect bottom-aligned to authored surface",
-      facing: "not applicable",
-      animations: { idle: { row: y / 128, frames: 1, fps: 0, loop: false } },
-      requiredStates: ["idle"],
-      runtimeOwner: "level-two-prop-render",
-    }, {
-      visualBounds: rect(-drawSize / 2, visualTop, drawSize, drawSize),
-      collisionBounds: rect(-surface.w / 2, -surface.h, surface.w, surface.h),
-      placementFootprint: rect(-drawSize / 2, footprintTop, drawSize, footprintBottom - footprintTop),
-      groundAnchor: { x: 0, y: 0 },
-      renderLayer: "TERRAIN",
-      allowedZones: ["authored-world-geometry"],
-      forbiddenZones: [],
-      minimumClearance: clearance(0),
-      scalePolicy: canonicalScale(1, 1),
-      anchorPolicy: FREE_ANCHOR,
-    });
-  });
+const levelTwoVisualPlatformRecords = [];
 
 const decorativeRecords = Object.entries(DECORATIVE_PROPS).map(([id, meta]) => makeRecord({
   id, category: id === "checkpoint" ? "interactive-prop" : "decorative-prop", levelIds: ["level-1", "level-2"],
@@ -435,7 +398,8 @@ const lampPostRecord = makeRecord({
 });
 
 const propRecords = [
-  groundedPropRecord({ id: "charge-obstacle", category: "interactive-prop", sourceRects: { idle: [rect(0, 128, 128, 128)] }, renderedSize: { w: 112, h: 112 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
+  groundedPropRecord({ id: "loose-acorn-pile", category: "decorative-prop", sourceRects: { idle: [rect(128, 128, 128, 128)] }, renderedSize: { w: 96, h: 96 }, renderLayer: "GROUND_DECOR", runtimeOwner: "level-two-prop-render" }),
+  groundedPropRecord({ id: "residential-trash-can", category: "interactive-prop", sourceRects: { idle: [rect(0, 128, 128, 128)] }, renderedSize: { w: 112, h: 112 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
   groundedPropRecord({ id: "hydrant-body", category: "interactive-prop", sourceRects: { idle: [rect(0, 256, 128, 128)] }, renderedSize: { w: 96, h: 96 }, renderLayer: "GAMEPLAY", runtimeOwner: "brutus-crash-mechanic" }),
 ];
 
@@ -490,9 +454,6 @@ const miscRecords = [
   makeRecord({ id: "ordinary-bin-lid", category: "projectile", levelIds: ["level-1", "level-2"], assetSource: LEVEL_TWO_PROP_ASSET, nativeSize: { cellW: 128, cellH: 128 }, renderedSize: { w: 34, h: 34 }, sourceRects: animationSourceRects({ active: LEVEL_TWO_PROP_FRAMES.acorn }, 128, 128), runtimeDestinations: { active: repeated(4, { w: 34, h: 34 }) }, origin: "center", facing: "velocity-controlled rotation", animations: { active: LEVEL_TWO_PROP_FRAMES.acorn }, requiredStates: ["active"] }, {
     visualBounds: rect(-17, -17, 34, 34), collisionBounds: rect(-8, -8, 16, 16), placementFootprint: rect(-22, -22, 44, 44), groundAnchor: { x: 0, y: 17 }, renderLayer: "GAMEPLAY_EFFECTS", allowedZones: ["authored-projectile-lane"], forbiddenZones: ["source-owner-footprint"], minimumClearance: clearance(0), scalePolicy: canonicalScale(1, 1),
   }),
-  makeRecord({ id: "bin-lid-source", category: "interactive-prop", levelIds: ["level-2"], assetSource: LEVEL_TWO_PROP_ASSET, nativeSize: { cellW: 128, cellH: 128 }, renderedSize: { w: 44, h: 44 }, sourceRects: animationSourceRects({ active: LEVEL_TWO_PROP_FRAMES.acorn }, 128, 128), runtimeDestinations: { active: repeated(4, { w: 44, h: 44 }) }, origin: "center", facing: "not applicable", animations: { active: LEVEL_TWO_PROP_FRAMES.acorn }, requiredStates: ["active"] }, {
-    ...grounded(44, 44, 22, 22, 6), renderLayer: "GAMEPLAY", allowedZones: ["authored-world-geometry"], forbiddenZones: ["boss-platform-interior"], minimumClearance: clearance(0),
-  }),
   makeRecord({ id: "brutus-rolling-can", category: "projectile", levelIds: ["level-2"], assetSource: LEVEL_TWO_PROP_ASSET, nativeSize: { cellW: 128, cellH: 128 }, renderedSize: { w: 42, h: 42 }, sourceRects: animationSourceRects({ active: LEVEL_TWO_PROP_FRAMES["rolling-can"] }, 128, 128), runtimeDestinations: { active: [{ w: 42, h: 42 }] }, origin: "center", facing: "velocity-controlled rotation", animations: { active: LEVEL_TWO_PROP_FRAMES["rolling-can"] }, requiredStates: ["active"] }, {
     ...grounded(42, 42, 22, 22, 6), renderLayer: "GAMEPLAY_EFFECTS", allowedZones: ["boss-arena-floor"], forbiddenZones: ["boss-platform-interior"], minimumClearance: clearance(0),
   }),
@@ -524,10 +485,8 @@ export const RUNTIME_DRAW_FAMILY_MANIFEST = Object.freeze([
   drawFamily("bosses", "drawEnemy/bossAnimation+brutusDrawRect", ["trash-heap-tyrant", "brutus-bin-hound"]),
   drawFamily("pickups", "drawSprite/trashPickupRows+tacoPowerMotion+sprites.cap", ["trash", "taco", "cap"]),
   drawFamily("victory-dumpster", "drawSprite/dumpsterFrame+dumpsterDrawRect", ["victory-dumpster"]),
-  drawFamily("level-two-props", "drawSprite/levelTwoPropFrame", ["charge-obstacle", "hydrant-body"]),
+  drawFamily("level-two-props", "drawSprite/levelTwoPropFrame", ["loose-acorn-pile", "residential-trash-can", "hydrant-body"]),
   drawFamily("level-two-lamp-post", "drawImage/lampPostDrawRect", ["lamp-post"]),
-  drawFamily("level-two-visual-platforms", "drawSprite/levelTwoPlatformDrawRect", ["brutus-platform-left", "brutus-platform-right"]),
-  drawFamily("bin-lid-source", "drawSprite/levelTwoPropFrame(acorn)", ["bin-lid-source"]),
   drawFamily("ordinary-bin-lid", "drawSprite/binLids", ["ordinary-bin-lid"]),
   drawFamily("brutus-rolling-can", "drawSprite/binLids", ["brutus-rolling-can"]),
   drawFamily("procedural-effects", "canvas fill/particle renderer", ["pit-and-drainage-gap", "impact-particles", "gameplay-hud"]),

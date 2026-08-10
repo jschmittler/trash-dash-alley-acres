@@ -66,7 +66,7 @@ test("renderer draw-family manifest binds every named runtime path to canonical 
   const families = new Set(RUNTIME_DRAW_FAMILY_MANIFEST.map(({ id }) => id));
   const expectedFamilies = [
     "decorative-props", "level-one-enemies", "level-two-enemies", "players", "bosses", "pickups",
-    "victory-dumpster", "level-two-props", "level-two-visual-platforms", "bin-lid-source",
+    "victory-dumpster", "level-two-props",
     "level-two-lamp-post", "ordinary-bin-lid", "brutus-rolling-can", "procedural-effects",
   ];
   assert.deepEqual([...families].sort(), expectedFamilies.sort(), "renderer draw families are exhaustive");
@@ -78,12 +78,7 @@ test("renderer draw-family manifest binds every named runtime path to canonical 
     assert.ok(family.recordIds.length > 0, `${family.id}: record coverage`);
     for (const recordId of family.recordIds) assert.ok(ids.has(recordId), `${family.id}:${recordId}`);
   }
-  const platformFamily = RUNTIME_DRAW_FAMILY_MANIFEST.find(({ id }) => id === "level-two-visual-platforms");
-  assert.deepEqual(
-    platformFamily.recordIds.slice().sort(),
-    LEVEL_TWO.surfaces.filter(({ visual }) => visual).map(({ id }) => id).sort(),
-    "every Level 2 surface.visual draw is bound to its own inventory record",
-  );
+  assert.equal(LEVEL_TWO.surfaces.some(({ visual }) => visual), false, "Level 2 no longer owns bespoke visual-platform cells");
   const boundRecordIds = new Set(RUNTIME_DRAW_FAMILY_MANIFEST.flatMap(({ recordIds }) => recordIds));
   for (const { id, category, assetSource } of IMPLEMENTED_VISUAL_INVENTORY) {
     if (assetSource && ["projectile", "effect"].includes(category)) assert.ok(boundRecordIds.has(id), `explicit ${category}: ${id}`);
@@ -95,12 +90,12 @@ test("renderer draw-family manifest binds every named runtime path to canonical 
 
 test("animated prop consumers bind all committed source frames to runtime destinations", () => {
   const record = (id) => IMPLEMENTED_VISUAL_INVENTORY.find((candidate) => candidate.id === id);
-  const binLid = record("bin-lid-source");
+  const binLid = record("ordinary-bin-lid");
   assert.deepEqual(binLid.sourceRects.active, [
     { x: 0, y: 0, w: 128, h: 128 }, { x: 128, y: 0, w: 128, h: 128 },
     { x: 256, y: 0, w: 128, h: 128 }, { x: 384, y: 0, w: 128, h: 128 },
   ]);
-  assert.deepEqual(binLid.runtimeDestinations.active, Array.from({ length: 4 }, () => ({ w: 44, h: 44 })));
+  assert.deepEqual(binLid.runtimeDestinations.active, Array.from({ length: 4 }, () => ({ w: 34, h: 34 })));
   const lamp = record("lamp-post");
   const runtimeLamp = lampPostDrawRect({ x: 0, y: 0, w: 96, h: 208 });
   assert.deepEqual(lamp.sourceRects.idle, [{ x: 0, y: 0, w: 192, h: 256 }]);
@@ -108,17 +103,12 @@ test("animated prop consumers bind all committed source frames to runtime destin
   assert.equal(runtimeLamp.w / 192, runtimeLamp.h / 256);
 });
 
-test("Level 2 visual platforms are fixed-aspect records with their source cells and runtime rectangles", () => {
-  const platforms = IMPLEMENTED_VISUAL_INVENTORY.filter(({ id }) => id === "brutus-platform-left" || id === "brutus-platform-right");
-  assert.equal(platforms.length, 2);
-  for (const platform of platforms) {
-    assert.equal(platform.contract.scalePolicy.kind, "CANONICAL_WORLD_SIZE", `${platform.id}: fixed aspect`);
-    const surface = LEVEL_TWO.surfaces.find(({ id }) => id === platform.id);
-    const drawSize = 128 * surface.w / 96;
-    assert.deepEqual(platform.runtimeDestinations, { idle: [{ w: drawSize, h: drawSize }] }, `${platform.id}: runtime draw rect`);
-    assert.deepEqual(platform.sourceRects.idle[0], platform.id.endsWith("left")
-      ? { x: 128, y: 128, w: 128, h: 128 }
-      : { x: 256, y: 128, w: 128, h: 128 });
+test("Level 2 boss platforms inherit the canonical decorative crate record", () => {
+  const crate = IMPLEMENTED_VISUAL_INVENTORY.find(({ id }) => id === "crate");
+  assert.deepEqual(crate.renderedSize, { w: 112, h: 85 });
+  for (const surface of LEVEL_TWO.surfaces.filter(({ id }) => id.startsWith("brutus-platform-"))) {
+    assert.equal(surface.kind, "crate");
+    assert.deepEqual({ w: surface.w, h: surface.h }, crate.renderedSize);
   }
 });
 
