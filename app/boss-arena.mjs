@@ -3,8 +3,28 @@ export const BOSS_ARENA_RIGHT = 6600;
 export const BOSS_ARENA_TRIGGER_X = 5680;
 export const BOSS_ARENA_CAMERA_X = 5640;
 export const BOSS_INTRO_DURATION = 1.1;
+export const BOSS_ENTRY_MOTION_LIMITS = Object.freeze({
+  maximumStepSeconds: 0.033,
+  maximumRunSpeed: 330,
+  maximumPlayerWidth: 38,
+  minimumClearance: 6,
+});
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
+
+export function advanceBossArenaEntryX(playerX, {
+  speed = BOSS_ENTRY_MOTION_LIMITS.maximumRunSpeed,
+  dt = BOSS_ENTRY_MOTION_LIMITS.maximumStepSeconds,
+} = {}) {
+  const boundedSpeed = clamp(Number.isFinite(speed) ? speed : 0, 0, BOSS_ENTRY_MOTION_LIMITS.maximumRunSpeed);
+  const boundedDt = clamp(Number.isFinite(dt) ? dt : 0, 0, BOSS_ENTRY_MOTION_LIMITS.maximumStepSeconds);
+  return playerX + boundedSpeed * boundedDt;
+}
+
+export function latestSafeBossArenaTriggerX(firstPlatformX, limits = BOSS_ENTRY_MOTION_LIMITS) {
+  const worstStep = limits.maximumRunSpeed * limits.maximumStepSeconds;
+  return Math.floor(firstPlatformX - limits.maximumPlayerWidth - limits.minimumClearance - worstStep);
+}
 
 const defaultArena = Object.freeze({
   triggerX: BOSS_ARENA_TRIGGER_X,
@@ -55,7 +75,6 @@ export function bossArenaCameraX(arena = defaultArena) {
 export function validateBossArenaPlacement(level, {
   minimumRunway = 360,
   maximumJumpRise = 140,
-  maximumPlayerWidth = 38,
 } = {}) {
   const errors = [];
   const arena = level?.boss;
@@ -91,12 +110,15 @@ export function validateBossArenaPlacement(level, {
       if (left.x < arena.arenaStartX || right.x + right.w > arena.arenaEndX) {
         errors.push(`${level.id}: boss utility platform leaves arena bounds`);
       }
-      const triggerOverlapsPlatform = [left, right].some((platform) => (
-        arena.triggerX < platform.x + platform.w
-        && arena.triggerX + maximumPlayerWidth > platform.x
+      const worstStepEntryX = advanceBossArenaEntryX(arena.triggerX);
+      const triggerViolatesPlatformClearance = [left, right].some((platform) => (
+        worstStepEntryX < platform.x + platform.w
+        && worstStepEntryX
+          + BOSS_ENTRY_MOTION_LIMITS.maximumPlayerWidth
+          + BOSS_ENTRY_MOTION_LIMITS.minimumClearance > platform.x
       ));
-      if (triggerOverlapsPlatform) {
-        errors.push(`${level.id}: boss entry overlaps a utility platform`);
+      if (triggerViolatesPlatformClearance) {
+        errors.push(`${level.id}: boss entry worst step violates utility-platform clearance`);
       }
     }
   }

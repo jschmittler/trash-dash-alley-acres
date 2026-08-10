@@ -218,3 +218,62 @@ clean
 The shared working tree also passed 295/295, but its extra passing rendered-HTML
 test remains unrelated and unstaged, so this fix round claims only the exact
 294-test staged result.
+
+## Fix Round 2 — worst-step normal-entry clearance
+
+Re-review correctly found that Round 1 tested only the nominal trigger point.
+Ordinary gameplay integrates horizontal movement before checking arena
+activation, so the runtime's maximum 330px/s run speed and 0.033s time step can
+advance the player 10.89px beyond that nominal point.
+
+RED-first reproduction:
+
+```text
+node --test tests/boss-arena.test.mjs
+8 passed, 1 failed
+
+worst-step normal entry 5690.89..5728.89 overlaps brutus-platform-left
+```
+
+The speed, time-step, maximum player width, and desired entry gap now live in
+one frozen `BOSS_ENTRY_MOTION_LIMITS` contract: 330px/s, 0.033s, 38px, and 6px.
+The runtime consumes the same speed and step bounds, while
+`latestSafeBossArenaTriggerX` authors the Level 2 trigger from the unchanged left
+crate coordinate. The resulting trigger is x5669. At the worst allowed movement
+step, the player advances to x5679.89 and ends at x5717.89, leaving 6.11px before
+the crate at x5724.
+
+The final regression follows the ordinary movement-to-activation sequence with
+the shared helper, asserts the authored minimum gap, and proves that moving the
+trigger one pixel right fails. The arena validator uses the same worst-step
+contract, and a separate source-wiring assertion prevents runtime speed or dt
+from silently drifting back to literals.
+
+The direct fixture remains x5680, the crate pair and lock stay unchanged, the
+open center lane is unchanged, and the normal runway remains a valid 369px
+approach against the 360px minimum. The deterministic prop command and hashes
+are unchanged. The regenerated arena trace records the 6.11px worst-step gap
+and still completes all three Brutus phases in 14.2s.
+
+Fix-round verification:
+
+```text
+node --test tests/boss-arena.test.mjs tests/brutus-boss.test.mjs tests/level-two-props.test.mjs tests/visual-asset-integrity.test.mjs tests/level-two-enemies.test.mjs tests/level-two-fixture.test.mjs tests/level-two-routes.test.mjs tests/world-placement.test.mjs tests/visual-inventory.test.mjs tests/v2-visual-remediation.test.mjs
+106 passed, 0 failed
+
+npm test (exact staged snapshot reconstructed from HEAD + cached binary patch)
+295 passed, 0 failed; production build passed
+
+npm run lint (exact staged snapshot)
+0 errors, 1 pre-existing no-img-element warning at app/trash-dash-game.tsx:2806
+
+node concepts/level-two/audit-brutus-arena.mjs
+Brutus reaches complete at 14.2s; runway ordinary count 0.
+
+git diff --cached --check
+clean
+```
+
+The shared working tree also passed 296/296, but its extra unrelated
+rendered-HTML test remains unstaged. Runtime browser inspection remains CANNOT
+VERIFY from Round 1; this round makes no new screenshot claim.

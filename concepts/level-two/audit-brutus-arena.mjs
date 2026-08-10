@@ -2,7 +2,12 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { activateBossArena, clampArenaPlayerX } from "../../app/boss-arena.mjs";
+import {
+  activateBossArena,
+  advanceBossArenaEntryX,
+  BOSS_ENTRY_MOTION_LIMITS,
+  clampArenaPlayerX,
+} from "../../app/boss-arena.mjs";
 import {
   brutusArenaHazards,
   createBrutusState,
@@ -84,6 +89,14 @@ const activated = activateBossArena([
   { kind: "moth", active: true },
   { kind: "boss", active: true },
 ], LEVEL_TWO.boss);
+const leftPlatform = LEVEL_TWO.surfaces.find(({ id }) => id === "brutus-platform-left");
+const worstStepEntryX = advanceBossArenaEntryX(LEVEL_TWO.boss.triggerX);
+const worstStepEntryGap = Number((
+  leftPlatform.x - worstStepEntryX - BOSS_ENTRY_MOTION_LIMITS.maximumPlayerWidth
+).toFixed(2));
+if (worstStepEntryGap < BOSS_ENTRY_MOTION_LIMITS.minimumClearance) {
+  throw new Error("Worst-step normal entry violates the canonical crate clearance");
+}
 
 const audit = {
   dt: 0.1,
@@ -99,6 +112,14 @@ const audit = {
     renderLeftAtComplete,
   },
   runwayOrdinaryAfterActivation: activated.enemies.filter(({ kind }) => kind !== "boss").length,
+  normalEntry: {
+    triggerX: LEVEL_TWO.boss.triggerX,
+    worstStepEntryX,
+    maximumPlayerWidth: BOSS_ENTRY_MOTION_LIMITS.maximumPlayerWidth,
+    leftPlatformX: leftPlatform.x,
+    gap: worstStepEntryGap,
+    minimumClearance: BOSS_ENTRY_MOTION_LIMITS.minimumClearance,
+  },
   lockedPlayerSamples: [5400, LEVEL_TWO.boss.triggerX, 6700]
     .map((x) => clampArenaPlayerX(x, 38, LEVEL_TWO.boss)),
   releasePlayerSample: 6700,

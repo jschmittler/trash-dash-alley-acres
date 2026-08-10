@@ -33,7 +33,7 @@ test("Level 2 has six optional routes, four ordered checkpoints, and Brutus meta
     id: "brutus-bin-hound",
     kind: "brutus",
     runwayStartX: 5300,
-    triggerX: 5680,
+    triggerX: 5669,
     arenaStartX: 5650,
     arenaEndX: 6600,
     surfaceId: "cul-de-sac",

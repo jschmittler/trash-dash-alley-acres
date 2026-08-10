@@ -46,6 +46,7 @@ import {
 } from "./boss-animation.mjs";
 import {
   activateBossArena,
+  BOSS_ENTRY_MOTION_LIMITS,
   clampArenaBossX as metadataClampArenaBossX,
   clampArenaPlayerX as metadataClampArenaPlayerX,
   completeBossArena,
@@ -1782,7 +1783,7 @@ export function TrashDashGame() {
       if (direction && Math.sign(player.vx) === -direction && Math.abs(player.vx) > 120) {
         player.skidTimer = 0.16;
       }
-      const targetSpeed = direction * (running ? 330 : 225);
+      const targetSpeed = direction * (running ? BOSS_ENTRY_MOTION_LIMITS.maximumRunSpeed : 225);
       const acceleration = player.grounded ? 1900 : 1050;
       const speedDelta = targetSpeed - player.vx;
       player.vx += Math.sign(speedDelta) * Math.min(Math.abs(speedDelta), acceleration * dt);
@@ -2737,7 +2738,7 @@ export function TrashDashGame() {
 
     const loop = (timestamp: number) => {
       const elapsed = lastFrameRef.current ? (timestamp - lastFrameRef.current) / 1000 : 0;
-      const dt = Math.min(0.033, Math.max(0, elapsed));
+      const dt = Math.min(BOSS_ENTRY_MOTION_LIMITS.maximumStepSeconds, Math.max(0, elapsed));
       lastFrameRef.current = timestamp;
       const world = worldRef.current;
       if (screenRef.current === "playing" && !powerupPausedRef.current) update(world, dt);

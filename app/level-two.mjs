@@ -6,6 +6,7 @@
  */
 
 import { campaignLightingAt, campaignZoneAt } from "./campaign-level.mjs";
+import { latestSafeBossArenaTriggerX } from "./boss-arena.mjs";
 
 const freezeDeep = (value) => {
   if (value && typeof value === "object" && !Object.isFrozen(value)) {
@@ -16,6 +17,8 @@ const freezeDeep = (value) => {
 };
 
 export const LEVEL_TWO_ENEMY_KINDS = freezeDeep(["squirrel", "terrier", "skunk", "moth"]);
+
+const BRUTUS_LEFT_PLATFORM_X = 5724;
 
 const zones = [
   { id: "moonlit-backyard", startX: 0, endX: 1250, background: "backyard", lighting: "moonlit", landmark: "porch-and-fence" },
@@ -48,7 +51,7 @@ const surfaces = [
   { id: "drainage-landing", x: 4920, y: 468, w: 630, h: 90, kind: "ground" },
   { id: "boss-runway", x: 5300, y: 468, w: 400, h: 90, kind: "ground" },
   { id: "cul-de-sac", x: 5700, y: 468, w: 850, h: 90, kind: "ground" },
-  { id: "brutus-platform-left", x: 5724, y: 383, w: 112, h: 85, kind: "crate" },
+  { id: "brutus-platform-left", x: BRUTUS_LEFT_PLATFORM_X, y: 383, w: 112, h: 85, kind: "crate" },
   { id: "brutus-platform-right", x: 6414, y: 383, w: 112, h: 85, kind: "crate" },
   { id: "victory-street", x: 6550, y: 468, w: 650, h: 90, kind: "ground" },
 ];
@@ -155,7 +158,7 @@ export const LEVEL_TWO = freezeDeep({
     id: "brutus-bin-hound",
     kind: "brutus",
     runwayStartX: 5300,
-    triggerX: 5680,
+    triggerX: latestSafeBossArenaTriggerX(BRUTUS_LEFT_PLATFORM_X),
     arenaStartX: 5650,
     arenaEndX: 6600,
     spawnX: 6250,

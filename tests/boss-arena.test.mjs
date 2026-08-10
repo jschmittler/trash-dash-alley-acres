@@ -7,12 +7,15 @@ import {
   BOSS_ARENA_LEFT,
   BOSS_ARENA_RIGHT,
   BOSS_ARENA_TRIGGER_X,
+  BOSS_ENTRY_MOTION_LIMITS,
   BOSS_INTRO_DURATION,
   activateBossArena,
+  advanceBossArenaEntryX,
   bossArenaCameraX,
   clampArenaBossX,
   clampArenaPlayerX,
   completeBossArena,
+  latestSafeBossArenaTriggerX,
   selectBossTestRoute,
   validateBossArenaPlacement,
 } from "../app/boss-arena.mjs";
@@ -109,28 +112,46 @@ test("boss test routes preserve canonical Level 1 positions and isolate Brutus",
   assert.equal(selectBossTestRoute("unknown"), null);
 });
 
-test("Brutus normal entry and direct fixture clear both canonical crate footprints", () => {
-  const playerWidth = 38;
+test("Brutus worst-step normal entry and direct fixture clear both canonical crate footprints", () => {
+  const playerWidth = BOSS_ENTRY_MOTION_LIMITS.maximumPlayerWidth;
+  const minimumEntryClearance = BOSS_ENTRY_MOTION_LIMITS.minimumClearance;
   const platforms = LEVEL_TWO.surfaces.filter(({ id }) => id.startsWith("brutus-platform-"));
+  const leftPlatform = platforms[0];
   const fixture = selectBossTestRoute("brutus");
-  const assertClear = ({ label, x }, candidates = platforms) => {
+  const assertClear = ({ label, x, clearance = 0 }, candidates = platforms) => {
     const overlap = candidates.find((platform) => x < platform.x + platform.w && x + playerWidth > platform.x);
     assert.equal(overlap, undefined, `${label} ${x}..${x + playerWidth} overlaps ${overlap?.id}`);
+    assert.ok(leftPlatform.x - (x + playerWidth) >= clearance, `${label} lost its ${clearance}px entry margin`);
   };
 
-  const entries = [
-    { label: "normal trigger", x: LEVEL_TWO.boss.triggerX },
-    { label: "direct fixture", x: fixture.playerX },
-  ];
-  for (const entry of entries) {
-    assertClear(entry);
-    const placementMutant = [{ ...platforms[0], x: entry.x + playerWidth - 1 }, platforms[1]];
-    assert.throws(
-      () => assertClear(entry, placementMutant),
-      assert.AssertionError,
-      `${entry.label} clearance must reject a one-pixel crate overlap`,
-    );
-  }
+  const normalEntry = {
+    label: "worst-step normal entry",
+    x: advanceBossArenaEntryX(LEVEL_TWO.boss.triggerX),
+    clearance: minimumEntryClearance,
+  };
+  assert.equal(LEVEL_TWO.boss.triggerX, latestSafeBossArenaTriggerX(leftPlatform.x));
+  assertClear(normalEntry);
+  const triggerMutantEntry = advanceBossArenaEntryX(LEVEL_TWO.boss.triggerX + 1);
+  assert.throws(
+    () => assertClear({ ...normalEntry, x: triggerMutantEntry }),
+    assert.AssertionError,
+    "normal entry must reject a one-pixel trigger mutation",
+  );
+
+  const fixtureEntry = { label: "direct fixture", x: fixture.playerX };
+  assertClear(fixtureEntry);
+  const fixturePlacementMutant = [{ ...leftPlatform, x: fixture.playerX + playerWidth - 1 }, platforms[1]];
+  assert.throws(
+    () => assertClear(fixtureEntry, fixturePlacementMutant),
+    assert.AssertionError,
+    "direct fixture must reject a one-pixel crate overlap",
+  );
+});
+
+test("runtime movement consumes the authored boss-entry speed and time-step bounds", async () => {
+  const runtime = await readFile(new URL("../app/trash-dash-game.tsx", import.meta.url), "utf8");
+  assert.match(runtime, /running \? BOSS_ENTRY_MOTION_LIMITS\.maximumRunSpeed : 225/);
+  assert.match(runtime, /Math\.min\(BOSS_ENTRY_MOTION_LIMITS\.maximumStepSeconds, Math\.max\(0, elapsed\)\)/);
 });
 
 test("both boss arenas provide a quiet runway, grounded props, and reachable symmetric utility platforms", () => {
@@ -141,6 +162,6 @@ test("both boss arenas provide a quiet runway, grounded props, and reachable sym
       ...LEVEL_TWO,
       boss: { ...LEVEL_TWO.boss, triggerX: 5724 },
     })[0],
-    /entry overlaps a utility platform/,
+    /entry worst step violates utility-platform clearance/,
   );
 });

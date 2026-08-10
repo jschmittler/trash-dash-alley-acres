@@ -283,9 +283,17 @@
     "renderLeftAtComplete": 6678
   },
   "runwayOrdinaryAfterActivation": 0,
+  "normalEntry": {
+    "triggerX": 5669,
+    "worstStepEntryX": 5679.89,
+    "maximumPlayerWidth": 38,
+    "leftPlatformX": 5724,
+    "gap": 6.11,
+    "minimumClearance": 6
+  },
   "lockedPlayerSamples": [
     5674,
-    5680,
+    5674,
     6538
   ],
   "releasePlayerSample": 6700,

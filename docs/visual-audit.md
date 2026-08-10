@@ -920,3 +920,12 @@ worktree-preservation evidence is recorded in
   no available browser after the local server started; no new screenshot PASS is
   claimed. The focused matrix passed 105/105, the exact staged snapshot passed
   294/294 with a production build, and lint completed with zero errors.
+- **Fix Round 2:** movement integration occurs before arena activation, so the
+  nominal Round 1 trigger still allowed a 10.89px maximum-frame overshoot. A
+  frozen shared entry contract now owns 330px/s speed, 0.033s maximum dt, 38px
+  player width, and 6px minimum clearance. It derives the Level 2 trigger at
+  x5669 and is consumed by runtime movement, validation, mutation tests, and the
+  arena audit. Worst-step entry ends at x5717.89, retaining a measured 6.11px
+  gap before the unchanged left crate; a one-pixel trigger mutation fails. The
+  focused matrix passed 106/106, and the exact staged production build and
+  295/295 tests passed with zero lint errors.
