@@ -975,3 +975,42 @@ worktree-preservation evidence is recorded in
   recapture is **CANNOT VERIFY** because browser selection returned `No browser
   is available` after the local server started. Focused tests passed 39/39 and
   the shared build/default gate passed 305/305; no new runtime PASS is claimed.
+
+### 2026-08-10 — V2 Task 4 Brutus arena and victory composition
+
+- **Reproduction and root cause:** the supplied hydrant screenshot matched a
+  lifecycle owner that rebuilt every Level 2 environment record on each state
+  transition. The supplied post-boss screenshot matched the screen-derived
+  dumpster at world x6394 overlapping the right 112×85 crate at x6414..6526.
+  The Level 2 completion path also set `bossDefeated` without recording the
+  holy reveal start time.
+- **Lifecycle repair:** a world now materializes one frozen environment record
+  set and retains that exact hydrant object through death, checkpoint recovery,
+  both phase advances, defeat, and exit. Retry and re-entry constructors each
+  resolve one frozen `brutus-hydrant` with the canonical ID. Actual runtime
+  paths own all lifecycle calls; no test-only environment builder is used.
+- **Rendering and placement:** the dumpster's complete sealed/holy alpha union
+  is source x13..178 and y8..183, or 166×176px. One 0.75 source-axis scale draws
+  every 192×192 state cell at 144×144 and produces a 124.5×132 full glow
+  footprint, grounded by visible alpha instead of transparent cell padding.
+  Level 2 authors the footprint's visible left edge at world x7000. It is 474px
+  beyond the right crate and 62px beyond the complete 38px player route plus a
+  16px required clearance. The defeat gate is unchanged; actual Brutus defeat
+  now starts the existing 0.8-second smoothstep crossfade at `world.elapsed`.
+- **Automated evidence:** the initial focused RED run produced 12 passes and 7
+  expected failures for missing lifecycle events/runtime wiring, missing world
+  placement, missing measured geometry helpers, and skipped reveal timing. The
+  repaired focused matrix passed 76/76 before the atlas-union mutation check;
+  full default verification and exact staged-snapshot totals are recorded in
+  the task report.
+- **Running-game evidence:** the in-app browser entered the cache-fresh Brutus
+  fixture three times through title and character selection. Each entry showed
+  one hydrant and two distinct canonical crates. The Level 2 victory fixture
+  showed the smaller grounded holy dumpster at the far right, a widely
+  separated crate, and an unobstructed traversal lane. Route-scoped warning and
+  error logs were empty.
+- **CANNOT VERIFY:** controller-driven Brutus damage, player death/retry inside
+  the locked arena, complete defeat animation, exit, and campaign re-entry were
+  not played continuously in this task. Those paths are covered by the actual
+  runtime-owner lifecycle suite and existing defeat-state tests, but remain a
+  continuous-play acceptance item for Task 6.

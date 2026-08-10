@@ -184,6 +184,7 @@ interface CampaignLevelDefinition {
     recoveryX?: number;
     defeatExitX?: number;
     postBossStartX?: number;
+    victoryDumpster?: { x: number; surfaceId: string; placementType: "ON_SURFACE" };
   };
   exit: { nextLevelId: string | null; x: number };
 }
@@ -382,7 +383,8 @@ const clampArenaBossX = (world: World, x: number, width: number) => (
 );
 const worldBossSpawnX = (level: CampaignLevelDefinition) => level.boss.spawnX ?? level.boss.arenaStartX + 480;
 const dumpsterGoalWorldX = (world: World) => (
-  bossArenaCameraX(world) + WIDTH - DUMPSTER_RIGHT_MARGIN - DUMPSTER_DRAW_WIDTH
+  world.level.boss.victoryDumpster?.x
+    ?? bossArenaCameraX(world) + WIDTH - DUMPSTER_RIGHT_MARGIN - DUMPSTER_DRAW_WIDTH
 );
 
 const assetUrl = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\/+/, "")}`;
@@ -1438,10 +1440,12 @@ export function TrashDashGame() {
         player.invulnerable = 1.8;
         setMessage(world, "Oof — back to small!", 1.6);
       } else if (outcome === "respawn") {
+        applyLevelTwoEnvironmentTransition(world, "death");
         world.lives -= 1;
         transformPlayer(player, false);
         respawn(world);
       } else if (outcome === "gameover") {
+        applyLevelTwoEnvironmentTransition(world, "death");
         world.lives = Math.max(0, world.lives - 1);
         player.endSequence = "gameover";
         player.endTimer = 0.66;
@@ -1452,6 +1456,7 @@ export function TrashDashGame() {
 
     const handlePitFall = (world: World, pit: ReturnType<typeof beginPitFallTransition>) => {
       if (!pit) return;
+      applyLevelTwoEnvironmentTransition(world, "death");
       const player = world.player;
       world.lives = pit.lives;
       transformPlayer(player, pit.player.large);
@@ -1575,12 +1580,14 @@ export function TrashDashGame() {
 
     const finishBrutusDefeat = (world: World, boss: Enemy) => {
       if (world.bossDefeated) return;
+      applyLevelTwoEnvironmentTransition(world, "defeat");
       boss.active = false;
       boss.vx = 0;
       world.bossDefeated = true;
       world.arenaActive = false;
       world.bossTransition = null;
       world.binLids = [];
+      world.dumpsterRevealStartedAt = world.elapsed;
       setMessage(world, "Cul-de-sac cleared — downtown ahead!", 3);
       tone(420, 0.12);
       window.setTimeout(() => tone(620, 0.15), 100);
@@ -2142,6 +2149,7 @@ export function TrashDashGame() {
       world.particles = world.particles.filter((particle) => particle.life > 0);
 
       if (world.bossDefeated && player.x > world.level.exit.x - 220 && screenRef.current === "playing" && !player.endSequence) {
+        applyLevelTwoEnvironmentTransition(world, "exit");
         world.score += Math.max(0, Math.floor(4000 - world.elapsed * 12));
         const oldScore = Number(window.localStorage.getItem("trash-dash-high-score") ?? 0);
         const oldTime = Number(window.localStorage.getItem("trash-dash-best-time") ?? 0);

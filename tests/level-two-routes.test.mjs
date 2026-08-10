@@ -46,6 +46,9 @@ test("Level 2 has six optional routes, four ordered checkpoints, and Brutus meta
     recoveryX: 6250,
     defeatExitX: 6740,
     postBossStartX: 6600,
+    victoryDumpster: {
+      x: 7000, surfaceId: "victory-street", placementType: "ON_SURFACE",
+    },
   });
   assert.deepEqual(LEVEL_TWO.exit, { nextLevelId: "level-3", x: 7120 });
 });

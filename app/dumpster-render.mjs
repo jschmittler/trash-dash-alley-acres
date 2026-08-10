@@ -5,8 +5,11 @@
  */
 export const DUMPSTER_CELL = 192;
 export const DUMPSTER_FRAME_COUNT = 4;
-export const DUMPSTER_DRAW_WIDTH = 180;
-export const DUMPSTER_DRAW_HEIGHT = 180;
+// Union of the sealed body and all holy aura frames in the shipped atlas.
+export const DUMPSTER_SOURCE_VISIBLE_BOUNDS = Object.freeze({ x: 13, y: 8, w: 166, h: 176 });
+export const DUMPSTER_UNIFORM_SCALE = 0.75;
+export const DUMPSTER_DRAW_WIDTH = DUMPSTER_CELL * DUMPSTER_UNIFORM_SCALE;
+export const DUMPSTER_DRAW_HEIGHT = DUMPSTER_CELL * DUMPSTER_UNIFORM_SCALE;
 export const DUMPSTER_HOLY_FPS = 1.25;
 export const DUMPSTER_REVEAL_DURATION = 0.8;
 
@@ -40,11 +43,28 @@ export function dumpsterFrame(state, elapsed = 0) {
 
 export function dumpsterDrawRect(worldX, cameraX, groundY) {
   return {
-    x: worldX - cameraX,
-    y: groundY - DUMPSTER_DRAW_HEIGHT,
+    x: worldX - cameraX - DUMPSTER_SOURCE_VISIBLE_BOUNDS.x * DUMPSTER_UNIFORM_SCALE,
+    y: groundY
+      - (DUMPSTER_SOURCE_VISIBLE_BOUNDS.y + DUMPSTER_SOURCE_VISIBLE_BOUNDS.h)
+        * DUMPSTER_UNIFORM_SCALE,
     width: DUMPSTER_DRAW_WIDTH,
     height: DUMPSTER_DRAW_HEIGHT,
   };
+}
+
+export function dumpsterPlacementFootprint(worldX, groundY) {
+  return {
+    x: worldX,
+    y: groundY - DUMPSTER_SOURCE_VISIBLE_BOUNDS.h * DUMPSTER_UNIFORM_SCALE,
+    w: DUMPSTER_SOURCE_VISIBLE_BOUNDS.w * DUMPSTER_UNIFORM_SCALE,
+    h: DUMPSTER_SOURCE_VISIBLE_BOUNDS.h * DUMPSTER_UNIFORM_SCALE,
+  };
+}
+
+// The goal is non-blocking in gameplay, but keeping its conservative collision
+// footprint explicit lets placement validation prove the route would stay open.
+export function dumpsterCollisionRect(worldX, groundY) {
+  return dumpsterPlacementFootprint(worldX, groundY);
 }
 
 export function dumpsterRevealProgress(elapsedSinceDefeat) {

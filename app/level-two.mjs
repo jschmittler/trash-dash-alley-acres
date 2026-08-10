@@ -168,6 +168,7 @@ export const LEVEL_TWO = freezeDeep({
     recoveryX: 6250,
     defeatExitX: 6740,
     postBossStartX: 6600,
+    victoryDumpster: { x: 7000, surfaceId: "victory-street", placementType: "ON_SURFACE" },
   },
   exit: { nextLevelId: "level-3", x: 7120 },
 });

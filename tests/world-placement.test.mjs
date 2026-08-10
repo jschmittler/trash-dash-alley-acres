@@ -18,6 +18,7 @@ import { LEVEL_TWO } from "../app/level-two.mjs";
 import { IMPLEMENTED_VISUAL_INVENTORY } from "../app/visual-inventory.mjs";
 import { sceneryForLevel, sceneryVisualBounds } from "../app/world-scenery.mjs";
 import { decorativeCollisionRect } from "../app/decorative-render.mjs";
+import { dumpsterCollisionRect, dumpsterPlacementFootprint } from "../app/dumpster-render.mjs";
 import { pickupYAboveSurface } from "../app/pickup-layout.mjs";
 import { levelTwoEnvironmentRecords } from "../app/level-two-enemies.mjs";
 import {
@@ -344,4 +345,16 @@ test("boss utility-platform art, collision tops, floor contacts, and symmetry ag
   const leftOffset = arenaCenter - (platforms[0].x + platforms[0].w / 2);
   const rightOffset = platforms[1].x + platforms[1].w / 2 - arenaCenter;
   assert.ok(Math.abs(leftOffset - rightOffset) <= 1, `platform asymmetry ${leftOffset}/${rightOffset}`);
+});
+
+test("Level 2 victory dumpster is grounded by its full glow footprint beyond the traversal lane", () => {
+  const dumpster = LEVEL_TWO.boss.victoryDumpster;
+  assert.ok(dumpster);
+  const support = LEVEL_TWO.surfaces.find(({ id }) => id === dumpster.surfaceId);
+  const footprint = dumpsterPlacementFootprint(dumpster.x, support.y);
+  const collision = dumpsterCollisionRect(dumpster.x, support.y);
+  assert.deepEqual(collision, footprint);
+  assert.equal(footprint.y + footprint.h, support.y);
+  assert.ok(footprint.x >= LEVEL_TWO.exit.x - 220 + 38 + 16);
+  assert.ok(footprint.x + footprint.w <= LEVEL_TWO.worldWidth);
 });

@@ -106,6 +106,11 @@ test("Level 2 authors one hydrant and a hostile-free release boundary", () => {
   assert.equal(LEVEL_TWO.boss.hydrant.id, "brutus-hydrant");
   assert.equal(Object.hasOwn(LEVEL_TWO.boss, "sprinklers"), false);
   assert.equal(LEVEL_TWO.boss.postBossStartX, LEVEL_TWO.boss.arenaEndX);
+  assert.deepEqual(LEVEL_TWO.boss.victoryDumpster, {
+    x: 7000,
+    surfaceId: "victory-street",
+    placementType: "ON_SURFACE",
+  });
   const lockedCameraRight = LEVEL_TWO.boss.arenaStartX + 960;
   const renderLeftAtExit = LEVEL_TWO.boss.defeatExitX + 96 / 2 - 220 / 2;
   assert.ok(renderLeftAtExit > lockedCameraRight);
@@ -124,6 +129,7 @@ test("strict Brutus and Level 2 victory test routes preserve lazy boss loading",
   const eagerStart = source.indexOf("void Promise.all([", source.indexOf("useEffect(() =>"));
   const eagerEnd = source.indexOf("]).then(([", eagerStart);
   assert.doesNotMatch(source.slice(eagerStart, eagerEnd), /brutus-motion\.png/);
+  assert.match(source, /finishBrutusDefeat[\s\S]{0,500}world\.dumpsterRevealStartedAt = world\.elapsed/);
 });
 
 test("recovery leaves the hydrant boundary before faster phase charges can reconnect", () => {

@@ -18,6 +18,20 @@ export function rectIntersectionArea(left, right) {
   return width * height;
 }
 
+export function validateFootprintSeparation(footprints) {
+  const errors = [];
+  for (let leftIndex = 0; leftIndex < footprints.length; leftIndex += 1) {
+    for (let rightIndex = leftIndex + 1; rightIndex < footprints.length; rightIndex += 1) {
+      const left = footprints[leftIndex];
+      const right = footprints[rightIndex];
+      if (rectIntersectionArea(left.bounds, right.bounds) > 0) {
+        errors.push(`${left.id} overlaps ${right.id}`);
+      }
+    }
+  }
+  return errors;
+}
+
 const expanded = (rect, padding) => ({
   x: rect.x - padding.horizontal,
   y: rect.y - padding.vertical,

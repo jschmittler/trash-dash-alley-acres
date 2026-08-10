@@ -2,9 +2,12 @@ import { levelTwoEnvironmentRecords } from "./level-two-enemies.mjs";
 
 export const LEVEL_TWO_ENVIRONMENT_TRANSITIONS = Object.freeze([
   "entry",
+  "death",
   "retry",
   "checkpoint-recovery",
   "phase-change",
+  "defeat",
+  "exit",
   "re-entry",
 ]);
 
@@ -22,13 +25,17 @@ export function transitionLevelTwoEnvironment(previous, level, transition = "ent
   if (!LEVEL_TWO_ENVIRONMENT_TRANSITIONS.includes(transition)) {
     throw new RangeError(`Unknown Level 2 environment transition: ${transition}`);
   }
-  const records = materializeLevelTwoEnvironment(level);
+  // Static environment identities are materialized once per world. Lifecycle
+  // events update the owner state without reconstructing or appending props.
+  const records = previous?.records ?? Object.freeze(
+    materializeLevelTwoEnvironment(level).map((record) => Object.freeze(record)),
+  );
   const ids = new Set(records.map(({ id }) => id));
   if (ids.size !== records.length) throw new RangeError("Duplicate Level 2 environment ID");
   return Object.freeze({
     transition,
     revision: (previous?.revision ?? 0) + 1,
-    records: Object.freeze(records.map((record) => Object.freeze(record))),
+    records,
   });
 }
 
@@ -41,7 +48,7 @@ export function createLevelTwoEnvironmentRuntime(level, transition = "entry") {
   return {
     level,
     environmentState,
-    environment: Object.freeze([...environmentState.records]),
+    environment: environmentState.records,
   };
 }
 
@@ -49,6 +56,6 @@ export function applyLevelTwoEnvironmentTransition(runtime, transition) {
   if (!runtime?.level) throw new TypeError("Level 2 environment runtime requires a level");
   const environmentState = transitionLevelTwoEnvironment(runtime.environmentState, runtime.level, transition);
   runtime.environmentState = environmentState;
-  runtime.environment = Object.freeze([...environmentState.records]);
+  runtime.environment = environmentState.records;
   return runtime;
 }

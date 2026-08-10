@@ -1,7 +1,14 @@
 import { DECORATIVE_PROPS } from "../concepts/decorative/decorative-manifest.mjs";
 import { BOSS_ANIMATIONS } from "./boss-animation.mjs";
 import { BRUTUS_ANIMATIONS, BRUTUS_RENDER_METRICS } from "./brutus-boss.mjs";
-import { DUMPSTER_CELL, DUMPSTER_DRAW_HEIGHT, DUMPSTER_DRAW_WIDTH, DUMPSTER_STATES } from "./dumpster-render.mjs";
+import {
+  DUMPSTER_CELL,
+  DUMPSTER_DRAW_HEIGHT,
+  DUMPSTER_DRAW_WIDTH,
+  DUMPSTER_SOURCE_VISIBLE_BOUNDS,
+  DUMPSTER_STATES,
+  DUMPSTER_UNIFORM_SCALE,
+} from "./dumpster-render.mjs";
 import { LEVEL_ONE_ENEMY_ANIMATIONS } from "./level-one-enemy-animation.mjs";
 import { LEVEL_ONE, LEVEL_ONE_ENEMY_KINDS } from "./level-one.mjs";
 import { LEVEL_TWO, LEVEL_TWO_ENEMY_KINDS } from "./level-two.mjs";
@@ -441,7 +448,12 @@ const dumpsterRecord = makeRecord({
   },
   requiredStates: ["sealed", "holy"],
 }, {
-  ...grounded(DUMPSTER_DRAW_WIDTH, DUMPSTER_DRAW_HEIGHT, DUMPSTER_DRAW_WIDTH, DUMPSTER_DRAW_HEIGHT, 8),
+  ...grounded(
+    DUMPSTER_SOURCE_VISIBLE_BOUNDS.w * DUMPSTER_UNIFORM_SCALE,
+    DUMPSTER_SOURCE_VISIBLE_BOUNDS.h * DUMPSTER_UNIFORM_SCALE,
+    DUMPSTER_SOURCE_VISIBLE_BOUNDS.w * DUMPSTER_UNIFORM_SCALE,
+    DUMPSTER_SOURCE_VISIBLE_BOUNDS.h * DUMPSTER_UNIFORM_SCALE,
+  ),
   renderLayer: "GAMEPLAY",
   allowedZones: ["goal-zone", "post-boss-arena"],
   forbiddenZones: ["active-boss-arena", "solid-platform-interior"],

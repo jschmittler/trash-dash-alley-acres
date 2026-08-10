@@ -81,9 +81,12 @@ test("real world lifecycle owners keep one stable hydrant identity without appen
   let runtime;
   const lifecycleOwners = {
     entry: () => createLevelTwoEnvironmentRuntime(LEVEL_TWO, "entry"),
+    death: (current) => applyLevelTwoEnvironmentTransition(current, "death"),
     retry: () => createLevelTwoEnvironmentRuntime(LEVEL_TWO, "retry"),
     "checkpoint-recovery": (current) => applyLevelTwoEnvironmentTransition(current, "checkpoint-recovery"),
     "phase-change": (current) => applyLevelTwoEnvironmentTransition(current, "phase-change"),
+    defeat: (current) => applyLevelTwoEnvironmentTransition(current, "defeat"),
+    exit: (current) => applyLevelTwoEnvironmentTransition(current, "exit"),
     "re-entry": () => createLevelTwoEnvironmentRuntime(LEVEL_TWO, "re-entry"),
   };
   for (const transition of LEVEL_TWO_ENVIRONMENT_TRANSITIONS) {
