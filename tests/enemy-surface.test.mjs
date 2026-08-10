@@ -151,7 +151,7 @@ test("resolves Brutus against the dedicated Level 2 arena support", () => {
 
   assert.deepEqual(
     createEnemyPatrol({
-      x: LEVEL_TWO.boss.arenaStartX + 480,
+      x: LEVEL_TWO.boss.spawnX,
       width: 96,
       surfaceY: support.y,
       surfaceId: LEVEL_TWO.boss.surfaceId,
@@ -159,8 +159,8 @@ test("resolves Brutus against the dedicated Level 2 arena support", () => {
       grounded: true,
     }, LEVEL_TWO.surfaces),
     {
-      spawnX: 6180,
-      minX: 5820,
+      spawnX: 6250,
+      minX: 5890,
       maxX: 6454,
       surfaceY: 468,
       surfaceId: "cul-de-sac",

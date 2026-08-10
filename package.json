@@ -7,6 +7,7 @@
   },
   "scripts": {
     "build:brutus": "node concepts/level-two/build-brutus-atlas.mjs && node concepts/level-two/audit-brutus-arena.mjs",
+    "build:level2-props": "node concepts/level-two/build-prop-atlas.mjs",
     "build:level-two-enemies": "node concepts/level-two/build-atlases.mjs",
     "build:level-two-backgrounds": "node concepts/level-two/build-backgrounds.mjs && node concepts/level-two/audit-background-motion.mjs",
     "dev": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext dev",

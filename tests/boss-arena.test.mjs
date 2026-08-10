@@ -88,12 +88,12 @@ test("player and boss remain inside their distinct arena margins", () => {
 });
 
 test("active boss metadata controls arena clamping and camera placement", () => {
-  const brutus = { arenaStartX: 5700, arenaEndX: 6550 };
-  assert.equal(clampArenaPlayerX(4000, 38, brutus), 5724);
-  assert.equal(clampArenaPlayerX(7000, 38, brutus), 6488);
-  assert.equal(clampArenaBossX(4000, 96, brutus), 5800);
-  assert.equal(clampArenaBossX(7000, 96, brutus), 6418);
-  assert.equal(bossArenaCameraX(brutus), 5700);
+  const brutus = { arenaStartX: 5650, arenaEndX: 6600 };
+  assert.equal(clampArenaPlayerX(4000, 38, brutus), 5674);
+  assert.equal(clampArenaPlayerX(7000, 38, brutus), 6538);
+  assert.equal(clampArenaBossX(4000, 96, brutus), 5750);
+  assert.equal(clampArenaBossX(7000, 96, brutus), 6468);
+  assert.equal(bossArenaCameraX(brutus), 5650);
 });
 
 test("boss test routes preserve canonical Level 1 positions and isolate Brutus", () => {
@@ -104,12 +104,43 @@ test("boss test routes preserve canonical Level 1 positions and isolate Brutus",
     levelId: "level-1", playerX: 5690, checkpointX: 5590, cameraX: 5280, glider: 0,
   });
   assert.deepEqual(selectBossTestRoute("brutus"), {
-    levelId: "level-2", playerX: 5770, checkpointX: 5200, cameraX: 5700, glider: 14, activateArena: true,
+    levelId: "level-2", playerX: 5680, checkpointX: 5200, cameraX: 5650, glider: 14, activateArena: true,
   });
   assert.equal(selectBossTestRoute("unknown"), null);
+});
+
+test("Brutus normal entry and direct fixture clear both canonical crate footprints", () => {
+  const playerWidth = 38;
+  const platforms = LEVEL_TWO.surfaces.filter(({ id }) => id.startsWith("brutus-platform-"));
+  const fixture = selectBossTestRoute("brutus");
+  const assertClear = ({ label, x }, candidates = platforms) => {
+    const overlap = candidates.find((platform) => x < platform.x + platform.w && x + playerWidth > platform.x);
+    assert.equal(overlap, undefined, `${label} ${x}..${x + playerWidth} overlaps ${overlap?.id}`);
+  };
+
+  const entries = [
+    { label: "normal trigger", x: LEVEL_TWO.boss.triggerX },
+    { label: "direct fixture", x: fixture.playerX },
+  ];
+  for (const entry of entries) {
+    assertClear(entry);
+    const placementMutant = [{ ...platforms[0], x: entry.x + playerWidth - 1 }, platforms[1]];
+    assert.throws(
+      () => assertClear(entry, placementMutant),
+      assert.AssertionError,
+      `${entry.label} clearance must reject a one-pixel crate overlap`,
+    );
+  }
 });
 
 test("both boss arenas provide a quiet runway, grounded props, and reachable symmetric utility platforms", () => {
   assert.deepEqual(validateBossArenaPlacement(LEVEL_ONE), []);
   assert.deepEqual(validateBossArenaPlacement(LEVEL_TWO), []);
+  assert.match(
+    validateBossArenaPlacement({
+      ...LEVEL_TWO,
+      boss: { ...LEVEL_TWO.boss, triggerX: 5724 },
+    })[0],
+    /entry overlaps a utility platform/,
+  );
 });

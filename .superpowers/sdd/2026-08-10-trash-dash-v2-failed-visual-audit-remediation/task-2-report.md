@@ -144,3 +144,77 @@ unrelated hunks in `app/trash-dash-game.tsx` and the unrelated modified
 `tests/rendered-html.test.mjs` were excluded from Task 2 staging.
 A 293rd passing test visible in the shared working tree belongs to that preserved
 unrelated test edit and is intentionally not claimed by this commit.
+
+## Fix Round 1 — arena-entry clearance and executable build proof
+
+Review correctly found that the widened canonical left crate occupied
+`5724..5836`, while the normal arena trigger at `5750` and direct-fixture player
+at `5770` both intersected it. Review also correctly found that the documented
+`npm run build:level2-props` alias did not exist.
+
+RED-first reproduction:
+
+```text
+node --test tests/boss-arena.test.mjs tests/level-two-props.test.mjs
+20 passed, 2 failed
+
+normal trigger 5750..5788 overlaps brutus-platform-left
+build:level2-props expected node concepts/level-two/build-prop-atlas.mjs,
+but package.json returned undefined
+```
+
+The accepted crate artwork and coordinates remain unchanged. The Level 2 arena
+lock was expanded equally to `5650..6600`, retaining its exact `6125` center and
+therefore retaining crate symmetry. The normal trigger and direct Brutus fixture
+now start at `5680`; a maximum-width 38px player occupies `5680..5718`, leaving
+six transparent world pixels before the left crate. The normal runway remains
+380px, the crate-to-crate center lane is unchanged, both platforms retain their
+112x85 reachable geometry, and Brutus retains his explicit spawn/recovery and
+hydrant charge positions. The lock samples are now `5674`, `5680`, and `6538`.
+
+The entry test checks both the normal trigger and direct fixture, and proves
+mutation sensitivity by introducing a one-pixel crate overlap for each sample.
+The arena validator now independently rejects trigger/platform overlap.
+
+`package.json` now wires the documented command exactly:
+
+```text
+npm run build:level2-props
+> node concepts/level-two/build-prop-atlas.mjs
+```
+
+Two fresh executions reproduced the same four Task 2 hashes already recorded
+above. The Brutus arena audit also now consumes the authored `boss.spawnX`
+instead of deriving a different start from the arena boundary; its regenerated
+trace reaches completion in 14.2s with three 340px charges and the expanded lock
+camera boundary at x6610.
+
+Runtime visual inspection is **CANNOT VERIFY** for this fix round. The local dev
+server started successfully at `http://localhost:3001/`, but browser discovery
+returned an empty browser list (`[]`) after the previously bound browser reported
+itself unavailable. The server was stopped, and no screenshot or visual PASS is
+claimed. The preceding Task 2 runtime inspection remains historical evidence,
+not evidence for these changed entry coordinates.
+
+Fix-round verification:
+
+```text
+node --test tests/boss-arena.test.mjs tests/brutus-boss.test.mjs tests/level-two-props.test.mjs tests/visual-asset-integrity.test.mjs tests/level-two-enemies.test.mjs tests/level-two-fixture.test.mjs tests/level-two-routes.test.mjs tests/world-placement.test.mjs tests/visual-inventory.test.mjs tests/v2-visual-remediation.test.mjs
+105 passed, 0 failed
+
+node concepts/level-two/audit-brutus-arena.mjs
+Brutus reaches complete at 14.2s; runway ordinary count 0.
+
+npm test (exact staged snapshot reconstructed from HEAD + cached binary patch)
+294 passed, 0 failed; production build passed
+
+npm run lint (exact staged snapshot)
+0 errors, 1 pre-existing no-img-element warning at app/trash-dash-game.tsx:2805
+
+git diff --cached --check
+clean
+```
+
+The shared working tree also passed 295/295, but its extra passing rendered-HTML
+test remains unrelated and unstaged, so this fix round claims only the exact
+294-test staged result.

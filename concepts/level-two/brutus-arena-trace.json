@@ -1,13 +1,13 @@
 {
   "dt": 0.1,
-  "completionElapsed": 14.3,
+  "completionElapsed": 14.2,
   "transitions": [
     {
       "elapsed": 0,
       "mode": "intro",
       "hp": 3,
       "phase": 1,
-      "x": 6180,
+      "x": 6250,
       "arenaUnlocked": false
     },
     {
@@ -15,7 +15,7 @@
       "mode": "sniff",
       "hp": 3,
       "phase": 1,
-      "x": 6180,
+      "x": 6250,
       "hydrantHit": false,
       "hazards": [],
       "arenaUnlocked": false
@@ -25,7 +25,7 @@
       "mode": "bark",
       "hp": 3,
       "phase": 1,
-      "x": 6180,
+      "x": 6250,
       "hydrantHit": false,
       "hazards": [],
       "arenaUnlocked": false
@@ -35,7 +35,7 @@
       "mode": "charge",
       "hp": 3,
       "phase": 1,
-      "x": 6180,
+      "x": 6250,
       "hydrantHit": false,
       "hazards": [],
       "arenaUnlocked": false
@@ -45,7 +45,7 @@
       "mode": "stunned-open",
       "hp": 3,
       "phase": 1,
-      "x": 5852,
+      "x": 5910,
       "hydrantHit": true,
       "hazards": [],
       "arenaUnlocked": false
@@ -55,7 +55,7 @@
       "mode": "hit",
       "hp": 2,
       "phase": 2,
-      "x": 5852,
+      "x": 5910,
       "hydrantHit": false,
       "hazards": [
         {
@@ -70,7 +70,7 @@
       "mode": "recover",
       "hp": 2,
       "phase": 2,
-      "x": 5852,
+      "x": 5910,
       "hydrantHit": false,
       "hazards": [
         {
@@ -85,7 +85,7 @@
       "mode": "sniff",
       "hp": 2,
       "phase": 2,
-      "x": 6200,
+      "x": 6250,
       "hydrantHit": false,
       "hazards": [
         {
@@ -100,7 +100,7 @@
       "mode": "bark",
       "hp": 2,
       "phase": 2,
-      "x": 6200,
+      "x": 6250,
       "hydrantHit": false,
       "hazards": [
         {
@@ -115,7 +115,7 @@
       "mode": "charge",
       "hp": 2,
       "phase": 2,
-      "x": 6200,
+      "x": 6250,
       "hydrantHit": false,
       "hazards": [
         {
@@ -130,7 +130,7 @@
       "mode": "stunned-open",
       "hp": 2,
       "phase": 2,
-      "x": 5852,
+      "x": 5910,
       "hydrantHit": true,
       "hazards": [
         {
@@ -145,14 +145,9 @@
       "mode": "hit",
       "hp": 1,
       "phase": 3,
-      "x": 5852,
+      "x": 5910,
       "hydrantHit": false,
-      "hazards": [
-        {
-          "kind": "sprinkler",
-          "side": "left"
-        }
-      ],
+      "hazards": [],
       "arenaUnlocked": false
     },
     {
@@ -160,14 +155,9 @@
       "mode": "recover",
       "hp": 1,
       "phase": 3,
-      "x": 5852,
+      "x": 5910,
       "hydrantHit": false,
-      "hazards": [
-        {
-          "kind": "sprinkler",
-          "side": "left"
-        }
-      ],
+      "hazards": [],
       "arenaUnlocked": false
     },
     {
@@ -175,14 +165,9 @@
       "mode": "sniff",
       "hp": 1,
       "phase": 3,
-      "x": 6200,
+      "x": 6250,
       "hydrantHit": false,
-      "hazards": [
-        {
-          "kind": "sprinkler",
-          "side": "right"
-        }
-      ],
+      "hazards": [],
       "arenaUnlocked": false
     },
     {
@@ -190,14 +175,9 @@
       "mode": "bark",
       "hp": 1,
       "phase": 3,
-      "x": 6200,
+      "x": 6250,
       "hydrantHit": false,
-      "hazards": [
-        {
-          "kind": "sprinkler",
-          "side": "left"
-        }
-      ],
+      "hazards": [],
       "arenaUnlocked": false
     },
     {
@@ -205,14 +185,9 @@
       "mode": "charge",
       "hp": 1,
       "phase": 3,
-      "x": 6200,
+      "x": 6250,
       "hydrantHit": false,
-      "hazards": [
-        {
-          "kind": "sprinkler",
-          "side": "right"
-        }
-      ],
+      "hazards": [],
       "arenaUnlocked": false
     },
     {
@@ -220,14 +195,9 @@
       "mode": "stunned-open",
       "hp": 1,
       "phase": 3,
-      "x": 5852,
+      "x": 5910,
       "hydrantHit": true,
-      "hazards": [
-        {
-          "kind": "sprinkler",
-          "side": "left"
-        }
-      ],
+      "hazards": [],
       "arenaUnlocked": false
     },
     {
@@ -235,7 +205,7 @@
       "mode": "hit",
       "hp": 0,
       "phase": 3,
-      "x": 5852,
+      "x": 5910,
       "hydrantHit": false,
       "hazards": [],
       "arenaUnlocked": false
@@ -245,7 +215,7 @@
       "mode": "defeat-slide",
       "hp": 0,
       "phase": 3,
-      "x": 5852,
+      "x": 5910,
       "hydrantHit": false,
       "hazards": [],
       "arenaUnlocked": false
@@ -255,7 +225,7 @@
       "mode": "defeat-shake",
       "hp": 0,
       "phase": 3,
-      "x": 5852,
+      "x": 5910,
       "hydrantHit": false,
       "hazards": [],
       "arenaUnlocked": false
@@ -265,13 +235,13 @@
       "mode": "defeat-exit",
       "hp": 0,
       "phase": 3,
-      "x": 5852,
+      "x": 5910,
       "hydrantHit": false,
       "hazards": [],
       "arenaUnlocked": false
     },
     {
-      "elapsed": 14.3,
+      "elapsed": 14.2,
       "mode": "complete",
       "hp": 0,
       "phase": 3,
@@ -284,39 +254,39 @@
   "chargeProfiles": [
     {
       "phase": 1,
-      "startX": 6180,
-      "impactX": 5852,
-      "travel": 328,
+      "startX": 6250,
+      "impactX": 5910,
+      "travel": 340,
       "elapsed": 1.1
     },
     {
       "phase": 2,
-      "startX": 6200,
-      "impactX": 5852,
-      "travel": 348,
+      "startX": 6250,
+      "impactX": 5910,
+      "travel": 340,
       "elapsed": 1
     },
     {
       "phase": 3,
-      "startX": 6200,
-      "impactX": 5852,
-      "travel": 348,
+      "startX": 6250,
+      "impactX": 5910,
+      "travel": 340,
       "elapsed": 0.9
     }
   ],
   "defeatExit": {
-    "startX": 5852,
+    "startX": 5910,
     "targetX": 6740,
     "completeX": 6740,
-    "travel": 888,
-    "lockedCameraRight": 6660,
+    "travel": 830,
+    "lockedCameraRight": 6610,
     "renderLeftAtComplete": 6678
   },
   "runwayOrdinaryAfterActivation": 0,
   "lockedPlayerSamples": [
-    5724,
-    5750,
-    6488
+    5674,
+    5680,
+    6538
   ],
   "releasePlayerSample": 6700,
   "manualFeelBoundary": [

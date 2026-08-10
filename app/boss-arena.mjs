@@ -15,7 +15,7 @@ const defaultArena = Object.freeze({
 const bossTestRoutes = Object.freeze({
   "1": Object.freeze({ levelId: "level-1", playerX: 5590, checkpointX: 5590, cameraX: 5280, glider: 0 }),
   arena: Object.freeze({ levelId: "level-1", playerX: 5690, checkpointX: 5590, cameraX: 5280, glider: 0 }),
-  brutus: Object.freeze({ levelId: "level-2", playerX: 5770, checkpointX: 5200, cameraX: 5700, glider: 14, activateArena: true }),
+  brutus: Object.freeze({ levelId: "level-2", playerX: 5680, checkpointX: 5200, cameraX: 5650, glider: 14, activateArena: true }),
 });
 
 export function selectBossTestRoute(routeName) {
@@ -52,7 +52,11 @@ export function bossArenaCameraX(arena = defaultArena) {
   return arena.arenaStartX;
 }
 
-export function validateBossArenaPlacement(level, { minimumRunway = 360, maximumJumpRise = 140 } = {}) {
+export function validateBossArenaPlacement(level, {
+  minimumRunway = 360,
+  maximumJumpRise = 140,
+  maximumPlayerWidth = 38,
+} = {}) {
   const errors = [];
   const arena = level?.boss;
   if (!arena) return [`${level?.id ?? "unknown"}: missing boss arena`];
@@ -86,6 +90,13 @@ export function validateBossArenaPlacement(level, { minimumRunway = 360, maximum
       }
       if (left.x < arena.arenaStartX || right.x + right.w > arena.arenaEndX) {
         errors.push(`${level.id}: boss utility platform leaves arena bounds`);
+      }
+      const triggerOverlapsPlatform = [left, right].some((platform) => (
+        arena.triggerX < platform.x + platform.w
+        && arena.triggerX + maximumPlayerWidth > platform.x
+      ));
+      if (triggerOverlapsPlatform) {
+        errors.push(`${level.id}: boss entry overlaps a utility platform`);
       }
     }
   }

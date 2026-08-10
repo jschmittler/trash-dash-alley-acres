@@ -15,7 +15,7 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 let state = createBrutusState();
 let elapsed = 0;
 let actor = {
-  x: LEVEL_TWO.boss.arenaStartX + 480,
+  x: LEVEL_TWO.boss.spawnX ?? LEVEL_TWO.boss.arenaStartX + 480,
   w: 96,
   facing: -1,
 };
@@ -99,7 +99,8 @@ const audit = {
     renderLeftAtComplete,
   },
   runwayOrdinaryAfterActivation: activated.enemies.filter(({ kind }) => kind !== "boss").length,
-  lockedPlayerSamples: [5400, 5750, 6700].map((x) => clampArenaPlayerX(x, 38, LEVEL_TWO.boss)),
+  lockedPlayerSamples: [5400, LEVEL_TWO.boss.triggerX, 6700]
+    .map((x) => clampArenaPlayerX(x, 38, LEVEL_TWO.boss)),
   releasePlayerSample: 6700,
   manualFeelBoundary: [
     "Input cadence and audiovisual feel require browser playtesting.",

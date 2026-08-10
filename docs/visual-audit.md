@@ -908,3 +908,15 @@ worktree-preservation evidence is recorded in
   79/79, the exact staged snapshot passed 292/292, and lint completed with zero
   errors. A 293rd test belongs to preserved unrelated work and is not claimed by
   this task.
+- **Fix Round 1:** review found the maximum-width entry player intersecting the
+  newly canonical left crate. RED contracts reproduced both normal-trigger and
+  direct-fixture overlap. The Level 2 lock now expands symmetrically to
+  5650..6600 while keeping the crate pair and arena center fixed; the trigger and
+  fixture move to x5680, so the 38px player ends six pixels before the crate.
+  Mutation tests reject a one-pixel regression. The previously documented
+  `npm run build:level2-props` command is now a real package alias for the direct
+  builder, and two fresh runs reproduce all four committed hashes. Runtime visual
+  inspection is CANNOT VERIFY for this round because browser discovery returned
+  no available browser after the local server started; no new screenshot PASS is
+  claimed. The focused matrix passed 105/105, the exact staged snapshot passed
+  294/294 with a production build, and lint completed with zero errors.

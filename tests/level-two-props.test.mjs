@@ -21,6 +21,14 @@ import { LEVEL_TWO } from "../app/level-two.mjs";
 
 const atlasUrl = new URL("../public/assets/generated/level2-props.png", import.meta.url);
 
+test("Level 2 prop builder has one reproducible project command", async () => {
+  const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  assert.equal(
+    packageJson.scripts["build:level2-props"],
+    "node concepts/level-two/build-prop-atlas.mjs",
+  );
+});
+
 test("Level 2 prop atlas exposes only runtime-owned frames", () => {
   assert.deepEqual(LEVEL_TWO_PROP_ATLAS, { cell: 128, columns: 4, rows: 3, baseline: 112 });
   assert.deepEqual(Object.keys(LEVEL_TWO_PROP_FRAMES), [

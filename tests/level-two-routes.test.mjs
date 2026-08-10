@@ -33,9 +33,9 @@ test("Level 2 has six optional routes, four ordered checkpoints, and Brutus meta
     id: "brutus-bin-hound",
     kind: "brutus",
     runwayStartX: 5300,
-    triggerX: 5750,
-    arenaStartX: 5700,
-    arenaEndX: 6550,
+    triggerX: 5680,
+    arenaStartX: 5650,
+    arenaEndX: 6600,
     surfaceId: "cul-de-sac",
     checkpointId: "boss-runway-checkpoint",
     hydrant: {
@@ -45,7 +45,7 @@ test("Level 2 has six optional routes, four ordered checkpoints, and Brutus meta
     spawnX: 6250,
     recoveryX: 6250,
     defeatExitX: 6740,
-    postBossStartX: 6550,
+    postBossStartX: 6600,
   });
   assert.deepEqual(LEVEL_TWO.exit, { nextLevelId: "level-3", x: 7120 });
 });
