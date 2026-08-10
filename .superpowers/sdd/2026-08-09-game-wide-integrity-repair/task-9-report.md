@@ -49,6 +49,22 @@ only the replacement remains active.
 Fix-round focused result: **17/17 PASS** across controller and rendered runtime
 source coverage; Pages verification is **1/1 PASS**.
 
+### Independent-review Fix Round 2
+
+Re-review commit `50e14d0` reproduced an overlapping-switch race: while the
+first incoming player was blocked inside an injected fade wait, a second switch
+could overwrite `pending` and leave both incoming players active until the old
+wait returned. RED asserted immediate disposal before releasing that wait.
+
+GREEN makes every newer switch synchronously stop/remove the previously pending
+player, clear its ownership, and restore outgoing volume before starting its
+own transition. The controlled test proves only the winner is active before
+the stale wait releases; mute/pause reach the winner; and the eventual stale
+continuation cannot alter ownership, replay, or dispose the winner.
+
+Fix-round-2 focused result: **18/18 PASS** across controller and rendered
+runtime source coverage; Pages verification is **1/1 PASS**.
+
 ## Track-role ledger
 
 | Level | Exploration | Boss | Truth |
@@ -68,6 +84,8 @@ source coverage; Pages verification is **1/1 PASS**.
   distinct canonical source replaces.
 - In-flight ownership — PASS; pause/mute survive nonzero fade settlement,
   resume reaches the settled incoming player, and restart cancels stale work.
+- Overlapping switch ownership — PASS; the first pending player is disposed
+  synchronously and its delayed continuation is a no-op.
 - Rejected play/switch — PASS; no escaped rejection, rejected replacement is
   disposed, current remains alive.
 - Repeated switches — PASS; every predecessor disposed, one final active
@@ -105,10 +123,10 @@ No audio asset file changed.
 - Focused controller/runtime/rendered/Pages source matrix: **15/15 PASS**.
 - `npm run validate:skills`: PASS (7 canonical skills).
 - `npm run lint`: zero errors; one unrelated `no-img-element` warning.
-- `npm test`: production build PASS; skill system **5/5**; package **293/293**.
+- `npm test`: production build PASS; skill system **5/5**; package **294/294**.
 - Pages build PASS; Pages verification **1/1**.
 - Exact staged implementation tree (before recording this result): production
-  and Pages builds PASS, focused **16/16**, clean package **233/233**.
+  and Pages builds PASS, focused **17/17**, clean package **234/234**.
 - `git diff --cached --check`: PASS.
 
 ## Self-review and concerns

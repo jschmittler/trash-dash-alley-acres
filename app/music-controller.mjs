@@ -189,6 +189,11 @@ export function createGameMusicOwner() {
     },
     async switch(source, options = {}) {
       const switchGeneration = ++generation;
+      if (pending && pending !== current) {
+        disposeGameMusic(pending);
+        pending = null;
+        if (current) current.volume = MUSIC_VOLUME;
+      }
       const outgoing = current;
       const next = await switchGameMusic(outgoing, source, {
         ...options,

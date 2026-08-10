@@ -42,6 +42,10 @@ them; this pass deliberately did not create missing music.
    reached the outgoing player. A single music owner now owns current and
    pending players, propagates pause/resume/mute to both, cancels stale fades by
    generation, and prevents a cancelled incoming source from becoming current.
+6. Re-review found that a second `switch()` could overwrite ownership of the
+   first pending player until its blocked fade wait returned. A newer switch
+   now synchronously stops, removes, and clears the prior pending source before
+   creating its replacement, while restoring the outgoing track's volume.
 
 No audio bytes, loudness, encoding, loop points, or mix settings changed.
 
@@ -61,14 +65,16 @@ No audio bytes, loudness, encoding, loop points, or mix settings changed.
   incoming player settles and resumes;
 - cancellation of an in-flight fade during restart, with the stale source
   disposed and only the replacement active;
+- overlapping switch cancellation before the stale wait is released, including
+  mute/pause propagation to the winner and an inert stale continuation;
 - rejected replacement cleanup while the current player remains alive;
 - repeated exploration/boss switching with every predecessor disposed and
   exactly one final player left active; and
 - source-level runtime use of the canonical role resolver for initial and
   arena-entry music.
 
-Focused controller and rendered-shell matrix: **17/17 PASS**; Pages artifact
-verification: **1/1 PASS**. The shared full package suite: **293/293 PASS**.
+Focused controller and rendered-shell matrix: **18/18 PASS**; Pages artifact
+verification: **1/1 PASS**. The shared full package suite: **294/294 PASS**.
 Skill validation, production
 build, and lint also pass; lint retains one unrelated `no-img-element` warning.
 
