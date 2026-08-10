@@ -30,6 +30,7 @@ import {
   PLAYER_ANIMATIONS,
   animationFrame,
   isTailSwipeActive,
+  playerAnimationDrawRect,
 } from "./player-animation.mjs";
 import { getPlayableCharacter, PLAYABLE_CHARACTERS, selectCharacterAnimation } from "./playable-character.mjs";
 import {
@@ -990,6 +991,7 @@ export function TrashDashGame() {
     const backgroundTest = devParams?.get("backgroundTest") ?? null;
     const powerupTest = devParams?.get("powerupTest") ?? null;
     const victoryTest = devParams?.get("victoryTest") ?? null;
+    const victoryTransitionTest = devParams?.get("victoryTransitionTest") === "jimothy";
     const encounterTest = devParams?.get("encounterTest") ?? null;
     const levelTwoRequested = devParams?.get("level") === "2"
       || levelTest === "level2-start"
@@ -1098,18 +1100,22 @@ export function TrashDashGame() {
         : 215;
       nextWorld.cameraX = powerupTest === "taco" ? 560 : 3320;
     } else if (victoryTest === "level2") {
-      nextWorld.player.x = nextWorld.level.boss.postBossStartX ?? nextWorld.level.boss.arenaEndX;
+      nextWorld.player.x = victoryTransitionTest
+        ? nextWorld.level.exit.x - 219
+        : nextWorld.level.boss.postBossStartX ?? nextWorld.level.boss.arenaEndX;
       nextWorld.player.y = GROUND_Y - 58;
       nextWorld.player.w = 38;
       nextWorld.player.h = 58;
       nextWorld.player.large = true;
       nextWorld.player.glider = 14;
       nextWorld.player.animationName = "large_idle";
-      nextWorld.bossDefeated = true;
+      nextWorld.bossDefeated = !victoryTransitionTest;
       nextWorld.arenaActive = false;
       nextWorld.enemies = [];
       nextWorld.trash = 5;
-      nextWorld.cameraX = nextWorld.level.boss.arenaEndX - 120;
+      nextWorld.cameraX = victoryTransitionTest
+        ? clamp(nextWorld.player.x - WIDTH * 0.36, 0, nextWorld.worldWidth - WIDTH)
+        : nextWorld.level.boss.arenaEndX - 120;
     } else if (victoryTest === "1") {
       nextWorld.player.x = 6350;
       nextWorld.player.y = GROUND_Y - 58;
@@ -1134,6 +1140,16 @@ export function TrashDashGame() {
         ));
         lastFrameRef.current = performance.now();
         changeScreen("playing");
+        if (victoryTransitionTest) {
+          // Development-only consecutive-frame fixture: the player and camera
+          // stay fixed while the ordinary exit condition changes idle to
+          // victory. It does not own any destination size or render exception.
+          window.setTimeout(() => {
+            if (worldRef.current !== nextWorld || screenRef.current !== "playing") return;
+            nextWorld.bossDefeated = true;
+            nextWorld.dumpsterRevealStartedAt = nextWorld.elapsed;
+          }, 1800);
+        }
         tone(520, 0.08);
         window.setTimeout(() => tone(720, 0.12), 80);
       })
@@ -2173,7 +2189,11 @@ export function TrashDashGame() {
         window.setTimeout(() => tone(800, 0.18), 120);
       }
 
-      if (world.arenaActive && world.bossTransition) {
+      const freezeVictoryTransitionCamera = import.meta.env.DEV
+        && new URLSearchParams(window.location.search).get("victoryTransitionTest") === "jimothy";
+      if (freezeVictoryTransitionCamera) {
+        // Hold the authored camera for consecutive before/during visual QA.
+      } else if (world.arenaActive && world.bossTransition) {
         const transition = advanceBossTransition(world.bossTransition, dt, world.level.boss);
         world.cameraX = transition.cameraX;
         world.bossTransition = transition.complete ? null : transition.transition;
@@ -2658,15 +2678,14 @@ export function TrashDashGame() {
         MOTION_CELL,
         MOTION_CELL,
       ] as Frame;
-      const drawW = playerAnimation.drawWidth;
-      const drawH = playerAnimation.drawHeight;
+      const playerDrawRect = playerAnimationDrawRect(player, playerAnimation);
 
       drawSprite(
         frame,
-        playerX + player.w / 2 - drawW / 2,
-        player.y + player.h - drawH + playerAnimation.offsetY,
-        drawW,
-        drawH,
+        playerDrawRect.x - camera,
+        playerDrawRect.y,
+        playerDrawRect.w,
+        playerDrawRect.h,
         player.facing < 0,
         player.hurtTimer <= 0 && player.invulnerable > 0 && Math.floor(player.invulnerable * 18) % 2 ? 0.45 : 1,
         world.selectedCharacterId === "jimothy" ? jimothyHeroMotionRef.current : playerHeroMotionRef.current,
@@ -2723,10 +2742,10 @@ export function TrashDashGame() {
           context.fillStyle = "#fff8b5";
           context.fillText(debugLabel, x + 3, enemy.y - 13);
         }
-        const visualX = playerX + player.w / 2 - drawW / 2;
-        const visualY = player.y + player.h - drawH + playerAnimation.offsetY;
+        const visualX = playerDrawRect.x - camera;
+        const visualY = playerDrawRect.y;
         context.strokeStyle = "#ffe45f";
-        context.strokeRect(visualX, visualY, drawW, drawH);
+        context.strokeRect(visualX, visualY, playerDrawRect.w, playerDrawRect.h);
         context.strokeStyle = "#51ffd6";
         context.strokeRect(playerX, player.y, player.w, player.h);
         context.fillStyle = "#ff58d4";

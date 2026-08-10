@@ -1,6 +1,15 @@
 const CELL = 192;
 const BASELINE = 184;
 
+export const JIMOTHY_VICTORY_CONTRACT = Object.freeze({
+  sourceCell: Object.freeze({ width: CELL, height: CELL, columns: 4 }),
+  baseline: BASELINE,
+  anchor: "BOTTOM_CENTER",
+  canonicalSideProfileWidth: 140,
+  maximumPoseHeight: 144,
+  destinationByForm: Object.freeze({ small: 84, large: 110 }),
+});
+
 const entry = (row, frames, fps, loop, drawSize, baseline = BASELINE) => ({
   row,
   frames,
@@ -28,7 +37,7 @@ export const JIMOTHY_ANIMATIONS = {
   small_hurt: entry(6, 4, 8, false, 84),
   small_skid: entry(7, 4, 10, false, 84),
   small_defeat: entry(8, 4, 6, false, 84),
-  small_victory: entry(9, 4, 7, true, 84),
+  small_victory: entry(9, 4, 7, true, JIMOTHY_VICTORY_CONTRACT.destinationByForm.small),
   large_idle: entry(10, 4, 3, true, 110),
   large_walk: entry(11, 4, 8, true, 110),
   large_run: entry(12, 4, 11, true, 110),
@@ -40,7 +49,7 @@ export const JIMOTHY_ANIMATIONS = {
   large_shrink: entry(18, 4, 10, false, 110),
   large_glide: entry(19, 4, 7, true, 110),
   large_skid: entry(20, 4, 10, false, 110),
-  large_victory: entry(21, 4, 7, true, 110),
+  large_victory: entry(21, 4, 7, true, JIMOTHY_VICTORY_CONTRACT.destinationByForm.large),
 };
 
 export const JIMOTHY_ANIMATION_BASELINES = Object.fromEntries(

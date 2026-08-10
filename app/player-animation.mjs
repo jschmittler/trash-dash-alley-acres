@@ -65,6 +65,21 @@ export function animationFrame(animation, elapsed) {
   return animation.loop ? raw % animation.frames : Math.min(animation.frames - 1, raw);
 }
 
+export function playerAnimationDrawRect(player, animation) {
+  const anchor = {
+    x: player.x + player.w / 2,
+    y: player.y + player.h,
+    kind: "BOTTOM_CENTER",
+  };
+  return {
+    x: anchor.x - animation.drawWidth / 2,
+    y: anchor.y - animation.drawHeight + animation.offsetY,
+    w: animation.drawWidth,
+    h: animation.drawHeight,
+    anchor,
+  };
+}
+
 export function isTailSwipeActive(frameIndex) {
   return frameIndex === 1 || frameIndex === 2;
 }

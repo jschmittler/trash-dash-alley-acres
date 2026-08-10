@@ -208,6 +208,11 @@ const playerRecords = Object.values(PLAYABLE_CHARACTERS).map((profile) => {
     origin: "destination center-bottom",
     facing: "right-authored; horizontal flip around destination center",
     animations,
+    animationScalePolicy: Object.freeze({
+      kind: "FORM_CANONICAL",
+      destinationByForm: Object.freeze({ small: 84, large: 110 }),
+      stateExceptions: Object.freeze([]),
+    }),
     requiredStates: Object.freeze([...PLAYER_FORM_STATES.small.map((state) => `small_${state}`), ...PLAYER_FORM_STATES.large.map((state) => `large_${state}`)]),
   }, {
     visualBounds: envelope,

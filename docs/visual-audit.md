@@ -1026,3 +1026,31 @@ worktree-preservation evidence is recorded in
   24/24 and the complete Task 4 matrix is 77/77. No visual state size, defeat
   gate, or holy-reveal timing changed, so the prior browser evidence remains
   applicable and no new continuous-play claim is made.
+
+### 2026-08-10 — V2 Task 5 Jimothy victory normalization
+
+- **Root cause:** Task 1 already gave every Jimothy state the canonical 84×84
+  small or 110×110 large destination, but the generic authored-strip builder
+  expanded the high-resolution victory art to as much as 190×183 visible
+  pixels inside its 192px cell. Idle frame 0 is only 140×119, so unchanged
+  destination geometry still produced a large visible body-scale pop.
+- **Source and build repair:** the approved squat, rounded, bob-tail poses now
+  occupy a deterministic 4×1 192px-cell source strip at one shared pixel scale.
+  Their alpha bounds are 140×126, 140×136, 112×144, and 112×137; all are
+  bottom-centered on logical baseline 184. The builder rejects source-layout,
+  envelope, baseline, and center-anchor drift. Two consecutive builds produced
+  identical `89d9eb87…` private/public atlas and contact-sheet hashes.
+- **Runtime contract:** one `playerAnimationDrawRect` helper owns production and
+  debug destination geometry. Idle and victory resolve the same bottom-center
+  84×84 or 110×110 rectangle; inventory declares no state exceptions and the
+  small/large collision profiles remain unchanged. Regression tests measure
+  real atlas alpha bounds and reject renderer-side victory scaling.
+- **Running-game evidence:** the 1280×720 cache-busted Jimothy transition
+  fixture exercised the ordinary exit victory condition at one frozen player
+  and camera position. `task-5-before-victory.jpg` and
+  `task-5-during-victory.jpg` show identical yellow 110×110 destinations,
+  cyan 38×58 collision, magenta ground anchor, and a stable baseline across
+  `large_idle` → `large_victory`. Browser warning/error logs were empty.
+- **Verification:** focused tests passed 16/16, the related matrix passed 51/51,
+  and the production build plus complete default suite passed 315/315. Lint
+  reported zero errors and the pre-existing `<img>` performance warning.

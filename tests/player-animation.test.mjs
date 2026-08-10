@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   PLAYER_ATLAS,
@@ -6,6 +7,7 @@ import {
   PLAYER_FORM_STATES,
   animationFrame,
   isTailSwipeActive,
+  playerAnimationDrawRect,
   selectPlayerAnimation,
 } from "../app/player-animation.mjs";
 import { PLAYABLE_CHARACTERS } from "../app/playable-character.mjs";
@@ -103,4 +105,38 @@ test("every canonical player profile uses one runtime destination size per form"
       }
     }
   }
+});
+
+test("pre-victory and victory use the same bottom-center destination and collision contract", () => {
+  const actor = { x: 320, y: 180, w: 38, h: 58 };
+  for (const [form, canonicalSize] of [["small", 84], ["large", 110]]) {
+    const profile = PLAYABLE_CHARACTERS.jimothy;
+    const idle = profile.animations[`${form}_idle`];
+    const victory = profile.animations[`${form}_victory`];
+    const idleRect = playerAnimationDrawRect(actor, idle);
+    const victoryRect = playerAnimationDrawRect(actor, victory);
+
+    assert.deepEqual(victoryRect, idleRect, `${form} victory destination must not apply a runtime scale exception`);
+    assert.deepEqual([victoryRect.w, victoryRect.h], [canonicalSize, canonicalSize]);
+    assert.deepEqual(victoryRect.anchor, {
+      x: actor.x + actor.w / 2,
+      y: actor.y + actor.h,
+      kind: "BOTTOM_CENTER",
+    });
+    assert.deepEqual(profile[form].hitbox, form === "small"
+      ? { x: 4, y: 3, w: 24, h: 43 }
+      : { x: 4, y: 4, w: 30, h: 54 }, `${form} collision must remain state-independent`);
+  }
+});
+
+test("the runtime player renderer has no victory scale exception", async () => {
+  const runtimeSource = await readFile(new URL("../app/trash-dash-game.tsx", import.meta.url), "utf8");
+  assert.match(runtimeSource, /playerAnimationDrawRect\(player, playerAnimation\)/);
+  assert.match(runtimeSource, /playerDrawRect\.w,\s*playerDrawRect\.h,/);
+  assert.match(runtimeSource, /get\("victoryTransitionTest"\) === "jimothy"/);
+  assert.doesNotMatch(
+    runtimeSource,
+    /victor(?:y|ious)[^\n]*(?:drawWidth|drawHeight|drawW|drawH|scale|multiplier)/i,
+    "victory must never acquire a renderer-side scale multiplier or destination override",
+  );
 });
