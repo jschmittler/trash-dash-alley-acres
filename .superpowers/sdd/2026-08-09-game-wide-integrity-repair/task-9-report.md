@@ -65,6 +65,23 @@ continuation cannot alter ownership, replay, or dispose the winner.
 Fix-round-2 focused result: **18/18 PASS** across controller and rendered
 runtime source coverage; Pages verification is **1/1 PASS**.
 
+### Independent-review Fix Round 3
+
+Second re-review commit `3203d98` reproduced one final stale mutation. Two
+nonzero fades shared the outgoing player; after the winning fade set its first
+step to `0.293333…`, releasing the cancelled fade reset that shared volume to
+`0.32` while the winner remained blocked.
+
+RED controls both first fade steps independently. GREEN routes cancellation
+restoration through an ownership callback. Direct controller callers retain
+safe default restoration, while the owner permits cleanup mutation only when
+the cancelling generation still owns the same current player. The test proves
+stale release leaves current, pending, volume, pause, and mute unchanged, then
+the winning fade completes and disposes the outgoing source normally.
+
+Fix-round-3 focused result: **19/19 PASS** across controller and rendered
+runtime source coverage; Pages verification is **1/1 PASS**.
+
 ## Track-role ledger
 
 | Level | Exploration | Boss | Truth |
@@ -86,6 +103,8 @@ runtime source coverage; Pages verification is **1/1 PASS**.
   resume reaches the settled incoming player, and restart cancels stale work.
 - Overlapping switch ownership — PASS; the first pending player is disposed
   synchronously and its delayed continuation is a no-op.
+- Stale cleanup ownership — PASS; a cancelled fade cannot mutate a shared
+  outgoing player after a newer generation owns its volume ramp.
 - Rejected play/switch — PASS; no escaped rejection, rejected replacement is
   disposed, current remains alive.
 - Repeated switches — PASS; every predecessor disposed, one final active
@@ -123,10 +142,10 @@ No audio asset file changed.
 - Focused controller/runtime/rendered/Pages source matrix: **15/15 PASS**.
 - `npm run validate:skills`: PASS (7 canonical skills).
 - `npm run lint`: zero errors; one unrelated `no-img-element` warning.
-- `npm test`: production build PASS; skill system **5/5**; package **294/294**.
+- `npm test`: production build PASS; skill system **5/5**; package **295/295**.
 - Pages build PASS; Pages verification **1/1**.
 - Exact staged implementation tree (before recording this result): production
-  and Pages builds PASS, focused **17/17**, clean package **234/234**.
+  and Pages builds PASS, focused **18/18**, clean package **235/235**.
 - `git diff --cached --check`: PASS.
 
 ## Self-review and concerns

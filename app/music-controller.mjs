@@ -92,6 +92,9 @@ export async function switchGameMusic(
     fadeMs = 360,
     wait = (delay) => new Promise((resolve) => globalThis.setTimeout(resolve, delay)),
     onReplacementReady = () => {},
+    onCancelled = (outgoing) => {
+      if (outgoing) outgoing.volume = MUSIC_VOLUME;
+    },
     shouldContinue = () => true,
   } = {},
 ) {
@@ -110,11 +113,13 @@ export async function switchGameMusic(
   }
   if (!shouldContinue()) {
     disposeGameMusic(next);
+    onCancelled(current, next);
     return current;
   }
   onReplacementReady(next);
   if (!shouldContinue()) {
     disposeGameMusic(next);
+    onCancelled(current, next);
     return current;
   }
 
@@ -128,7 +133,7 @@ export async function switchGameMusic(
       await wait(delay);
       if (!shouldContinue()) {
         disposeGameMusic(next);
-        if (current) current.volume = MUSIC_VOLUME;
+        onCancelled(current, next);
         return current;
       }
     }
@@ -207,6 +212,11 @@ export function createGameMusicOwner() {
           setGameMusicMuted(replacement, muted);
           if (!playing) pauseGameMusic(replacement);
           options.onReplacementReady?.(replacement);
+        },
+        onCancelled: (cancelledCurrent, cancelledNext) => {
+          if (switchGeneration !== generation || cancelledCurrent !== current) return;
+          if (cancelledCurrent) cancelledCurrent.volume = MUSIC_VOLUME;
+          options.onCancelled?.(cancelledCurrent, cancelledNext);
         },
         shouldContinue: () => switchGeneration === generation
           && (options.shouldContinue?.() ?? true),

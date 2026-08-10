@@ -622,9 +622,11 @@ Browser diagnostics:
   browser absolute-URL equivalence and centralized current/pending fade
   ownership so pause, resume, mute, restart, and cancellation are race-safe.
   Re-review then closed the overlapping-switch window by synchronously
-  disposing the previously pending source before a newer switch begins.
-- **Automated evidence:** controller/runtime/rendered coverage passes 18/18,
-  Pages passes 1/1, and the shared full package suite passes 294/294. Rejected playback is contained,
+  disposing the previously pending source before a newer switch begins. A
+  second re-review owner-gated delayed cancellation cleanup so a stale fade can
+  no longer overwrite a winning fade's outgoing volume.
+- **Automated evidence:** controller/runtime/rendered coverage passes 19/19,
+  Pages passes 1/1, and the shared full package suite passes 295/295. Rejected playback is contained,
   previous sources are paused/removed/loaded, and sequential switches leave
   one final player with no listeners.
 - **Browser evidence:** user-gesture Level 1 start observed the exploration

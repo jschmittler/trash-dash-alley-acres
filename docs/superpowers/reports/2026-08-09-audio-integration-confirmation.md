@@ -46,6 +46,10 @@ them; this pass deliberately did not create missing music.
    first pending player until its blocked fade wait returned. A newer switch
    now synchronously stops, removes, and clears the prior pending source before
    creating its replacement, while restoring the outgoing track's volume.
+7. A second re-review found that the cancelled fade's delayed cleanup could
+   still reset the outgoing volume while a newer nonzero fade owned it.
+   Cancellation restoration is now owner-gated: only the generation that still
+   owns the same current player may mutate it or run cancellation callbacks.
 
 No audio bytes, loudness, encoding, loop points, or mix settings changed.
 
@@ -67,14 +71,16 @@ No audio bytes, loudness, encoding, loop points, or mix settings changed.
   disposed and only the replacement active;
 - overlapping switch cancellation before the stale wait is released, including
   mute/pause propagation to the winner and an inert stale continuation;
+- two independently blocked nonzero fades, proving stale release cannot change
+  the newer fade's current, pending player, volume, pause, or mute state;
 - rejected replacement cleanup while the current player remains alive;
 - repeated exploration/boss switching with every predecessor disposed and
   exactly one final player left active; and
 - source-level runtime use of the canonical role resolver for initial and
   arena-entry music.
 
-Focused controller and rendered-shell matrix: **18/18 PASS**; Pages artifact
-verification: **1/1 PASS**. The shared full package suite: **294/294 PASS**.
+Focused controller and rendered-shell matrix: **19/19 PASS**; Pages artifact
+verification: **1/1 PASS**. The shared full package suite: **295/295 PASS**.
 Skill validation, production
 build, and lint also pass; lint retains one unrelated `no-img-element` warning.
 

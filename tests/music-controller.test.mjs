@@ -335,6 +335,73 @@ test("an overlapping switch immediately disposes the prior pending player and st
   assert.deepEqual(FakeAudio.instances.filter((music) => !music.paused), [winner]);
 });
 
+test("a stale fade continuation cannot mutate the outgoing volume owned by a newer fade", async () => {
+  const owner = createGameMusicOwner();
+  const exploration = new FakeAudio("/level.m4a");
+  owner.replace(exploration, { active: true });
+  let releaseStaleFade;
+  let releaseWinningFade;
+  const staleFade = new Promise((resolve) => {
+    releaseStaleFade = resolve;
+  });
+  const winningFade = new Promise((resolve) => {
+    releaseWinningFade = resolve;
+  });
+
+  const firstSwitch = owner.switch("/boss-a.m4a", {
+    AudioConstructor: FakeAudio,
+    fadeMs: 24,
+    wait: () => staleFade,
+  });
+  await Promise.resolve();
+  await Promise.resolve();
+  const staleBoss = owner.pending;
+  assert.ok(staleBoss);
+
+  const secondSwitch = owner.switch("/boss-b.m4a", {
+    AudioConstructor: FakeAudio,
+    fadeMs: 24,
+    wait: () => winningFade,
+  });
+  await Promise.resolve();
+  await Promise.resolve();
+  const winner = owner.pending;
+  assert.ok(winner);
+  assert.notEqual(winner, staleBoss);
+  const winningOutgoingVolume = exploration.volume;
+  assert.equal(winningOutgoingVolume, MUSIC_VOLUME * (11 / 12));
+
+  owner.setMuted(true);
+  owner.pause();
+  releaseStaleFade();
+  await firstSwitch;
+
+  assert.equal(owner.current, exploration);
+  assert.equal(owner.pending, winner);
+  assert.equal(exploration.volume, winningOutgoingVolume);
+  assert.equal(exploration.paused, true);
+  assert.equal(exploration.muted, true);
+  assert.equal(winner.paused, true);
+  assert.equal(winner.muted, true);
+  assert.equal(staleBoss.paused, true);
+  assert.deepEqual(staleBoss.removed, ["src"]);
+
+  releaseWinningFade();
+  const settled = await secondSwitch;
+  assert.equal(settled, winner);
+  assert.equal(owner.current, winner);
+  assert.equal(owner.pending, null);
+  assert.equal(winner.volume, MUSIC_VOLUME);
+  assert.equal(winner.paused, true);
+  assert.equal(winner.muted, true);
+  assert.deepEqual(exploration.removed, ["src"]);
+
+  owner.resume();
+  assert.equal(winner.paused, false);
+  assert.equal(staleBoss.paused, true);
+  assert.deepEqual(FakeAudio.instances.filter((music) => !music.paused), [winner]);
+});
+
 test("rejected replacement playback is contained and keeps the current player alive", async () => {
   class RejectingAudio extends FakeAudio {
     async play() {
