@@ -24,7 +24,7 @@ Legend:
 
 ### VIS-001: Sprinkler rendering
 
-- Status: 🟩 Complete
+- Status: PASS
 - Original priority: 🟥 Critical
 - Location: Level 2 obstacle course and Brutus arena
 
@@ -73,7 +73,7 @@ Screenshot references:
 
 ### VIS-002: Lamp-post scaling and grounding
 
-- Status: 🟨 Corrective automated repair complete; final running-game recheck pending
+- Status: PASS
 - Original priority: 🟧 High
 - Location: Level 2 moth encounter
 
@@ -117,9 +117,8 @@ Verification:
   and full-world-placement tests pass. The widened full texture uses its
   measured visible bounds for platform exclusion, and the lamp's grounded
   placement shifts 12px so the visible silhouette clears the poolside ledge.
-- The earlier browser evidence predates this corrective geometry. Final runtime
-  appearance is `CANNOT VERIFY` until a post-fix moth-route screenshot is
-  captured; no automated check is reported as visual PASS.
+- Task 10 captured the post-fix moth route at 1440×900. The complete fixture is
+  grounded, uniformly scaled, unobstructed, and produced no warning/error logs.
 
 Screenshot reference:
 
@@ -127,7 +126,7 @@ Screenshot reference:
 
 ### VIS-003: Level 1 campsite crate placement
 
-- Status: 🟩 Complete
+- Status: PASS
 - Original priority: 🟥 Critical
 - Location: Level 1 opening campsite
 
@@ -167,7 +166,7 @@ Screenshot reference:
 
 ### VIS-004: Character and boss animation quality
 
-- Status: 🟩 Complete for implemented Level 1 and Level 2 states
+- Status: INCOMPLETE
 - Original priority: 🟥 Critical
 - Characters reviewed: Trashy, Jimothy, Level 1 enemies, Level 2 enemies,
   Trash Heap Tyrant, Brutus
@@ -202,6 +201,10 @@ Verification:
   tests pass.
 - Browser sequences confirm stable terrier recovery, coherent boss silhouettes,
   and a clean active Brutus arena.
+- Contact sheets and deterministic state routes pass, but uninterrupted live
+  action/facing sequences for every implemented state remain CANNOT VERIFY in
+  this browser session. The issue therefore remains INCOMPLETE rather than
+  being promoted to a game-wide visual PASS.
 
 Screenshot references:
 
@@ -399,8 +402,7 @@ Verification:
 
 ### VIS-005: Player animation axis distortion (Task 3)
 
-- Status: 🟨 Automated repair complete; running-game verification `CANNOT VERIFY`
-  because the browser backend was unavailable in this execution.
+- Status: INCOMPLETE
 - RED source/runtime evidence: every 192×192 player cell was nonempty and inset,
   but Trashy's generated air/victory rows and Jimothy's copied concept rows had
   incompatible alpha bottoms (Jimothy measured 106–179 where the authored
@@ -468,6 +470,8 @@ Verification:
 
 ### VIS-006: Enemy and boss animation axis distortion (Task 4)
 
+- Status: INCOMPLETE
+
 - **Closed 2026-08-09 (Task 4):** the RED contract measured 86 allowlisted
   Level 1/Level 2 enemy and Trash Heap Tyrant frame mappings with unequal
   source-cell/destination axes. The source atlases were complete, inset, and
@@ -506,8 +510,7 @@ Verification:
 
 ### VIS-007: Prop and pickup residual axis distortion (separate prop/runtime pass)
 
-- Status: 🟨 Level 2 runtime portion repaired and browser-verified; the unrelated
-  one-pixel tires rounding remains open.
+- Status: INCOMPLETE
 - Original source/runtime evidence: charge obstacle 128²→84×112; sprinkler
   water 128²→non-square destinations; hydrant body/water 128²→non-square
   destinations; Brutus platform cells 128²→104×96; tires' 224×115→112×58;
@@ -648,7 +651,7 @@ Browser diagnostics:
 
 ### VIS-009: Short-viewport canvas distortion (Task 8)
 
-- Status: 🟩 Complete
+- Status: PASS
 - Priority: 🟥 Critical
 - Locations: shared Level 1/Level 2 cabinet at short desktop and landscape
   viewport heights
@@ -674,7 +677,7 @@ Browser diagnostics:
 
 ### VIS-010: Input retained across pause/fullscreen transitions (Task 8)
 
-- Status: 🟩 Complete for automated and controllable-browser paths
+- Status: INCOMPLETE
 - Priority: 🟥 Critical
 - Location: shared keyboard/touch lifecycle
 - Reproduction: `changeScreen` changed overlays without clearing held and
@@ -752,6 +755,13 @@ pass a visual composition review.
 
 ### 2026-08-09 — Task 6 Level 1 and Trash Heap Tyrant acceptance
 
+### VIS-008: Level 1 boss arena release after defeat
+
+- Status: INCOMPLETE
+- Deterministic lifecycle coverage passes and direct boss/victory fixtures are
+  visually clean. A continuous player-controlled defeat-to-release sequence
+  remains CANNOT VERIFY, so this issue is not promoted to PASS.
+
 - **Baseline:** the required Level 1 definition, route, background, boss-arena,
   boss-transition, and victory matrix passed 27/27 before Task 6 edits. The
   broader deterministic route/lifecycle matrix passed 89/89 and covered both
@@ -777,6 +787,54 @@ pass a visual composition review.
   Automated evidence is not presented as visual PASS for those conditions.
 - No source art, generated asset, atlas, contact sheet, background, scale,
   anchor, support, collision, or encounter coordinate changed in this pass.
+
+## Task 10 release-candidate closure — 2026-08-09
+
+The classifications below are authoritative for the current local release
+candidate. PASS means the required automated and rendered evidence was
+available. INCOMPLETE means part of the contract passed but a required manual
+or live-input observation remains unavailable. CANNOT VERIFY is used only for
+the individual unsupported observation, never as a substitute for failure.
+
+| Issue | Final status | Closure evidence / remaining limitation |
+| --- | --- | --- |
+| VIS-001 | PASS | Fresh Level 2 interaction fixture and emitter/body contracts show grounded hardware and attached water. |
+| VIS-002 | PASS | Fresh 1440×900 moth fixture shows a uniformly scaled, grounded lamp; console is clean. |
+| VIS-003 | PASS | Separated crates pass composition/support tests and final route inspection. |
+| VIS-004 | INCOMPLETE | Contact sheets, manifests, deterministic state routes, and representative boss/enemy frames pass; uninterrupted all-state/all-facing action sequences are CANNOT VERIFY. |
+| VIS-005 | INCOMPLETE | Both character atlases, contact sheets, spawn/debug routes, baselines, and destinations pass; full keyboard-driven state and facing traversal is CANNOT VERIFY. |
+| VIS-006 | INCOMPLETE | Enemy/boss atlases and representative direct fixtures pass; live attack, hit, recovery, defeat, and both-facing sequences are CANNOT VERIFY. |
+| VIS-007 | INCOMPLETE | Level 2 prop/effect runtime repair passes; the separately documented one-pixel decorative tire rounding remains open. |
+| VIS-008 | INCOMPLETE | Automated defeat/release contract and direct boss/victory fixtures pass; continuous player-controlled defeat-to-release is CANNOT VERIFY. |
+| VIS-009 | PASS | 16:9 DOM geometry and uncropped rendering pass at 1440×900, 1024×640, 844×390, and 390×844. |
+| VIS-010 | INCOMPLETE | Desktop pause/resume, mute, fullscreen entry/exit, and input clearing pass; real-device touch, safe-area, orientation, and mobile fullscreen are CANNOT VERIFY. |
+
+Canonical route result: PASS for loading and static rendered integrity on all
+27 routes, entered through title and character selection as Trashy at
+1440×900, with zero route-scoped warning/error logs. Jimothy's start,
+squirrel, Brutus, and victory fixtures also PASS for static rendered integrity.
+The optional canvas-locator measurement timed out after the first route; the
+route sweep was restarted in a fresh tab without that optional measurement and
+completed. This does not convert continuous normal campaign traversal into a
+PASS.
+
+Required state classification:
+
+- PASS: title/character entry; direct Level 1 and Level 2 start, middle, end,
+  boss, and victory fixtures; static power-up/debug state fixtures;
+  pause/resume; mute/unmute; desktop fullscreen entry/exit; responsive shell
+  geometry; contact-sheet and representative rendered-frame inspection.
+- INCOMPLETE: both complete campaign flows, combat timing, damage/checkpoint/
+  pit-death presentation, boss defeat transitions, and every action/facing
+  sequence. Deterministic tests and direct fixtures pass, but the continuous
+  live-input observation remains CANNOT VERIFY.
+- CANNOT VERIFY: real-device touch/multi-touch, safe-area cutouts, native
+  orientation and mobile fullscreen, audible music quality/loop continuity,
+  and acoustic balance. Audio bytes were not changed in this audit.
+
+Complete command, route, viewport, screenshot, contact-sheet, hash, and
+worktree-preservation evidence is recorded in
+`docs/superpowers/reports/2026-08-09-game-wide-integrity-final.md`.
 
 ### 2026-08-09 — Task 7 Level 2 and Brutus acceptance
 
