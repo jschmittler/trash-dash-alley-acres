@@ -174,12 +174,16 @@ test("both boss arenas provide a quiet runway, grounded props, and reachable sym
 
 test("post-boss crate, dumpster glow, collision, and traversal footprints remain separated", () => {
   const floor = LEVEL_TWO.surfaces.find(({ id }) => id === "cul-de-sac");
-  const rightCrate = LEVEL_TWO.surfaces.find(({ id }) => id === "brutus-platform-right");
+  const crates = LEVEL_TWO.surfaces.filter(({ id }) => id.startsWith("brutus-platform-"));
+  assert.deepEqual(crates.map(({ id }) => id), ["brutus-platform-left", "brutus-platform-right"]);
   const dumpster = LEVEL_TWO.boss.victoryDumpster;
   assert.ok(dumpster, "Level 2 must author its post-boss dumpster in world space");
 
-  const crateCollision = decorativeCollisionRect("crate", rightCrate.x, floor.y);
-  const crateVisual = { ...crateCollision };
+  const crateFootprints = crates.map((crate) => ({
+    id: crate.id,
+    visual: { x: crate.x, y: crate.y, w: crate.w, h: crate.h },
+    collision: decorativeCollisionRect("crate", crate.x, floor.y),
+  }));
   const dumpsterVisual = dumpsterPlacementFootprint(dumpster.x, floor.y);
   const dumpsterCollision = dumpsterCollisionRect(dumpster.x, floor.y);
   const playerRoute = {
@@ -189,29 +193,45 @@ test("post-boss crate, dumpster glow, collision, and traversal footprints remain
     h: 58,
   };
 
-  for (const [crateName, crateBounds] of [["visual", crateVisual], ["collision", crateCollision]]) {
-    for (const [dumpsterName, dumpsterBounds] of [["glow", dumpsterVisual], ["collision", dumpsterCollision]]) {
-      assert.equal(
-        rectIntersectionArea(crateBounds, dumpsterBounds),
-        0,
-        `crate ${crateName} overlaps dumpster ${dumpsterName}`,
-      );
+  for (const crate of crateFootprints) {
+    for (const [crateName, crateBounds] of [["visual", crate.visual], ["collision", crate.collision]]) {
+      for (const [dumpsterName, dumpsterBounds] of [["glow", dumpsterVisual], ["collision", dumpsterCollision]]) {
+        assert.equal(
+          rectIntersectionArea(crateBounds, dumpsterBounds),
+          0,
+          `${crate.id} ${crateName} overlaps dumpster ${dumpsterName}`,
+        );
+      }
+      assert.equal(rectIntersectionArea(crateBounds, playerRoute), 0, `${crate.id} ${crateName} obstructs post-boss traversal`);
     }
   }
-  assert.equal(rectIntersectionArea(crateCollision, playerRoute), 0, "crate obstructs post-boss traversal");
   assert.equal(rectIntersectionArea(dumpsterCollision, playerRoute), 0, "dumpster obstructs post-boss traversal");
   assert.ok(dumpsterVisual.x >= LEVEL_TWO.exit.x - 220 + 38 + 16, "dumpster lacks player-route clearance");
 
-  const overlappingCrate = {
+  for (const crate of crates) {
+    const overlappingCrate = {
+      ...LEVEL_TWO,
+      boss: {
+        ...LEVEL_TWO.boss,
+        victoryDumpster: { ...LEVEL_TWO.boss.victoryDumpster, x: crate.x + 12 },
+      },
+    };
+    assert.ok(
+      validateBossArenaPlacement(overlappingCrate).some((error) => new RegExp(`${crate.id}.*overlaps victory-dumpster`).test(error)),
+      `arena validator must reject a ${crate.id}/dumpster footprint mutation`,
+    );
+  }
+
+  const forbiddenArena = {
     ...LEVEL_TWO,
     boss: {
       ...LEVEL_TWO.boss,
-      victoryDumpster: { ...LEVEL_TWO.boss.victoryDumpster, x: rightCrate.x + 12 },
+      victoryDumpster: { ...LEVEL_TWO.boss.victoryDumpster, x: 6200 },
     },
   };
   assert.ok(
-    validateBossArenaPlacement(overlappingCrate).some((error) => /brutus-platform-right overlaps victory-dumpster/.test(error)),
-    "arena validator must reject a crate/dumpster footprint mutation",
+    validateBossArenaPlacement(forbiddenArena).some((error) => /victory dumpster.*active boss arena/i.test(error)),
+    "arena validator must enforce the active-boss-arena forbidden zone",
   );
 
   const blockedRoute = {

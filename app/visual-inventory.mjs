@@ -8,6 +8,7 @@ import {
   DUMPSTER_SOURCE_VISIBLE_BOUNDS,
   DUMPSTER_STATES,
   DUMPSTER_UNIFORM_SCALE,
+  dumpsterPlacementFootprint,
 } from "./dumpster-render.mjs";
 import { LEVEL_ONE_ENEMY_ANIMATIONS } from "./level-one-enemy-animation.mjs";
 import { LEVEL_ONE, LEVEL_ONE_ENEMY_KINDS } from "./level-one.mjs";
@@ -106,6 +107,7 @@ const canonicalScale = (min = 1, max = 1) => ({
 
 const GROUND_CONTACT = "GROUND_CONTACT";
 const FREE_ANCHOR = "FREE_ANCHOR";
+const VISIBLE_LEFT_BOTTOM = "VISIBLE_LEFT_BOTTOM";
 
 const placementCategoryFor = (record) => {
   if (record.category === "boss") return PLACEMENT_SIZE_CLASSES.BOSS_ARENA;
@@ -435,12 +437,15 @@ const dumpsterRecord = makeRecord({
     sealed: rect(0, DUMPSTER_STATES.sealed.row * DUMPSTER_CELL, DUMPSTER_CELL, DUMPSTER_CELL),
     holy: Array.from({ length: 4 }, (_, column) => rect(column * DUMPSTER_CELL, DUMPSTER_STATES.holy.row * DUMPSTER_CELL, DUMPSTER_CELL, DUMPSTER_CELL)),
   },
-  renderedSize: { w: DUMPSTER_DRAW_WIDTH, h: DUMPSTER_DRAW_HEIGHT },
+  renderedSize: {
+    w: DUMPSTER_SOURCE_VISIBLE_BOUNDS.w * DUMPSTER_UNIFORM_SCALE,
+    h: DUMPSTER_SOURCE_VISIBLE_BOUNDS.h * DUMPSTER_UNIFORM_SCALE,
+  },
   runtimeDestinations: {
     sealed: [{ w: DUMPSTER_DRAW_WIDTH, h: DUMPSTER_DRAW_HEIGHT }],
     holy: repeated(4, { w: DUMPSTER_DRAW_WIDTH, h: DUMPSTER_DRAW_HEIGHT }),
   },
-  origin: "destination center-bottom; both reveal rows share one grounded rect",
+  origin: "visible-alpha left/bottom; cell draw padding stays renderer-only",
   facing: "not applicable",
   animations: {
     sealed: { row: DUMPSTER_STATES.sealed.row, frames: 1, fps: 1, loop: false },
@@ -448,16 +453,18 @@ const dumpsterRecord = makeRecord({
   },
   requiredStates: ["sealed", "holy"],
 }, {
-  ...grounded(
-    DUMPSTER_SOURCE_VISIBLE_BOUNDS.w * DUMPSTER_UNIFORM_SCALE,
-    DUMPSTER_SOURCE_VISIBLE_BOUNDS.h * DUMPSTER_UNIFORM_SCALE,
-    DUMPSTER_SOURCE_VISIBLE_BOUNDS.w * DUMPSTER_UNIFORM_SCALE,
-    DUMPSTER_SOURCE_VISIBLE_BOUNDS.h * DUMPSTER_UNIFORM_SCALE,
-  ),
+  visualBounds: dumpsterPlacementFootprint(0, 0),
+  collisionBounds: dumpsterPlacementFootprint(0, 0),
+  placementFootprint: dumpsterPlacementFootprint(0, 0),
+  groundAnchor: { x: 0, y: 0 },
   renderLayer: "GAMEPLAY",
   allowedZones: ["goal-zone", "post-boss-arena"],
   forbiddenZones: ["active-boss-arena", "solid-platform-interior"],
   minimumClearance: clearance(8),
+  scalePolicy: canonicalScale(DUMPSTER_UNIFORM_SCALE, DUMPSTER_UNIFORM_SCALE),
+  preferredScale: DUMPSTER_UNIFORM_SCALE,
+  referenceWorldHeight: DUMPSTER_SOURCE_VISIBLE_BOUNDS.h * DUMPSTER_UNIFORM_SCALE,
+  anchorPolicy: VISIBLE_LEFT_BOTTOM,
 });
 
 const miscRecords = [

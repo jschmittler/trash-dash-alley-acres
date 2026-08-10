@@ -1,5 +1,6 @@
 import { dumpsterCollisionRect, dumpsterPlacementFootprint } from "./dumpster-render.mjs";
-import { validateFootprintSeparation } from "./world-placement.mjs";
+import { decorativeCollisionRect } from "./decorative-render.mjs";
+import { rectIntersectionArea, validateFootprintSeparation } from "./world-placement.mjs";
 
 export const BOSS_ARENA_LEFT = 5640;
 export const BOSS_ARENA_RIGHT = 6600;
@@ -130,23 +131,45 @@ export function validateBossArenaPlacement(level, {
     if (!support) {
       errors.push(`${level.id}: missing victory dumpster support ${arena.victoryDumpster.surfaceId}`);
     } else {
-      const rightCrate = platforms.toSorted((left, right) => left.x - right.x).at(-1);
       const playerRoute = {
         x: arena.postBossStartX,
         y: support.y - 58,
         w: level.exit.x - 220 + 38 - arena.postBossStartX,
         h: 58,
       };
+      const crateFootprints = platforms.flatMap((platform) => [
+        {
+          id: `${platform.id}-visual`,
+          ownerId: platform.id,
+          bounds: { x: platform.x, y: platform.y, w: platform.w, h: platform.h },
+        },
+        {
+          id: `${platform.id}-collision`,
+          ownerId: platform.id,
+          bounds: decorativeCollisionRect("crate", platform.x, support.y),
+        },
+      ]);
       const footprints = [
-        ...(rightCrate ? [{ id: rightCrate.id, bounds: rightCrate }] : []),
-        { id: "victory-dumpster-glow", bounds: dumpsterPlacementFootprint(arena.victoryDumpster.x, support.y) },
-        { id: "victory-dumpster-collision", bounds: dumpsterCollisionRect(arena.victoryDumpster.x, support.y) },
+        ...crateFootprints,
+        { id: "victory-dumpster-glow", ownerId: "victory-dumpster", bounds: dumpsterPlacementFootprint(arena.victoryDumpster.x, support.y) },
+        { id: "victory-dumpster-collision", ownerId: "victory-dumpster", bounds: dumpsterCollisionRect(arena.victoryDumpster.x, support.y) },
         { id: "post-boss-player-route", bounds: playerRoute },
       ];
       errors.push(...validateFootprintSeparation(footprints)
-        .filter((error) => error !== "victory-dumpster-glow overlaps victory-dumpster-collision")
         .map((error) => `${level.id}: ${error}`));
       const dumpster = dumpsterPlacementFootprint(arena.victoryDumpster.x, support.y);
+      const activeArena = {
+        x: arena.arenaStartX,
+        y: 0,
+        w: arena.arenaEndX - arena.arenaStartX,
+        h: support.y,
+      };
+      if (
+        rectIntersectionArea(dumpster, activeArena) > 0
+        || rectIntersectionArea(dumpsterCollisionRect(arena.victoryDumpster.x, support.y), activeArena) > 0
+      ) {
+        errors.push(`${level.id}: victory dumpster enters forbidden active boss arena`);
+      }
       if (dumpster.y + dumpster.h !== support.y || dumpster.x + dumpster.w > level.worldWidth) {
         errors.push(`${level.id}: victory dumpster is not grounded inside world bounds`);
       }

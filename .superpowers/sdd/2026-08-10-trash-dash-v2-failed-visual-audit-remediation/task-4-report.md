@@ -128,3 +128,46 @@ and all unrelated untracked files. Only Task 4 paths/hunks are staged.
 
 No implementation blocker remains. The only limitation is the continuous-play
 Visual QA item explicitly deferred to Task 6 above.
+
+## Fix Round 1 — canonical identity and complete footprint contract
+
+Review correctly identified that the first pass preserved hydrant identity only
+inside one world runtime. The fresh-entry, retry, and re-entry constructors each
+still materialized a different object. A new RED assertion compared the objects
+with strict reference equality and failed. The Level 2 environment owner now
+exports one frozen `LEVEL_TWO_HYDRANT_ENVIRONMENT_RECORD` and inserts that exact
+reference into every runtime constructor. The same reference continues through
+death, checkpoint recovery, both phase changes, defeat, and exit. Count remains
+one and the stable ID remains `brutus-hydrant`; append and ID mutations still
+throw against the actual runtime-owned arrays and record.
+
+The post-boss validator formerly selected only the right crate. It now evaluates
+the complete authored visual rectangle and canonical decorative collision
+rectangle for both `brutus-platform-left` and `brutus-platform-right`, plus the
+dumpster's full holy-glow/visible and collision rectangles and the complete
+player route. Same-owner visual/collision representations are identified as one
+object while every cross-owner intersection remains illegal. Independent left-
+crate and right-crate overlap mutants fail, as does a dumpster moved into the
+explicit active-arena forbidden rectangle.
+
+The dumpster contract now uses one visible-left/bottom convention throughout:
+
+```text
+authored/runtime anchor: visible left x, visible bottom y
+inventory local footprint: { x: 0, y: -132, w: 124.5, h: 132 }
+reference world height: 132
+renderer-only cell destination: 144x144
+uniform source-axis scale: 0.75
+```
+
+`dumpsterPlacementFootprint` is the shared placement owner used by runtime draw
+offsets, collision, boss validation, and inventory local bounds. Transparent
+192px-cell padding remains solely a renderer concern. Sealed/holy destination
+size, defeat gating, and the 0.8-second reveal timing are unchanged.
+
+RED evidence was 21 passes and 3 expected failures: constructor reference
+identity, left-crate mutation coverage, and the truthful inventory visible size.
+After the repair, the focused review assertions pass 24/24 and the complete Task
+4 matrix passes 77/77. The exact staged production build and default suite pass
+310/310; staged lint completes with zero errors and the existing
+`no-img-element` warning only. `git diff --cached --check` passes.

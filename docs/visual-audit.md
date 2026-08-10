@@ -1014,3 +1014,15 @@ worktree-preservation evidence is recorded in
   not played continuously in this task. Those paths are covered by the actual
   runtime-owner lifecycle suite and existing defeat-state tests, but remain a
   continuous-play acceptance item for Task 6.
+- **Fix Round 1:** all fresh-entry, retry, and re-entry runtimes now reuse one
+  frozen canonical hydrant record by strict object identity; the same reference
+  survives every in-world transition. Post-boss validation now covers the full
+  visual and collision rectangles of both canonical crates, the dumpster's full
+  glow/collision footprint, the traversal route, and the active-arena forbidden
+  zone, with independent left/right mutation failures. The dumpster inventory,
+  runtime, and placement validator now share a visible-left/bottom anchor and a
+  124.5×132 visible footprint; the uniform 144×144 cell destination remains a
+  renderer-only detail. RED was 21 pass/3 fail; repaired focused assertions are
+  24/24 and the complete Task 4 matrix is 77/77. No visual state size, defeat
+  gate, or holy-reveal timing changed, so the prior browser evidence remains
+  applicable and no new continuous-play claim is made.

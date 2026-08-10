@@ -208,7 +208,22 @@ test("authoritative inventory source rectangles have opaque source pixels and fr
   assert.throws(() => {
     binLidSource.runtimeDestinations.active[3].w = 1;
   }, TypeError);
-  assert.deepEqual(dumpster.renderedSize, { w: DUMPSTER_DRAW_WIDTH, h: DUMPSTER_DRAW_HEIGHT });
+  assert.deepEqual(dumpster.renderedSize, { w: 124.5, h: 132 });
+  assert.equal(dumpster.origin, "visible-alpha left/bottom; cell draw padding stays renderer-only");
+  assert.deepEqual(dumpster.contract.visualBounds, { x: 0, y: -132, w: 124.5, h: 132 });
+  assert.deepEqual(dumpster.contract.collisionBounds, dumpster.contract.visualBounds);
+  assert.deepEqual(dumpster.contract.placementFootprint, dumpster.contract.visualBounds);
+  assert.deepEqual(dumpster.contract.groundAnchor, { x: 0, y: 0 });
+  assert.equal(dumpster.anchorPolicy, "VISIBLE_LEFT_BOTTOM");
+  assert.equal(dumpster.contract.referenceWorldHeight, 132);
+  assert.equal(dumpster.contract.preferredScale, 0.75);
+  assert.deepEqual(dumpster.contract.scalePolicy, {
+    kind: "CANONICAL_WORLD_SIZE",
+    min: 0.75,
+    max: 0.75,
+    preserveAspectRatio: true,
+  });
+  assert.deepEqual(dumpster.runtimeDestinations.sealed, [{ w: DUMPSTER_DRAW_WIDTH, h: DUMPSTER_DRAW_HEIGHT }]);
 });
 
 test("Level 2 environmental identities own exact authored sources and destinations", () => {

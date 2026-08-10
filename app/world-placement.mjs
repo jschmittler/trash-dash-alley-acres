@@ -24,6 +24,7 @@ export function validateFootprintSeparation(footprints) {
     for (let rightIndex = leftIndex + 1; rightIndex < footprints.length; rightIndex += 1) {
       const left = footprints[leftIndex];
       const right = footprints[rightIndex];
+      if (left.ownerId && left.ownerId === right.ownerId) continue;
       if (rectIntersectionArea(left.bounds, right.bounds) > 0) {
         errors.push(`${left.id} overlaps ${right.id}`);
       }

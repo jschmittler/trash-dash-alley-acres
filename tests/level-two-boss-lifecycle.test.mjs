@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  LEVEL_TWO_HYDRANT_ENVIRONMENT_RECORD,
   LEVEL_TWO_ENVIRONMENT_TRANSITIONS,
   applyLevelTwoEnvironmentTransition,
   createLevelTwoEnvironmentRuntime,
@@ -54,11 +55,17 @@ test("one runtime hydrant identity survives death, checkpoint recovery, every ph
   assert.equal(runtime.environmentState.revision, transitions.length + 1);
 });
 
-test("retry and re-entry runtime constructors retain one canonical identity and reject append mutations", () => {
+test("fresh entry, retry, and re-entry runtime constructors reuse one canonical hydrant object", () => {
+  const entry = createLevelTwoEnvironmentRuntime(LEVEL_TWO, "entry");
+  const canonicalHydrant = hydrantsIn(entry)[0];
+  assert.strictEqual(canonicalHydrant, LEVEL_TWO_HYDRANT_ENVIRONMENT_RECORD);
+  assertSingleHydrant(entry, canonicalHydrant, "entry");
+
   for (const transition of ["retry", "re-entry"]) {
     const runtime = createLevelTwoEnvironmentRuntime(LEVEL_TWO, transition);
     const [hydrant] = hydrantsIn(runtime);
-    assertSingleHydrant(runtime, hydrant, transition);
+    assertSingleHydrant(runtime, canonicalHydrant, transition);
+    assert.strictEqual(hydrant, canonicalHydrant, `${transition}: constructor rematerialized hydrant`);
     assert.throws(() => runtime.environment.push(hydrant), TypeError, `${transition}: duplicate append`);
     assert.throws(() => { hydrant.id = "duplicate-hydrant"; }, TypeError, `${transition}: ID mutation`);
   }

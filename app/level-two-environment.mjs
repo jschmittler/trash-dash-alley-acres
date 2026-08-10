@@ -1,4 +1,11 @@
 import { levelTwoEnvironmentRecords } from "./level-two-enemies.mjs";
+import { LEVEL_TWO } from "./level-two.mjs";
+
+export const LEVEL_TWO_HYDRANT_ENVIRONMENT_RECORD = Object.freeze({
+  ...LEVEL_TWO.boss.hydrant,
+  kind: "hydrant",
+  encounterId: "brutus",
+});
 
 export const LEVEL_TWO_ENVIRONMENT_TRANSITIONS = Object.freeze([
   "entry",
@@ -16,7 +23,7 @@ const materializeLevelTwoEnvironment = (level) => {
   return [
     ...levelTwoEnvironmentRecords(),
     ...(level.boss?.hydrant
-      ? [{ ...level.boss.hydrant, kind: "hydrant", encounterId: "brutus" }]
+      ? [LEVEL_TWO_HYDRANT_ENVIRONMENT_RECORD]
       : []),
   ];
 };
