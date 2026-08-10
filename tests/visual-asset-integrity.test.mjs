@@ -161,22 +161,13 @@ test("every allowlisted distortion carries its owning visual issue", () => {
   }
 });
 
-test("overlapping prop renderer defects remain explicit until their owner repairs the runtime", () => {
+test("Level 2 prop renderer applies uniform scale to every fixed-aspect atlas cell", () => {
   const errors = IMPLEMENTED_VISUAL_INVENTORY
     .filter(({ runtimeOwner }) => runtimeOwner === "level-two-prop-render")
     .flatMap((record) => sourceRectanglesFor(record).flatMap((source) => (
       validateAspectRatio({ source, destination: renderedGeometryFor(record) }).map((error) => `${record.id}: ${error}`)
     )));
-  assert.deepEqual(errors, [
-    "brutus-platform-left: source aspect 1.00 does not match destination aspect 1.08",
-    "brutus-platform-right: source aspect 1.00 does not match destination aspect 1.08",
-    "charge-obstacle: source aspect 1.00 does not match destination aspect 0.75",
-    "sprinkler-water: source aspect 1.00 does not match destination aspect 1.25",
-    "sprinkler-water: source aspect 1.00 does not match destination aspect 1.25",
-    "sprinkler-water: source aspect 1.00 does not match destination aspect 1.25",
-    "sprinkler-water: source aspect 1.00 does not match destination aspect 1.25",
-    "hydrant-body: source aspect 1.00 does not match destination aspect 0.67",
-  ]);
+  assert.deepEqual(errors, []);
 });
 
 test("canonical inventory does not require optional future prop or render-metric exports", async () => {

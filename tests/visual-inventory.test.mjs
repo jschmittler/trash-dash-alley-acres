@@ -65,7 +65,7 @@ test("renderer draw-family manifest binds every named runtime path to canonical 
   const families = new Set(RUNTIME_DRAW_FAMILY_MANIFEST.map(({ id }) => id));
   const expectedFamilies = [
     "decorative-props", "level-one-enemies", "level-two-enemies", "players", "bosses", "pickups",
-    "victory-dumpster", "level-two-legacy-props", "level-two-visual-platforms", "bin-lid-source",
+    "victory-dumpster", "level-two-props", "level-two-visual-platforms", "bin-lid-source",
     "ordinary-bin-lid", "brutus-rolling-can", "procedural-effects",
   ];
   assert.deepEqual([...families].sort(), expectedFamilies.sort(), "renderer draw families are exhaustive");
@@ -102,10 +102,11 @@ test("animated prop consumers bind all committed source frames to runtime destin
   assert.deepEqual(binLid.runtimeDestinations.active, Array.from({ length: 4 }, () => ({ w: 44, h: 44 })));
   const sprinklerWater = record("sprinkler-water");
   assert.deepEqual(sprinklerWater.sourceRects.spray, [
-    { x: 128, y: 256, w: 128, h: 128 }, { x: 256, y: 256, w: 128, h: 128 },
-    { x: 384, y: 256, w: 128, h: 128 }, { x: 0, y: 384, w: 128, h: 128 },
+    { x: 256, y: 256, w: 128, h: 128 }, { x: 384, y: 256, w: 128, h: 128 },
+    { x: 0, y: 384, w: 128, h: 128 }, { x: 128, y: 384, w: 128, h: 128 },
+    { x: 256, y: 384, w: 128, h: 128 }, { x: 384, y: 384, w: 128, h: 128 },
   ]);
-  assert.deepEqual(sprinklerWater.runtimeDestinations.spray, Array.from({ length: 4 }, () => ({ w: 120, h: 96 })));
+  assert.deepEqual(sprinklerWater.runtimeDestinations.spray, Array.from({ length: 6 }, () => ({ w: 132, h: 132 })));
 });
 
 test("Level 2 visual platforms are fixed-aspect records with their source cells and runtime rectangles", () => {
@@ -113,7 +114,9 @@ test("Level 2 visual platforms are fixed-aspect records with their source cells 
   assert.equal(platforms.length, 2);
   for (const platform of platforms) {
     assert.equal(platform.contract.scalePolicy.kind, "CANONICAL_WORLD_SIZE", `${platform.id}: fixed aspect`);
-    assert.deepEqual(platform.runtimeDestinations, { idle: [{ w: 104, h: 96 }] }, `${platform.id}: runtime draw rect`);
+    const surface = LEVEL_TWO.surfaces.find(({ id }) => id === platform.id);
+    const drawSize = 128 * surface.w / 96;
+    assert.deepEqual(platform.runtimeDestinations, { idle: [{ w: drawSize, h: drawSize }] }, `${platform.id}: runtime draw rect`);
     assert.deepEqual(platform.sourceRects.idle[0], platform.id.endsWith("left")
       ? { x: 128, y: 128, w: 128, h: 128 }
       : { x: 256, y: 128, w: 128, h: 128 });

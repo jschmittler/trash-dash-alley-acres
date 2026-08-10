@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { access } from "node:fs/promises";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
@@ -204,8 +205,8 @@ test("moth orbit stays inside its authored light band", () => {
   assert.ok(next.y >= 150 && next.y <= 210);
 });
 
-test("moth clamps its full collision rectangle and reports committed motion", () => {
-  const flightBand = { startX: 760, endX: 840, minY: 150, maxY: 240 };
+test("moth clamps its full visible silhouette and reports committed motion", () => {
+  const flightBand = { startX: 760, endX: 900, minY: 150, maxY: 280 };
   const diving = updateMoth({
     state: "dive", x: 800, y: 190, w: 50, h: 34, vx: 150, vy: 240, timer: 0.5,
   }, {
@@ -215,6 +216,10 @@ test("moth clamps its full collision rectangle and reports committed motion", ()
   assert.ok(diving.x + 50 <= flightBand.endX);
   assert.ok(diving.y >= flightBand.minY);
   assert.ok(diving.y + 34 <= flightBand.maxY);
+  assert.ok(diving.x - 17 >= flightBand.startX);
+  assert.ok(diving.x + 50 + 17 <= flightBand.endX);
+  assert.ok(diving.y - 24 >= flightBand.minY);
+  assert.ok(diving.y + 34 + 24 <= flightBand.maxY);
 
   const orbiting = updateMoth({ state: "orbit", x: 800, y: 180, w: 50, h: 34, phase: 0 }, {
     dt: 0.1, lightX: 800, flightY: 180, flightBand, playerInRange: false,
@@ -335,6 +340,7 @@ test("encounter routes reject unknown names and drifted metadata", () => {
 });
 
 test("compact atlas metadata and pixels obey stable anchors", async () => {
+  await access(new URL("../concepts/level-two/source/squirrel-throw-source.png", import.meta.url));
   const atlasPath = fileURLToPath(new URL(
     "../public/assets/generated/level2-enemy-motion.png",
     import.meta.url,
@@ -449,4 +455,15 @@ test("compact atlas metadata and pixels obey stable anchors", async () => {
       }
     }
   }
+
+  const releaseComponents = componentStats(
+    LEVEL_TWO_ENEMY_ANIMATIONS.squirrel.attack.row,
+    1,
+  );
+  assert.ok(
+    releaseComponents.some(({ area, red, green, blue }) => (
+      area >= 8 && area <= 450 && red > green * 1.05 && green > blue * 1.05
+    )),
+    "squirrel release frame needs a detached warm-brown acorn component",
+  );
 });

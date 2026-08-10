@@ -10,6 +10,7 @@ import {
   dumpsterFrame,
   dumpsterFrameIndex,
   dumpsterRevealProgress,
+  shouldRenderDumpsterGoal,
   selectDumpsterState,
 } from "../app/dumpster-render.mjs";
 
@@ -18,6 +19,12 @@ test("dumpster state selection maps boss defeat to the holy row", () => {
   assert.equal(selectDumpsterState(true), "holy");
   assert.deepEqual(DUMPSTER_STATES.sealed, { row: 0, loop: false });
   assert.deepEqual(DUMPSTER_STATES.holy, { row: 1, loop: true });
+});
+
+test("Level 2 keeps the victory dumpster out of the active Brutus arena", () => {
+  assert.equal(shouldRenderDumpsterGoal("level-1", false), true);
+  assert.equal(shouldRenderDumpsterGoal("level-2", false), false);
+  assert.equal(shouldRenderDumpsterGoal("level-2", true), true);
 });
 
 test("sealed dumpster is static while holy effects loop slowly", () => {

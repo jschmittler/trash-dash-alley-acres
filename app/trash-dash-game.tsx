@@ -67,6 +67,7 @@ import {
   brutusAnimation,
   brutusAnimationFrame,
   brutusArenaHazards,
+  BRUTUS_DURATIONS,
   brutusDrawRect,
   createBrutusState,
   isBrutusTopHit,
@@ -80,6 +81,7 @@ import {
   dumpsterFrame,
   dumpsterRevealProgress,
   selectDumpsterState,
+  shouldRenderDumpsterGoal,
 } from "./dumpster-render.mjs";
 import {
   DECORATIVE_PROPS,
@@ -123,7 +125,23 @@ import {
   updateSprinkler,
   squirrelThrowAttachment,
 } from "./level-two-enemies.mjs";
-import { levelTwoPlatformDrawRect, levelTwoPropFrame } from "./level-two-props.mjs";
+import {
+  chargeObstacleDrawRect,
+  hydrantDrawRect,
+  hydrantNozzleOrigin,
+  hydrantVisualState,
+  hydrantWaterDrawRect,
+  lampEmitterOrigin,
+  lampPostDrawRect,
+  levelTwoPlatformDrawRect,
+  levelTwoPropFrame,
+  sprinklerBodyDrawRect,
+  sprinklerCycleState,
+  sprinklerEmitterOrigin,
+  sprinklerVisualState,
+  sprinklerWaterDrawRect,
+} from "./level-two-props.mjs";
+import { RENDER_LAYERS } from "./visual-contract.mjs";
 
 type Screen = "title" | "characterSelect" | "playing" | "paused" | "gameover" | "won";
 type Frame = readonly [number, number, number, number];
@@ -167,6 +185,7 @@ interface CampaignLevelDefinition {
     triggerX: number;
     arenaStartX: number;
     arenaEndX: number;
+    spawnX?: number;
     surfaceId?: string;
     hydrant?: Omit<EnvironmentCollision, "kind" | "encounterId">;
     recoveryX?: number;
@@ -252,7 +271,7 @@ interface BinLid extends Rect {
 
 interface EnvironmentCollision extends Rect {
   id: string;
-  kind: "bin-lid-source" | "charge-obstacle" | "sprinkler" | "porch-light" | "hydrant";
+  kind: "bin-lid-source" | "charge-obstacle" | "sprinkler" | "lamp-post" | "hydrant";
   encounterId: string;
   flightBand?: string;
 }
@@ -369,7 +388,7 @@ const clampArenaPlayerX = (world: World, x: number, width: number) => (
 const clampArenaBossX = (world: World, x: number, width: number) => (
   metadataClampArenaBossX(x, width, world.level.boss)
 );
-const worldBossSpawnX = (level: CampaignLevelDefinition) => level.boss.arenaStartX + 480;
+const worldBossSpawnX = (level: CampaignLevelDefinition) => level.boss.spawnX ?? level.boss.arenaStartX + 480;
 const dumpsterGoalWorldX = (world: World) => (
   bossArenaCameraX(world) + WIDTH - DUMPSTER_RIGHT_MARGIN - DUMPSTER_DRAW_WIDTH
 );
@@ -763,6 +782,7 @@ export function TrashDashGame() {
   const varietyEnemyMotionRef = useRef<HTMLImageElement | null>(null);
   const levelTwoEnemyMotionRef = useRef<HTMLImageElement | null>(null);
   const levelTwoPropMotionRef = useRef<HTMLImageElement | null>(null);
+  const levelTwoLampPostRef = useRef<HTMLImageElement | null>(null);
   const trashPickupMotionRef = useRef<HTMLImageElement | null>(null);
   const tacoPowerMotionRef = useRef<HTMLImageElement | null>(null);
   const dumpsterAtlasRef = useRef<HTMLImageElement | null>(null);
@@ -851,10 +871,12 @@ export function TrashDashGame() {
       loadImage("assets/generated/level2-enemy-motion.png"),
       loadImage("assets/generated/brutus-motion.png"),
       loadImage("assets/generated/level2-props.png"),
-    ]).then(([enemyAtlas, brutusAtlas, propAtlas]) => {
+      loadImage("assets/generated/level2-lamp-post.png"),
+    ]).then(([enemyAtlas, brutusAtlas, propAtlas, lampPost]) => {
       levelTwoEnemyMotionRef.current = enemyAtlas;
       brutusMotionRef.current = brutusAtlas;
       levelTwoPropMotionRef.current = propAtlas;
+      levelTwoLampPostRef.current = lampPost;
     }).catch((error) => {
       levelEnemyLoadPromisesRef.current.delete(activeLevel.id);
       throw error;
@@ -1032,6 +1054,13 @@ export function TrashDashGame() {
       nextWorld.checkpointReached = true;
       nextWorld.checkpointIndex = nextWorld.checkpoints.length - 1;
       nextWorld.cameraX = bossRoute.cameraX;
+      if (bossRoute.activateArena) {
+        const activated = activateBossArena(nextWorld.enemies);
+        nextWorld.arenaActive = activated.arenaActive;
+        nextWorld.enemies = activated.enemies as Enemy[];
+        nextWorld.bossTransition = null;
+        nextWorld.cameraX = nextWorld.level.boss.arenaStartX;
+      }
     } else if (levelTest !== null && Object.hasOwn(levelTwoTestStarts, levelTest)) {
       const route = levelTest as keyof typeof levelTwoTestStarts;
       const [requestedX, requestedCameraX] = levelTwoTestStarts[route];
@@ -1334,6 +1363,8 @@ export function TrashDashGame() {
     const context = canvas.getContext("2d");
     if (!context) return;
     context.imageSmoothingEnabled = false;
+    const debugVisuals = import.meta.env.DEV
+      && new URLSearchParams(window.location.search).get("debugVisuals") === "1";
 
     const keyHeld = (...codes: string[]) => codes.some((code) => keysRef.current.has(code));
     const keyPressed = (...codes: string[]) => codes.some((code) => pressedRef.current.has(code));
@@ -1938,6 +1969,10 @@ export function TrashDashGame() {
             const flightBand = enemy.kind === "moth"
               ? world.level.flightBands?.find(({ id }) => id === enemy.flightBand)
               : null;
+            const mothLamp = enemy.kind === "moth"
+              ? world.environment.find((item) => item.kind === "lamp-post" && item.flightBand === enemy.flightBand)
+              : null;
+            const mothLight = mothLamp ? lampEmitterOrigin(mothLamp) : null;
             if (enemy.kind === "moth" && !flightBand) {
               throw new RangeError(`Missing authored flight band "${enemy.flightBand}"`);
             }
@@ -1953,8 +1988,8 @@ export function TrashDashGame() {
               patrolMinX: enemy.patrolMinX,
               patrolMaxX: enemy.patrolMaxX,
               obstacle,
-              lightX: enemy.originX,
-              flightY: enemy.surfaceY - enemy.h,
+              lightX: mothLight?.x ?? enemy.originX,
+              flightY: mothLight?.y ?? enemy.surfaceY - enemy.h,
               flightBand,
             });
             Object.assign(enemy, applyLevelTwoBehaviorTransition(enemy, next.state));
@@ -2091,16 +2126,18 @@ export function TrashDashGame() {
             ? brutusArenaHazards(brutus.brutusState).find(({ kind }) => kind === "sprinkler")?.side
             : null;
           const authoredSide = world.level.boss.sprinklers?.find(({ id }) => id === sprinkler.id)?.side;
+          const direction = authoredSide === "right" ? -1 : 1;
+          const cycle = sprinklerCycleState(world.elapsed, sprinkler.x * 0.001);
           const sprinklerActive = sprinkler.encounterId === "brutus"
             ? Boolean(activeSide && activeSide === authoredSide)
-            : Math.sin(world.elapsed * 2.4 + sprinkler.x) > -0.15;
-          const stream: Rect = { x: sprinkler.x - 74, y: sprinkler.y - 104, w: 182, h: 128 };
+            : cycle.active;
+          const stream: Rect = sprinkler.encounterId === "brutus"
+            ? hydrantWaterDrawRect(hydrantNozzleOrigin(sprinkler, direction), direction)
+            : sprinklerWaterDrawRect(sprinklerEmitterOrigin(sprinkler, direction), direction);
           if (sprinklerActive && intersects(lid, stream)) {
             Object.assign(lid, updateSprinkler(lid, {
               active: true,
-              direction: authoredSide === "right"
-                ? -1
-                : authoredSide === "left" ? 1 : Math.sin(world.elapsed * 1.2 + sprinkler.x) < 0 ? -1 : 1,
+              direction,
             }));
           }
         }
@@ -2147,12 +2184,8 @@ export function TrashDashGame() {
           && (world.level.boss.sprinklers ?? []).find(({ id, side }) => id === item.id && side === activeBrutusSprinkler.side)
         ));
         if (sprinkler) {
-          const stream: Rect = {
-            x: activeBrutusSprinkler.side === "left" ? sprinkler.x : sprinkler.x - 148,
-            y: sprinkler.y - 104,
-            w: 182,
-            h: 128,
-          };
+          const direction = activeBrutusSprinkler.side === "left" ? 1 : -1;
+          const stream: Rect = hydrantWaterDrawRect(hydrantNozzleOrigin(sprinkler, direction), direction);
           if (intersects(player, stream)) hurtPlayer(world, activeBrutusSprinkler.side === "left" ? 1 : -1);
         }
       }
@@ -2423,48 +2456,50 @@ export function TrashDashGame() {
         const checkpointAlpha = index <= world.checkpointIndex ? 1 : 0.62;
         drawDecorativeProp("checkpoint", checkpoint.x, GROUND_Y, camera, checkpointAlpha);
       }
-      const dumpsterRect = dumpsterDrawRect(dumpsterGoalWorldX(world), camera, GROUND_Y);
-      const dumpsterState = selectDumpsterState(world.bossDefeated);
-      const revealElapsed = world.dumpsterRevealStartedAt === null
-        ? (world.bossDefeated ? 0.8 : 0)
-        : world.elapsed - world.dumpsterRevealStartedAt;
-      const revealProgress = world.bossDefeated ? dumpsterRevealProgress(revealElapsed) : 0;
-      const sealedFrame = dumpsterFrame("sealed", world.elapsed).source as Frame;
-      const holyFrame = dumpsterFrame("holy", world.elapsed).source as Frame;
-      if (dumpsterState === "sealed") {
-        drawSprite(
-          sealedFrame,
-          dumpsterRect.x,
-          dumpsterRect.y,
-          DUMPSTER_DRAW_WIDTH,
-          DUMPSTER_DRAW_HEIGHT,
-          false,
-          0.62,
-          dumpsterAtlasRef.current,
-        );
-      } else {
-        // Crossfade treatment only; both rows use the same destination rect,
-        // so the wheels and ground contact never jump during the reveal.
-        drawSprite(
-          sealedFrame,
-          dumpsterRect.x,
-          dumpsterRect.y,
-          DUMPSTER_DRAW_WIDTH,
-          DUMPSTER_DRAW_HEIGHT,
-          false,
-          0.62 * (1 - revealProgress),
-          dumpsterAtlasRef.current,
-        );
-        drawSprite(
-          holyFrame,
-          dumpsterRect.x,
-          dumpsterRect.y,
-          DUMPSTER_DRAW_WIDTH,
-          DUMPSTER_DRAW_HEIGHT,
-          false,
-          revealProgress,
-          dumpsterAtlasRef.current,
-        );
+      if (shouldRenderDumpsterGoal(world.level.id, world.bossDefeated)) {
+        const dumpsterRect = dumpsterDrawRect(dumpsterGoalWorldX(world), camera, GROUND_Y);
+        const dumpsterState = selectDumpsterState(world.bossDefeated);
+        const revealElapsed = world.dumpsterRevealStartedAt === null
+          ? (world.bossDefeated ? 0.8 : 0)
+          : world.elapsed - world.dumpsterRevealStartedAt;
+        const revealProgress = world.bossDefeated ? dumpsterRevealProgress(revealElapsed) : 0;
+        const sealedFrame = dumpsterFrame("sealed", world.elapsed).source as Frame;
+        const holyFrame = dumpsterFrame("holy", world.elapsed).source as Frame;
+        if (dumpsterState === "sealed") {
+          drawSprite(
+            sealedFrame,
+            dumpsterRect.x,
+            dumpsterRect.y,
+            DUMPSTER_DRAW_WIDTH,
+            DUMPSTER_DRAW_HEIGHT,
+            false,
+            0.62,
+            dumpsterAtlasRef.current,
+          );
+        } else {
+          // Crossfade treatment only; both rows use the same destination rect,
+          // so the wheels and ground contact never jump during the reveal.
+          drawSprite(
+            sealedFrame,
+            dumpsterRect.x,
+            dumpsterRect.y,
+            DUMPSTER_DRAW_WIDTH,
+            DUMPSTER_DRAW_HEIGHT,
+            false,
+            0.62 * (1 - revealProgress),
+            dumpsterAtlasRef.current,
+          );
+          drawSprite(
+            holyFrame,
+            dumpsterRect.x,
+            dumpsterRect.y,
+            DUMPSTER_DRAW_WIDTH,
+            DUMPSTER_DRAW_HEIGHT,
+            false,
+            revealProgress,
+            dumpsterAtlasRef.current,
+          );
+        }
       }
 
       context.save();
@@ -2490,39 +2525,75 @@ export function TrashDashGame() {
             ? brutusArenaHazards(brutus.brutusState).find(({ kind }) => kind === "sprinkler")?.side
             : null;
           const authoredSide = world.level.boss.sprinklers?.find(({ id }) => id === item.id)?.side;
+          const cycle = sprinklerCycleState(world.elapsed, item.x * 0.001);
           const sprinklerActive = item.encounterId === "brutus"
             ? Boolean(activeSide && activeSide === authoredSide)
-            : Math.sin(world.elapsed * 2.4 + item.x) > -0.15;
+            : cycle.active;
           const direction = authoredSide === "right" ? -1 : 1;
-          drawSprite(
-            levelTwoPropFrame("sprinkler-idle", world.elapsed) as Frame,
-            x + item.w / 2 - 41,
-            item.y + item.h - 72,
-            82,
-            82,
-            direction < 0,
-            1,
-            levelTwoPropMotionRef.current,
-          );
-          if (sprinklerActive) {
+          if (item.encounterId === "brutus") {
+            const progress = brutus?.brutusState
+              ? 1 - (brutus.brutusState.sprinklerTimer ?? BRUTUS_DURATIONS.sprinkler) / BRUTUS_DURATIONS.sprinkler
+              : 0;
+            const visual = hydrantVisualState(sprinklerActive, progress);
+            const body = hydrantDrawRect(item);
             drawSprite(
-              levelTwoPropFrame("sprinkler-spray", world.elapsed) as Frame,
-              direction > 0 ? x + item.w / 2 - 8 : x + item.w / 2 - 112,
-              item.y - 72,
-              120,
-              96,
+              levelTwoPropFrame(visual.body, world.elapsed) as Frame,
+              body.x - camera,
+              body.y,
+              body.w,
+              body.h,
               direction < 0,
               1,
               levelTwoPropMotionRef.current,
             );
+            if (visual.water) {
+              const water = hydrantWaterDrawRect(hydrantNozzleOrigin(item, direction), direction);
+              drawSprite(
+                levelTwoPropFrame(visual.water, world.elapsed) as Frame,
+                water.x - camera,
+                water.y,
+                water.w,
+                water.h,
+                direction < 0,
+                1,
+                levelTwoPropMotionRef.current,
+              );
+            }
+          } else {
+            const visual = sprinklerVisualState(sprinklerActive, cycle.progress);
+            const body = sprinklerBodyDrawRect(item);
+            drawSprite(
+              levelTwoPropFrame(visual.body, world.elapsed) as Frame,
+              body.x - camera,
+              body.y,
+              body.w,
+              body.h,
+              direction < 0,
+              1,
+              levelTwoPropMotionRef.current,
+            );
+            if (visual.water) {
+              const water = sprinklerWaterDrawRect(sprinklerEmitterOrigin(item, direction), direction);
+              drawSprite(
+                levelTwoPropFrame(visual.water, world.elapsed) as Frame,
+                water.x - camera,
+                water.y,
+                water.w,
+                water.h,
+                direction < 0,
+                1,
+                levelTwoPropMotionRef.current,
+              );
+            }
           }
         } else if (item.kind === "charge-obstacle") {
+          const draw = chargeObstacleDrawRect(item);
           drawSprite(
             levelTwoPropFrame("charge-obstacle", world.elapsed) as Frame,
-            x + item.w / 2 - 42,
-            item.y + item.h - 98,
-            84,
-            112,
+            draw.x - camera,
+            draw.y,
+            draw.w,
+            draw.h,
             false,
             1,
             levelTwoPropMotionRef.current,
@@ -2538,18 +2609,26 @@ export function TrashDashGame() {
             1,
             levelTwoPropMotionRef.current,
           );
-        } else if (item.kind === "porch-light") {
-          context.fillStyle = "#173e3b";
-          context.fillRect(x + 6, item.y - 8, 8, item.h + 12);
-          context.fillStyle = "#ffd86a";
-          context.fillRect(x + 2, item.y, 16, 12);
+        } else if (item.kind === "lamp-post") {
+          const draw = lampPostDrawRect(item);
+          const emitter = lampEmitterOrigin(item);
+          const glow = context.createRadialGradient(emitter.x - camera, emitter.y, 3, emitter.x - camera, emitter.y, 62);
+          glow.addColorStop(0, "rgba(255, 224, 118, 0.32)");
+          glow.addColorStop(0.55, "rgba(255, 176, 55, 0.12)");
+          glow.addColorStop(1, "rgba(255, 176, 55, 0)");
+          context.fillStyle = glow;
+          context.fillRect(emitter.x - camera - 62, emitter.y - 62, 124, 124);
+          if (levelTwoLampPostRef.current) {
+            context.drawImage(levelTwoLampPostRef.current, draw.x - camera, draw.y, draw.w, draw.h);
+          }
         } else if (item.kind === "hydrant") {
+          const draw = hydrantDrawRect(item);
           drawSprite(
-            levelTwoPropFrame("hydrant", world.elapsed) as Frame,
-            x + item.w / 2 - 36,
-            item.y + item.h - 95,
-            72,
-            108,
+            levelTwoPropFrame("hydrant-idle", world.elapsed) as Frame,
+            draw.x - camera,
+            draw.y,
+            draw.w,
+            draw.h,
             false,
             1,
             levelTwoPropMotionRef.current,
@@ -2567,7 +2646,7 @@ export function TrashDashGame() {
         if (pickup.kind === "taco") {
           drawSprite(tacoPowerMotion[pickupFrame], x - 10, y - 12, 58, 58, false, 1, tacoPowerMotionRef.current);
         } else if (pickup.kind === "cap") {
-          drawSprite(sprites.cap, x - 9, y - 7, 50, 42);
+          drawSprite(sprites.cap, x - 9, y - 7, 51, 42);
         } else {
           const trashFrames = trashPickupRows[Math.abs(Math.floor(pickup.phase)) % trashPickupRows.length];
           drawSprite(trashFrames[pickupFrame], x - 8, y - 10, 46, 46, false, 1, trashPickupMotionRef.current);
@@ -2732,6 +2811,51 @@ export function TrashDashGame() {
         context.fillRect(Math.round(particle.x - camera), Math.round(particle.y), particle.size, particle.size);
       }
       context.globalAlpha = 1;
+
+      if (debugVisuals) {
+        // Developer-only rendered QA: collision (cyan), visible destination
+        // bounds (yellow), ground/action anchors (magenta), and authored
+        // support geometry (blue). Normal gameplay never enters this branch.
+        context.save();
+        context.lineWidth = 1;
+        context.font = "10px monospace";
+        context.textBaseline = "top";
+        context.setLineDash([4, 3]);
+        context.strokeStyle = "rgba(68, 170, 255, 0.9)";
+        for (const surface of world.surfaces) {
+          const x = Math.round(surface.x - camera);
+          if (x + surface.w < 0 || x > WIDTH) continue;
+          context.strokeRect(x, surface.y, surface.w, surface.h);
+        }
+        context.setLineDash([]);
+        for (const enemy of world.enemies) {
+          if (!enemy.active) continue;
+          const x = enemy.x - camera;
+          if (x + enemy.w < 0 || x > WIDTH) continue;
+          context.strokeStyle = "rgba(0, 255, 230, 0.95)";
+          context.strokeRect(x, enemy.y, enemy.w, enemy.h);
+          context.fillStyle = "#ff58d4";
+          context.fillRect(x + enemy.w / 2 - 2, enemy.y + enemy.h - 2, 4, 4);
+          context.fillStyle = "rgba(7, 20, 28, 0.82)";
+          context.fillRect(x, enemy.y - 14, Math.max(58, (enemy.visualState ?? enemy.animationState ?? enemy.kind).length * 6 + 6), 13);
+          context.fillStyle = "#fff8b5";
+          context.fillText(`${enemy.kind}:${enemy.visualState ?? enemy.animationState ?? "move"}`, x + 3, enemy.y - 13);
+        }
+        const visualX = playerX + player.w / 2 - drawW / 2;
+        const visualY = player.y + player.h - drawH + playerAnimation.offsetY;
+        context.strokeStyle = "#ffe45f";
+        context.strokeRect(visualX, visualY, drawW, drawH);
+        context.strokeStyle = "#51ffd6";
+        context.strokeRect(playerX, player.y, player.w, player.h);
+        context.fillStyle = "#ff58d4";
+        context.fillRect(playerX + player.w / 2 - 2, player.y + player.h - 2, 4, 4);
+        context.fillStyle = "rgba(7, 20, 28, 0.86)";
+        context.fillRect(8, 8, 380, 32);
+        context.fillStyle = "#fff8b5";
+        context.fillText(`player:${player.animationName} frame:${playerFrameIndex}`, 14, 12);
+        context.fillText(`layers:${Object.entries(RENDER_LAYERS).map(([name, value]) => `${value.order}:${name}`).join(" ")}`, 14, 25);
+        context.restore();
+      }
 
       if (world.messageTimer > 0 && screenRef.current === "playing") {
         const alpha = Math.min(1, world.messageTimer * 2);

@@ -1,11 +1,12 @@
 export const LEVEL_TWO_PROP_ATLAS = Object.freeze({
   cell: 128,
   columns: 4,
-  rows: 4,
+  rows: 7,
   baseline: 112,
 });
 
 export const LEVEL_TWO_PROP_ASSET = "assets/generated/level2-props.png";
+export const LEVEL_TWO_LAMP_POST_ASSET = "assets/generated/level2-lamp-post.png";
 
 const cell = (column, row) => Object.freeze([column * 128, row * 128, 128, 128]);
 
@@ -16,56 +17,181 @@ export const LEVEL_TWO_PROP_FRAMES = Object.freeze({
   "boss-platform-right": Object.freeze({ frames: Object.freeze([cell(2, 1)]), fps: 0, loop: false }),
   "rolling-can": Object.freeze({ frames: Object.freeze([cell(3, 1)]), fps: 0, loop: false }),
   "sprinkler-idle": Object.freeze({ frames: Object.freeze([cell(0, 2)]), fps: 0, loop: false }),
-  "sprinkler-spray": Object.freeze({ frames: Object.freeze([cell(1, 2), cell(2, 2), cell(3, 2), cell(0, 3)]), fps: 10, loop: true }),
-  hydrant: Object.freeze({ frames: Object.freeze([cell(1, 3)]), fps: 0, loop: false }),
+  "sprinkler-start": Object.freeze({ frames: Object.freeze([cell(1, 2)]), fps: 0, loop: false }),
+  "sprinkler-spray": Object.freeze({ frames: Object.freeze([cell(2, 2), cell(3, 2), cell(0, 3), cell(1, 3), cell(2, 3), cell(3, 3)]), fps: 9, loop: true }),
+  "sprinkler-stop": Object.freeze({ frames: Object.freeze([cell(0, 4)]), fps: 0, loop: false }),
+  "hydrant-idle": Object.freeze({ frames: Object.freeze([cell(1, 4)]), fps: 0, loop: false }),
+  "hydrant-build": Object.freeze({ frames: Object.freeze([cell(2, 4)]), fps: 0, loop: false }),
+  "hydrant-spray": Object.freeze({ frames: Object.freeze([cell(3, 4)]), fps: 0, loop: false }),
+  "hydrant-recover": Object.freeze({ frames: Object.freeze([cell(0, 5)]), fps: 0, loop: false }),
+  "hydrant-water-burst": Object.freeze({ frames: Object.freeze([cell(1, 5)]), fps: 0, loop: false }),
+  "hydrant-water-full": Object.freeze({ frames: Object.freeze([cell(2, 5), cell(3, 5)]), fps: 12, loop: true }),
+  "hydrant-water-taper": Object.freeze({ frames: Object.freeze([cell(0, 6)]), fps: 0, loop: false }),
 });
 
 export const SPRINKLER_RENDER_METRICS = Object.freeze({
-  bodyWidth: 82, bodyHeight: 82, sourceNozzle: Object.freeze({ x: 74, y: 43 }), waterWidth: 132, waterHeight: 96,
+  bodyWidth: 82,
+  bodyHeight: 82,
+  sourceNozzle: Object.freeze({ x: 74, y: 43 }),
+  waterWidth: 132,
+  waterHeight: 132,
 });
+
 export const HYDRANT_RENDER_METRICS = Object.freeze({
-  drawWidth: 72, drawHeight: 96, sourceNozzle: Object.freeze({ x: 96, y: 54 }), waterWidth: 144, waterHeight: 96,
+  drawWidth: 96,
+  drawHeight: 96,
+  sourceNozzle: Object.freeze({ x: 96, y: 54 }),
+  waterWidth: 144,
+  waterHeight: 144,
 });
-export const LAMP_POST_RENDER_METRICS = Object.freeze({ drawWidth: 96, drawHeight: 208 });
+
+export const CHARGE_OBSTACLE_RENDER_METRICS = Object.freeze({
+  drawSize: 112,
+});
+
+export const BRUTUS_PLATFORM_RENDER_METRICS = Object.freeze({
+  sourceBoundsByVisual: Object.freeze({
+    "boss-platform-left": Object.freeze({ top: 25, bottom: 112, visibleWidth: 96 }),
+    "boss-platform-right": Object.freeze({ top: 28, bottom: 112, visibleWidth: 96 }),
+  }),
+});
+
+export const PORCH_LIGHT_RENDER_METRICS = Object.freeze({
+  drawWidth: 96,
+  drawHeight: 96,
+  sourceAttachment: Object.freeze({ x: 18, y: 52 }),
+});
+
+export const LAMP_POST_RENDER_METRICS = Object.freeze({
+  sourceWidth: 192,
+  sourceHeight: 256,
+  drawWidth: 96,
+  drawHeight: 208,
+  sourceLight: Object.freeze({ x: 136, y: 72 }),
+});
 
 export function sprinklerBodyDrawRect(item) {
   const groundY = item.y + item.h;
   const { bodyWidth: w, bodyHeight: h } = SPRINKLER_RENDER_METRICS;
-  return { x: item.x + item.w / 2 - w / 2, y: groundY - LEVEL_TWO_PROP_ATLAS.baseline / LEVEL_TWO_PROP_ATLAS.cell * h, w, h };
+  return {
+    x: item.x + item.w / 2 - w / 2,
+    y: groundY - LEVEL_TWO_PROP_ATLAS.baseline / LEVEL_TWO_PROP_ATLAS.cell * h,
+    w,
+    h,
+  };
 }
 
 export function sprinklerEmitterOrigin(item, direction = 1) {
   const draw = sprinklerBodyDrawRect(item);
-  const sourceX = direction < 0 ? LEVEL_TWO_PROP_ATLAS.cell - SPRINKLER_RENDER_METRICS.sourceNozzle.x : SPRINKLER_RENDER_METRICS.sourceNozzle.x;
-  return { x: draw.x + sourceX / LEVEL_TWO_PROP_ATLAS.cell * draw.w, y: draw.y + SPRINKLER_RENDER_METRICS.sourceNozzle.y / LEVEL_TWO_PROP_ATLAS.cell * draw.h };
+  const sourceX = direction < 0
+    ? LEVEL_TWO_PROP_ATLAS.cell - SPRINKLER_RENDER_METRICS.sourceNozzle.x
+    : SPRINKLER_RENDER_METRICS.sourceNozzle.x;
+  return {
+    x: draw.x + sourceX / LEVEL_TWO_PROP_ATLAS.cell * draw.w,
+    y: draw.y + SPRINKLER_RENDER_METRICS.sourceNozzle.y / LEVEL_TWO_PROP_ATLAS.cell * draw.h,
+  };
 }
 
 export function sprinklerWaterDrawRect(origin, direction = 1) {
   const { waterWidth: w, waterHeight: h } = SPRINKLER_RENDER_METRICS;
-  return { x: direction < 0 ? origin.x + 4 - w : origin.x - 4, y: origin.y - h / 2, w, h };
+  return {
+    x: direction < 0 ? origin.x + 4 - w : origin.x - 4,
+    y: origin.y - h / 2,
+    w,
+    h,
+  };
+}
+
+export function sprinklerVisualState(active, progress = 0) {
+  if (!active) return { body: "sprinkler-idle", water: null };
+  const phase = Math.max(0, Math.min(1, progress));
+  if (phase < 0.16) return { body: "sprinkler-idle", water: "sprinkler-start" };
+  if (phase < 0.88) return { body: "sprinkler-idle", water: "sprinkler-spray" };
+  return { body: "sprinkler-idle", water: "sprinkler-stop" };
+}
+
+export function sprinklerCycleState(elapsed, seed = 0) {
+  const cycle = ((elapsed * 0.34 + seed) % 1 + 1) % 1;
+  const activeDuration = 0.72;
+  return cycle < activeDuration
+    ? { active: true, progress: cycle / activeDuration }
+    : { active: false, progress: 0 };
+}
+
+export function chargeObstacleDrawRect(item) {
+  const size = CHARGE_OBSTACLE_RENDER_METRICS.drawSize;
+  const groundY = item.y + item.h;
+  return {
+    x: item.x + item.w / 2 - size / 2,
+    y: groundY - LEVEL_TWO_PROP_ATLAS.baseline / LEVEL_TWO_PROP_ATLAS.cell * size,
+    w: size,
+    h: size,
+  };
 }
 
 export function hydrantDrawRect(item) {
   const groundY = item.y + item.h;
   const { drawWidth: w, drawHeight: h } = HYDRANT_RENDER_METRICS;
-  return { x: item.x + item.w / 2 - w / 2, y: groundY - LEVEL_TWO_PROP_ATLAS.baseline / LEVEL_TWO_PROP_ATLAS.cell * h, w, h };
+  return {
+    x: item.x + item.w / 2 - w / 2,
+    y: groundY - LEVEL_TWO_PROP_ATLAS.baseline / LEVEL_TWO_PROP_ATLAS.cell * h,
+    w,
+    h,
+  };
 }
 
 export function hydrantNozzleOrigin(item, direction = 1) {
   const draw = hydrantDrawRect(item);
-  const sourceX = direction < 0 ? LEVEL_TWO_PROP_ATLAS.cell - HYDRANT_RENDER_METRICS.sourceNozzle.x : HYDRANT_RENDER_METRICS.sourceNozzle.x;
-  return { x: draw.x + sourceX / LEVEL_TWO_PROP_ATLAS.cell * draw.w, y: draw.y + HYDRANT_RENDER_METRICS.sourceNozzle.y / LEVEL_TWO_PROP_ATLAS.cell * draw.h };
+  const sourceX = direction < 0
+    ? LEVEL_TWO_PROP_ATLAS.cell - HYDRANT_RENDER_METRICS.sourceNozzle.x
+    : HYDRANT_RENDER_METRICS.sourceNozzle.x;
+  return {
+    x: draw.x + sourceX / LEVEL_TWO_PROP_ATLAS.cell * draw.w,
+    y: draw.y + HYDRANT_RENDER_METRICS.sourceNozzle.y / LEVEL_TWO_PROP_ATLAS.cell * draw.h,
+  };
 }
 
 export function hydrantWaterDrawRect(origin, direction = 1) {
   const { waterWidth: w, waterHeight: h } = HYDRANT_RENDER_METRICS;
-  return { x: direction < 0 ? origin.x + 4 - w : origin.x - 4, y: origin.y - h / 2, w, h };
+  return {
+    x: direction < 0 ? origin.x + 4 - w : origin.x - 4,
+    y: origin.y - h / 2,
+    w,
+    h,
+  };
+}
+
+export function hydrantVisualState(active, progress = 0) {
+  if (!active) return { body: "hydrant-idle", water: null };
+  const phase = Math.max(0, Math.min(1, progress));
+  if (phase < 0.18) return { body: "hydrant-build", water: "hydrant-water-burst" };
+  if (phase < 0.82) return { body: "hydrant-spray", water: "hydrant-water-full" };
+  return { body: "hydrant-recover", water: "hydrant-water-taper" };
+}
+
+export function porchLightDrawRect(item) {
+  const { drawWidth: w, drawHeight: h, sourceAttachment } = PORCH_LIGHT_RENDER_METRICS;
+  return {
+    x: item.x - sourceAttachment.x / LEVEL_TWO_PROP_ATLAS.cell * w,
+    y: item.y - sourceAttachment.y / LEVEL_TWO_PROP_ATLAS.cell * h,
+    w,
+    h,
+  };
 }
 
 export function lampPostDrawRect(item) {
   const { drawWidth: w, drawHeight: h } = LAMP_POST_RENDER_METRICS;
   const groundY = item.y + item.h;
   return { x: item.x + item.w / 2 - w / 2, y: groundY - h, w, h };
+}
+
+export function lampEmitterOrigin(item) {
+  const draw = lampPostDrawRect(item);
+  const { sourceWidth, sourceHeight, sourceLight } = LAMP_POST_RENDER_METRICS;
+  return {
+    x: draw.x + sourceLight.x / sourceWidth * draw.w,
+    y: draw.y + sourceLight.y / sourceHeight * draw.h,
+  };
 }
 
 export function levelTwoPropFrame(name, elapsed = 0) {
@@ -81,12 +207,14 @@ export function levelTwoPropFrame(name, elapsed = 0) {
 }
 
 export function levelTwoPlatformDrawRect(platform) {
-  const w = 104;
-  const h = 96;
+  const sourceBounds = BRUTUS_PLATFORM_RENDER_METRICS.sourceBoundsByVisual[platform.visual]
+    ?? { top: 0, bottom: LEVEL_TWO_PROP_ATLAS.cell };
+  const scale = platform.w / sourceBounds.visibleWidth;
+  const size = LEVEL_TWO_PROP_ATLAS.cell * scale;
   return {
-    x: platform.x + platform.w / 2 - w / 2,
-    y: platform.y + platform.h - 84,
-    w,
-    h,
+    x: platform.x + platform.w / 2 - size / 2,
+    y: platform.y + platform.h - sourceBounds.bottom * scale,
+    w: size,
+    h: size,
   };
 }

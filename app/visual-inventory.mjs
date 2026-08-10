@@ -278,30 +278,34 @@ const surfaceRecords = [LEVEL_ONE, LEVEL_TWO].flatMap((level) => level.surfaces
 })));
 
 // These are atlas sprites, despite also supplying collision surfaces. Their
-// renderer uses a distinct fixed 104×96 destination, so they cannot inherit
+// renderer uses a distinct fixed 104×104 destination, so they cannot inherit
 // the tiled-surface exemption used by ordinary authored platforms.
 const levelTwoVisualPlatformRecords = LEVEL_TWO.surfaces
   .filter((surface) => surface.visual)
   .map((surface) => {
     const [x, y, w, h] = LEVEL_TWO_PROP_FRAMES[surface.visual].frames[0];
+    const drawSize = 128 * surface.w / 96;
+    const visualTop = surface.h - 112 / 128 * drawSize;
+    const footprintTop = Math.min(visualTop, -surface.h);
+    const footprintBottom = Math.max(visualTop + drawSize, 0);
     return makeRecord({
       id: surface.id,
       category: "platform",
       levelIds: ["level-2"],
       assetSource: LEVEL_TWO_PROP_ASSET,
       nativeSize: { cellW: 128, cellH: 128 },
-      renderedSize: { w: 104, h: 96 },
+      renderedSize: { w: drawSize, h: drawSize },
       sourceRects: { idle: [rect(x, y, w, h)] },
-      runtimeDestinations: { idle: [{ w: 104, h: 96 }] },
+      runtimeDestinations: { idle: [{ w: drawSize, h: drawSize }] },
       origin: "levelTwoPlatformDrawRect bottom-aligned to authored surface",
       facing: "not applicable",
       animations: { idle: { row: y / 128, frames: 1, fps: 0, loop: false } },
       requiredStates: ["idle"],
       runtimeOwner: "level-two-prop-render",
     }, {
-      visualBounds: rect(-52, -84, 104, 96),
+      visualBounds: rect(-drawSize / 2, visualTop, drawSize, drawSize),
       collisionBounds: rect(-surface.w / 2, -surface.h, surface.w, surface.h),
-      placementFootprint: rect(-52, -84, 104, 96),
+      placementFootprint: rect(-drawSize / 2, footprintTop, drawSize, footprintBottom - footprintTop),
       groundAnchor: { x: 0, y: 0 },
       renderLayer: "TERRAIN",
       allowedZones: ["authored-world-geometry"],
@@ -356,18 +360,15 @@ const legacyPropRecord = ({ id, category, sourceRects, renderedSize, runtimeDest
   effectOrigin,
 });
 
-// These are the committed four-row atlas records. Later prop-state work owns
-// its expanded manifest separately and must not become an implicit dependency.
 const propRecords = [
-  legacyPropRecord({ id: "charge-obstacle", category: "interactive-prop", sourceRects: { idle: [rect(0, 128, 128, 128)] }, renderedSize: { w: 84, h: 112 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
+  legacyPropRecord({ id: "charge-obstacle", category: "interactive-prop", sourceRects: { idle: [rect(0, 128, 128, 128)] }, renderedSize: { w: 112, h: 112 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
   legacyPropRecord({ id: "sprinkler-body", category: "hazard", sourceRects: { idle: [rect(0, 256, 128, 128)] }, renderedSize: { w: 82, h: 82 }, renderLayer: "GAMEPLAY" }),
-  // Committed runtime: exactly four spray cells at 120×96. Do not import the
-  // separately-owned expanded prop manifest, which is not part of this range.
-  legacyPropRecord({ id: "sprinkler-water", category: "effect", sourceRects: { spray: [rect(128, 256, 128, 128), rect(256, 256, 128, 128), rect(384, 256, 128, 128), rect(0, 384, 128, 128)] }, renderedSize: { w: 120, h: 96 }, renderLayer: "GAMEPLAY_EFFECTS", effectOrigin: { x: 0, y: 0 }, runtimeOwner: "level-two-prop-render" }),
-  legacyPropRecord({ id: "hydrant-body", category: "interactive-prop", sourceRects: { idle: [rect(128, 384, 128, 128)] }, renderedSize: { w: 72, h: 108 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
+  legacyPropRecord({ id: "sprinkler-water", category: "effect", sourceRects: animationSourceRects({ start: LEVEL_TWO_PROP_FRAMES["sprinkler-start"], spray: LEVEL_TWO_PROP_FRAMES["sprinkler-spray"], stop: LEVEL_TWO_PROP_FRAMES["sprinkler-stop"] }, 128, 128), renderedSize: { w: 132, h: 132 }, renderLayer: "GAMEPLAY_EFFECTS", effectOrigin: { x: 0, y: 0 }, runtimeOwner: "level-two-prop-render" }),
+  legacyPropRecord({ id: "hydrant-body", category: "interactive-prop", sourceRects: animationSourceRects({ idle: LEVEL_TWO_PROP_FRAMES["hydrant-idle"], build: LEVEL_TWO_PROP_FRAMES["hydrant-build"], spray: LEVEL_TWO_PROP_FRAMES["hydrant-spray"], recover: LEVEL_TWO_PROP_FRAMES["hydrant-recover"] }, 128, 128), renderedSize: { w: 96, h: 96 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
+  legacyPropRecord({ id: "hydrant-water", category: "effect", sourceRects: animationSourceRects({ burst: LEVEL_TWO_PROP_FRAMES["hydrant-water-burst"], full: LEVEL_TWO_PROP_FRAMES["hydrant-water-full"], taper: LEVEL_TWO_PROP_FRAMES["hydrant-water-taper"] }, 128, 128), renderedSize: { w: 144, h: 144 }, renderLayer: "GAMEPLAY_EFFECTS", effectOrigin: { x: 0, y: 0 }, runtimeOwner: "level-two-prop-render" }),
 ];
 
-const pickupRecords = [["trash", 46, 46], ["taco", 58, 58], ["cap", 50, 42]].map(([id, w, h]) => makeRecord({
+const pickupRecords = [["trash", 46, 46], ["taco", 58, 58], ["cap", 51, 42]].map(([id, w, h]) => makeRecord({
   id, category: "pickup", levelIds: ["level-1", "level-2"],
   assetSource: id === "trash" ? "assets/generated/trash-pickups-motion.png" : id === "taco" ? "assets/generated/taco-power-motion.png" : "assets/raccoon-sprites.png",
   nativeSize: id === "cap" ? { w: 1448, h: 1086 } : { cellW: 192, cellH: 192 }, renderedSize: { w, h }, origin: "destination center", facing: "not applicable",
@@ -452,7 +453,7 @@ export const RUNTIME_DRAW_FAMILY_MANIFEST = Object.freeze([
   drawFamily("bosses", "drawEnemy/bossAnimation+brutusDrawRect", ["trash-heap-tyrant", "brutus-bin-hound"]),
   drawFamily("pickups", "drawSprite/trashPickupRows+tacoPowerMotion+sprites.cap", ["trash", "taco", "cap"]),
   drawFamily("victory-dumpster", "drawSprite/dumpsterFrame+dumpsterDrawRect", ["victory-dumpster"]),
-  drawFamily("level-two-legacy-props", "drawSprite/levelTwoPropFrame", ["charge-obstacle", "sprinkler-body", "sprinkler-water", "hydrant-body"]),
+  drawFamily("level-two-props", "drawSprite/levelTwoPropFrame", ["charge-obstacle", "sprinkler-body", "sprinkler-water", "hydrant-body", "hydrant-water"]),
   drawFamily("level-two-visual-platforms", "drawSprite/levelTwoPlatformDrawRect", ["brutus-platform-left", "brutus-platform-right"]),
   drawFamily("bin-lid-source", "drawSprite/levelTwoPropFrame(acorn)", ["bin-lid-source"]),
   drawFamily("ordinary-bin-lid", "drawSprite/binLids", ["ordinary-bin-lid"]),
@@ -466,25 +467,8 @@ export const RUNTIME_DRAW_FAMILY_MANIFEST = Object.freeze([
 const distortionFrame = (id, state, frame, source, destination, issue) => Object.freeze({
   id, state, frame, source: Object.freeze({ ...source }), destination: Object.freeze({ ...destination }), issue,
 });
-const distortionCells = ({ id, state, row, frames, destination, issue, cellW = 192, cellH = 192, startFrame = 0 }) => (
-  Array.from({ length: frames }, (_, frame) => distortionFrame(
-    id,
-    state,
-    frame,
-    rect((startFrame + frame) * cellW, row * cellH, cellW, cellH),
-    destination,
-    issue,
-  ))
-);
 export const MEASURED_RUNTIME_DISTORTION_FRAMES = Object.freeze([
   distortionFrame("tires", "idle", 0, rect(528, 373, 224, 115), { w: 112, h: 58 }, "VIS-007"),
-  distortionFrame("cap", "idle", 0, rect(385, 615, 58, 48), { w: 50, h: 42 }, "VIS-007"),
-  distortionFrame("charge-obstacle", "idle", 0, rect(0, 128, 128, 128), { w: 84, h: 112 }, "VIS-007"),
-  ...distortionCells({ id: "sprinkler-water", state: "spray", row: 2, frames: 3, destination: { w: 120, h: 96 }, issue: "VIS-007", cellW: 128, cellH: 128, startFrame: 1 }),
-  distortionFrame("sprinkler-water", "spray", 3, rect(0, 384, 128, 128), { w: 120, h: 96 }, "VIS-007"),
-  distortionFrame("hydrant-body", "idle", 0, rect(128, 384, 128, 128), { w: 72, h: 108 }, "VIS-007"),
-  distortionFrame("brutus-platform-left", "idle", 0, rect(128, 128, 128, 128), { w: 104, h: 96 }, "VIS-007"),
-  distortionFrame("brutus-platform-right", "idle", 0, rect(256, 128, 128, 128), { w: 104, h: 96 }, "VIS-007"),
 ]);
 
 const immutableRoute = (route) => Object.freeze({ ...route });

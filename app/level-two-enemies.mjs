@@ -20,6 +20,13 @@ export const LEVEL_TWO_ENEMY_COLLISION = Object.freeze({
   moth: Object.freeze([50, 34]),
 });
 
+export const LEVEL_TWO_ENEMY_RENDER = Object.freeze({
+  squirrel: Object.freeze({ drawWidth: 78, drawHeight: 76, anchor: "ground" }),
+  terrier: Object.freeze({ drawWidth: 94, drawHeight: 82, anchor: "ground" }),
+  skunk: Object.freeze({ drawWidth: 90, drawHeight: 78, anchor: "ground" }),
+  moth: Object.freeze({ drawWidth: 84, drawHeight: 82, anchor: "center" }),
+});
+
 const SQUIRREL_TELL = 0.48;
 const TERRIER_TELL = 0.5;
 const SKUNK_TELL = 0.52;
@@ -236,17 +243,22 @@ export function updateMoth(moth, context) {
     playerY = flightY + 170,
     defeated = false,
   } = context;
-  const bandMinX = flightBand?.startX ?? legacyMinX;
-  const bandMaxX = flightBand ? flightBand.endX - (moth.w ?? 0) : legacyMaxX;
-  const bandMinY = flightBand?.minY ?? legacyMinY;
-  const bandMaxY = flightBand ? flightBand.maxY - (moth.h ?? 0) : legacyMaxY;
+  const render = LEVEL_TWO_ENEMY_RENDER.moth;
+  const visualPadX = flightBand ? Math.max(0, (render.drawWidth - (moth.w ?? 0)) / 2) : 0;
+  const visualPadY = flightBand ? Math.max(0, (render.drawHeight - (moth.h ?? 0)) / 2) : 0;
+  const bandMinX = flightBand ? flightBand.startX + visualPadX : legacyMinX;
+  const bandMaxX = flightBand ? flightBand.endX - (moth.w ?? 0) - visualPadX : legacyMaxX;
+  const bandMinY = flightBand ? flightBand.minY + visualPadY : legacyMinY;
+  const bandMaxY = flightBand ? flightBand.maxY - (moth.h ?? 0) - visualPadY : legacyMaxY;
+  const targetLightX = clamp(lightX, bandMinX, bandMaxX);
+  const targetFlightY = clamp(flightY, bandMinY, bandMaxY);
   if (defeated || moth.state === "defeated") {
     return { ...moth, state: "defeated", timer: 0, vx: 0, vy: 0 };
   }
   if (moth.state === "orbit") {
     const phase = (moth.phase ?? 0) + dt * 2.2;
-    const x = clamp(lightX + Math.sin(phase) * Math.min(72, (bandMaxX - bandMinX) / 2), bandMinX, bandMaxX);
-    const y = clamp(flightY + Math.sin(phase * 2) * Math.min(34, (bandMaxY - bandMinY) / 2), bandMinY, bandMaxY);
+    const x = clamp(targetLightX + Math.sin(phase) * Math.min(72, (bandMaxX - bandMinX) / 2), bandMinX, bandMaxX);
+    const y = clamp(targetFlightY + Math.sin(phase * 2) * Math.min(34, (bandMaxY - bandMinY) / 2), bandMinY, bandMaxY);
     const vx = dt > 0 ? (x - moth.x) / dt : 0;
     const vy = dt > 0 ? (y - moth.y) / dt : 0;
     return playerInRange
@@ -268,12 +280,12 @@ export function updateMoth(moth, context) {
       : { ...moth, x, y, timer };
   }
   if (moth.state === "climb") {
-    const x = approach(moth.x, lightX, 150 * dt);
-    const y = approach(moth.y, flightY, 140 * dt);
+    const x = approach(moth.x, targetLightX, 150 * dt);
+    const y = approach(moth.y, targetFlightY, 140 * dt);
     const vx = dt > 0 ? (x - moth.x) / dt : 0;
     const vy = dt > 0 ? (y - moth.y) / dt : 0;
-    return x === lightX && y === flightY
-      ? { ...moth, x: lightX, y: flightY, state: "orbit", timer: 0, vx, vy, phase: 0 }
+    return x === targetLightX && y === targetFlightY
+      ? { ...moth, x: targetLightX, y: targetFlightY, state: "orbit", timer: 0, vx, vy, phase: 0 }
       : { ...moth, x, y, vx, vy };
   }
   return { ...moth };
@@ -392,7 +404,7 @@ export const ENCOUNTER_TEST_ROUTES = Object.freeze({
   }),
   moth: Object.freeze({
     encounterId: "porch-light-moth-introduction", playerX: 3890, playerSurfaceId: "poolside-ledge", cameraX: 3540,
-    environment: Object.freeze([{ id: "porch-light", kind: "porch-light", x: 4020, y: 220, w: 20, h: 20, flightBand: "porch-light-orbit", placementType: "EXPLICITLY_PLATFORM_ATTACHED", structureId: "porch-light-orbit" }]),
+    environment: Object.freeze([{ id: "moth-lamp-post", kind: "lamp-post", x: 4090, y: 260, w: 96, h: 208, flightBand: "porch-light-orbit", placementType: "ON_SURFACE", surfaceId: "obstacle-lawn" }]),
   }),
   interaction: Object.freeze({
     encounterId: "obstacle-interaction-test", playerX: 3260, playerSurfaceId: "obstacle-lawn", cameraX: 3120,

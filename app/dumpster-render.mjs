@@ -19,6 +19,10 @@ export function selectDumpsterState(bossDefeated) {
   return bossDefeated ? "holy" : "sealed";
 }
 
+export function shouldRenderDumpsterGoal(levelId, bossDefeated) {
+  return levelId === "level-1" || bossDefeated;
+}
+
 export function dumpsterFrameIndex(elapsed, state = "sealed") {
   if (state === "sealed") return 0;
   const seconds = Number.isFinite(elapsed) ? Math.max(0, elapsed) : 0;

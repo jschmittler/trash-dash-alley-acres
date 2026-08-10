@@ -497,15 +497,21 @@ Verification:
 
 ### VIS-007: Prop and pickup residual axis distortion (separate prop/runtime pass)
 
-- Observed source/runtime evidence: charge obstacle 128²→84×112; all four
-  sprinkler-water cells 128²→120×96; hydrant body 128²→72×108; both Brutus
-  platform cells 128²→104×96; tires' rounded 224×115→112×58 destination; and
-  cap 58×48→50×42 destination are exact frame-allowlisted mismatches.
-- The Level 2 prop entries remain owned by the separate prop/runtime pass. Cap
-  shares the dirty gameplay renderer; the tires deviation is a one-pixel
-  rounding decision. Neither runtime change is staged in Task 2. The platform
-  and water records narrow the issue to their actual renderer draws rather
-  than obscuring them behind a tiled-surface exemption.
+- Status: 🟨 Level 2 runtime portion repaired and browser-verified; the unrelated
+  one-pixel tires rounding remains open.
+- Original source/runtime evidence: charge obstacle 128²→84×112; sprinkler
+  water 128²→non-square destinations; hydrant body/water 128²→non-square
+  destinations; Brutus platform cells 128²→104×96; tires' 224×115→112×58;
+  and cap 58×48→50×42.
+- Task 7 repaired the Level 2 owner: every complete 128px prop/effect cell now
+  uses one uniform runtime scale, charge-obstacle rendering is centralized,
+  Brutus platform scale is derived from its authored visible width while its
+  alpha top/body cover the collision and meet the arena floor, and the cap now
+  renders at 51×42 (within the fixed-aspect tolerance).
+- The authoritative inventory now covers every expanded sprinkler and hydrant
+  body/effect frame and contains no Level 2 prop distortion allowlist entries.
+  Tires remain explicitly allowlisted under VIS-007 for a later decorative
+  asset pass.
 
 ### 2026-08-09 — Post-normalization visual verification
 
@@ -683,3 +689,32 @@ pass a visual composition review.
   Automated evidence is not presented as visual PASS for those conditions.
 - No source art, generated asset, atlas, contact sheet, background, scale,
   anchor, support, collision, or encounter coordinate changed in this pass.
+
+### 2026-08-09 — Task 7 Level 2 and Brutus acceptance
+
+- **Baseline:** the required eight-suite Level 2 matrix passed 76/76 before
+  edits. Direct Trashy fixtures for all five chapters, five authored enemy
+  encounters, interaction, Brutus, and Level 2 victory loaded at 1280×720
+  with empty browser warning/error logs. Jimothy squirrel, Brutus, and victory
+  fixtures also loaded with empty logs.
+- **Reproduced repair:** VIS-007 still allowed fixed 128px Level 2 prop atlas
+  cells to use unequal destination axes. A narrow RED regression failed before
+  the shared charge-obstacle draw contract existed and measured the unequal
+  water, hydrant, and platform geometry. The systemic runtime/inventory repair
+  makes those destinations uniform and keeps ground, nozzle/emitter, visible
+  platform top, collision body, and arena-floor relationships explicit.
+- **Browser evidence:** post-fix interaction and Brutus fixtures show complete,
+  grounded utility sprites and proportional hydrants/platforms; both fresh-tab
+  console results are empty. Evidence is stored in
+  `docs/superpowers/reports/2026-08-09-level1-level2-integrity/after/` with the
+  `task7-*fixed-1280x720.png` names.
+- **Deterministic acceptance:** background plate dimensions/alpha/baselines,
+  monotonic transitions, three parallax rates, encounter state contracts,
+  support/flight constraints, effect attachment, runway purge/lock, platform
+  reach, top-hit geometry, full Brutus phase/defeat/exit lifecycle, and victory
+  gating are covered by the Level 2/placement/boss matrices.
+- **CANNOT VERIFY:** direct routes and lifecycle tests do not substitute for a
+  continuous normal-input playthrough. Full-speed transition feel, player-
+  controlled reflection/damage/stomp timing, both facings through every enemy
+  action, utility-platform jump feel, and the complete live Brutus combat/exit
+  sequence remain manual acceptance items.

@@ -192,6 +192,29 @@ const sourceCells = async (kind) => {
       };
     }
   }
+  if (kind === "squirrel") {
+    const throwFile = path.join(sourceDir, "squirrel-throw-source.png");
+    const throwMetadata = await sharp(throwFile).metadata();
+    const throwWidth = Math.floor(throwMetadata.width / SOURCE_GRID);
+    for (let column = 0; column < SOURCE_GRID; column += 1) {
+      const extracted = await sharp(throwFile)
+        .extract({ left: column * throwWidth, top: 0, width: throwWidth, height: throwMetadata.height })
+        .png()
+        .toBuffer();
+      const transparent = await cleanDetachedKeyFragments(await keyOut(extracted));
+      const bounds = await alphaBounds(transparent);
+      const primary = await primaryAlphaBounds(transparent);
+      cells[2][column] = {
+        cropped: await sharp(transparent).extract(bounds).png().toBuffer(),
+        width: bounds.width,
+        height: bounds.height,
+        primaryWidth: primary.width,
+        primaryHeight: primary.height,
+        primaryLeft: primary.left - bounds.left,
+        primaryTop: primary.top - bounds.top,
+      };
+    }
+  }
   return cells;
 };
 
