@@ -66,7 +66,7 @@ const encounters = [
   },
   {
     id: "street-terrier-tutorial", zoneId: "garbage-night-street", spawnX: 1540, sizeClass: "large", recoveryEndX: 2500,
-    enemies: [{ kind: "terrier", movement: "grounded", x: 1580, patrol: [1420, 2480], surfaceId: "street-ground" }],
+    enemies: [{ kind: "terrier", movement: "grounded", x: 1580, patrol: [1420, 2340], surfaceId: "street-ground" }],
   },
   {
     id: "street-squirrel-repeat", zoneId: "garbage-night-street", spawnX: 2520, sizeClass: "small", bypass: "parked-car-route",

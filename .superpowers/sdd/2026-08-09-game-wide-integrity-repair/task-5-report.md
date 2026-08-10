@@ -115,7 +115,9 @@ substitute for this remaining visual QA.
 
 - Placement semantics and measured geometry are centralized; authored data is
   only narrowed after the central contract rejects an illegal full envelope.
-- No runtime renderer, z-order, animation, or asset file was changed.
+- The original pass did not change runtime rendering; the review repair below
+  subsequently wires the validated placement and scenery contracts into the
+  production runtime without changing generated art or animation bytes.
 - Encounter count intentionally measures authored introductions, while
   expanded patrol envelopes remain in the rolling window item set for spatial
   analysis. This distinguishes pacing from an actor grazing the viewport edge.
@@ -126,3 +128,35 @@ substitute for this remaining visual QA.
 
 Scoped commit: `fix: enforce world placement and composition` (this report is
 included in that commit; the final hash is recorded in the task handoff).
+
+## Round 1 review repair
+
+The review correctly found that the original scoped commit depended on dirty
+Level 2 prop helpers, left the central resolver disconnected from production,
+and did not make the rolling sweep relationship-sensitive.
+
+- **C1 clean archive:** the scoped package now includes the minimal canonical
+  body/emitter/effect geometry helpers, semantic environment placement fields,
+  and every expectation changed by Task 5. A clean archive passes the focused
+  matrix at 46/46 and its complete package suite/build at 206/206.
+- **I1 runtime:** `TrashDashGame` resolves every inventoried ordinary enemy
+  through `resolveEnemyWorldPatrol`, including full-footprint ground/flight
+  clamping. Illegal support/band placements return `null`; `createLevelRuntime`
+  omits them. Direct encounter routes use the same path. Rendering consumes
+  `sceneryForLevel(world.levelId)` and the old global scenery array is removed.
+- **I2 composition:** the rolling validator now rejects off-world/unsupported
+  pickup envelopes, out-of-world or reversed routes, missing landing targets,
+  route rewards outside their route, invalid bypass references/occupancy,
+  full-envelope density failures, foreground-scene layers at/above gameplay,
+  and overlaps between a large encounter's expanded motion footprint and any
+  other encounter. Negative mutation fixtures cover each failure family.
+- Authored follow-up: Level 1's highway bypass span now covers both declared
+  bypass encounters. Level 2's terrier patrol ends at x=2340, leaving its full
+  expanded large footprint clear of the subsequent squirrel introduction.
+- Browser evidence remains **CANNOT VERIFY** for the same recorded tool-control
+  boundary; no visual PASS has been inferred.
+- Final exact-index verification snapshot:
+  expanded focused matrix **50/50 PASS**, clean package build/suite **206/206
+  PASS**, Pages **1/1 PASS**, and lint **0 errors** with the same pre-existing
+  `<img>` warning. The shared worktree's broader suite also passes **274/274**
+  after skill validation and build.

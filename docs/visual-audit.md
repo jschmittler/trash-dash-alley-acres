@@ -638,3 +638,20 @@ pass a visual composition review.
   for the next controllable visual QA session; no screenshot is claimed.
 - No generated image or source-art bytes changed in this task, so deterministic
   asset rebuild comparison was not applicable.
+
+#### Task 5 review repair
+
+- Clean-checkout reproducibility is restored: the focused archive matrix passes
+  46/46 and the archive's complete package build/suite passes 206/206 without
+  borrowing dirty prop/runtime files.
+- Production now consumes the canonical full-envelope enemy resolver and
+  level-specific scenery inventory. Invalid placements are omitted rather than
+  rendered with an unbounded fallback.
+- Mutation-sensitive rolling checks now cover off-world pickups and routes,
+  support reach, route-boundary landing targets, bypass occupancy, expanded
+  density, foreground readability, and large-enemy motion isolation.
+- Highway alternate-route metadata now covers both promised bypass encounters;
+  the Level 2 terrier's large expanded footprint ends before the squirrel
+  introduction.
+- Runtime/browser visual observation remains **CANNOT VERIFY**; this repair
+  closes the deterministic review findings only.

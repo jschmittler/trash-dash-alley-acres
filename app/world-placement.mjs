@@ -168,3 +168,48 @@ export function resolveWorldPlacement(object, platforms, candidates, anchor, opt
   const result = classifyWorldObjectPlacement({ ...object, bounds }, platforms, options);
   return result.valid ? Object.freeze({ bounds: Object.freeze({ ...bounds }), relationship: result }) : null;
 }
+
+const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
+
+export function resolveEnemyWorldPatrol({
+  spawn,
+  supports,
+  flightBands = [],
+  collisionWidth,
+  contract,
+  grounded,
+  patrolRadius,
+}) {
+  const requested = spawn.patrol ?? [spawn.x - patrolRadius, spawn.x + patrolRadius];
+  if (grounded) {
+    const support = supports.find(({ id }) => id === spawn.surfaceId);
+    if (!support) return null;
+    const interval = supportedPatrolInterval({ support, collisionWidth, contract, requested });
+    if (!interval) return null;
+    return Object.freeze({
+      spawnX: clamp(spawn.x, interval.minX, interval.maxX),
+      minX: interval.minX,
+      maxX: interval.maxX,
+      surfaceY: support.y,
+      surfaceId: support.id,
+    });
+  }
+
+  const band = flightBands.find(({ id }) => id === spawn.flightBand);
+  if (!band) return null;
+  const interval = supportedFlightInterval({ band, collisionWidth, contract, requested });
+  if (!interval) return null;
+  const authoredBaseline = spawn.flightY ?? spawn.y;
+  if (!Number.isFinite(authoredBaseline)) return null;
+  const atZero = flightEnvelopeAt({ baselineX: 0, baselineY: 0, contract });
+  const minimumBaseline = band.minY - atZero.y;
+  const maximumBaseline = band.maxY - (atZero.y + atZero.h);
+  if (minimumBaseline > maximumBaseline) return null;
+  return Object.freeze({
+    spawnX: clamp(spawn.x, interval.minX, interval.maxX),
+    minX: interval.minX,
+    maxX: interval.maxX,
+    surfaceY: clamp(authoredBaseline, minimumBaseline, maximumBaseline),
+    flightBand: band.id,
+  });
+}

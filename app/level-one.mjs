@@ -172,7 +172,7 @@ const checkpoints = [
 const routeChoices = [
   { id: "campsite-upper-route", label: "Campsite cache", startX: 840, endX: 1060, optional: true, rewardIds: ["campsite-first-taco"] },
   { id: "mill-glider-route", label: "Mill glider route", startX: 1880, endX: 2240, optional: true, rewardIds: ["mill-glider-cap", "mill-bonus-cache"] },
-  { id: "highway-culvert-route", label: "Highway culvert shortcut", startX: 2750, endX: 3200, optional: true, rewardIds: ["highway-taco"], bypassEncounterIds: ["highway-main-lane-opossum", "highway-fox-spike"] },
+  { id: "highway-culvert-route", label: "Highway culvert shortcut", startX: 2750, endX: 3600, optional: true, rewardIds: ["highway-taco"], bypassEncounterIds: ["highway-main-lane-opossum", "highway-fox-spike"] },
   { id: "industrial-container-route", label: "Industrial container route", startX: 3820, endX: 4380, optional: true, rewardIds: ["industrial-trash-chain"], bypassEncounterIds: ["industrial-rail-yard-layers"] },
 ];
 

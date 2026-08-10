@@ -93,7 +93,9 @@ test("level one definition is deeply immutable", () => {
 test("Level 1 enemy placement references stable surfaces and flight bands", () => {
   const surfaceIds = LEVEL_ONE.surfaces.map(({ id }) => id);
   const flightBandIds = LEVEL_ONE.flightBands.map(({ id }) => id);
-  const flyingKinds = new Set(["pigeon", "wasp", "mosquito"]);
+  // Pigeons use a grounded walking cycle; animal category does not override
+  // the movement shown by their authored animation.
+  const flyingKinds = new Set(["wasp", "mosquito"]);
   const enemies = levelOneEncounterData().flatMap(({ enemies: spawns }) => spawns);
 
   assert.equal(new Set(surfaceIds).size, surfaceIds.length);

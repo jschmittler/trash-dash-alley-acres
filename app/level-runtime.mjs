@@ -21,7 +21,10 @@ export function nextCampaignStart(world) {
 export function createLevelRuntime(level, { makeEnemy, makePickup }) {
   const surfaces = level.surfaces.filter(({ hazard }) => !hazard);
   return {
-    enemies: level.encounters.flatMap(({ enemies }) => enemies.map((spawn) => makeEnemy(spawn, surfaces))),
+    enemies: level.encounters.flatMap(({ enemies }) => enemies.flatMap((spawn) => {
+      const enemy = makeEnemy(spawn, surfaces);
+      return enemy ? [enemy] : [];
+    })),
     pickups: level.rewards
       .filter(({ kind }) => kind !== "checkpoint")
       .map((reward, index) => makePickup(reward, index)),

@@ -2,6 +2,7 @@ import { DECORATIVE_PROPS } from "../concepts/decorative/decorative-manifest.mjs
 import {
   COMPOSITION_GAPS,
   PLACEMENT_SIZE_CLASSES,
+  RENDER_LAYERS,
   rectsIntersect,
   validateCompositionDensity,
 } from "./visual-contract.mjs";
@@ -79,6 +80,7 @@ export function compositionItemsForLevel(level) {
     compositionBounds: sceneryCompositionBounds(entry),
     placementType: entry.placementType ?? PLACEMENT_TYPES.ON_SURFACE,
     surfaceId: entry.surfaceId,
+    renderLayer: "BACKGROUND_SCENERY",
   }));
 }
 
@@ -181,16 +183,19 @@ export function rollingCompositionWindows(level, viewportWidth = 960, step = 120
   return Object.freeze(Array.from({ length: Math.ceil(level.worldWidth / step) }, (_, index) => {
     const x = index * step;
     const viewport = { x, y: 0, w: viewportWidth, h: 540 };
+    const visibleItems = items.filter(({ compositionBounds }) => rectsIntersect(compositionBounds, viewport));
     return Object.freeze({
       x,
       viewport,
-      items: Object.freeze(items.filter(({ compositionBounds }) => rectsIntersect(compositionBounds, viewport))),
-      // Count authored encounter introductions, not every patrol that can graze
-      // a viewport edge. Expanded patrol envelopes remain in `items` for
-      // overlap/clearance checks, while this count measures encounter pacing.
-      encounterIds: Object.freeze(level.encounters.filter((group) => (
-        group.enemies.length > 0 && group.spawnX >= x && group.spawnX < x + viewportWidth
-      )).map(({ id }) => id)),
+      items: Object.freeze(visibleItems),
+      // Encounter pacing is owned by the center of the complete motion
+      // envelope, not the authored spawn marker. Edge-grazing envelopes still
+      // remain in `items` for density, overlap, and route-clearance checks.
+      encounterIds: Object.freeze(items.filter(({ kind, compositionBounds }) => {
+        if (kind !== "encounter") return false;
+        const centerX = compositionBounds.x + compositionBounds.w / 2;
+        return centerX >= x && centerX < x + viewportWidth;
+      }).map(({ id }) => id)),
     });
   }));
 }
@@ -203,12 +208,70 @@ export function validateRollingWorldComposition(level, viewportWidth = 960, step
     }
   }
   const rewardIds = new Set(level.rewards.map(({ id }) => id));
+  const encounterIds = new Set(level.encounters.map(({ id }) => id));
+  const landingAt = (x) => level.surfaces.some((surface) => (
+    !surface.hazard && x >= surface.x && x <= surface.x + surface.w
+  ));
   for (const route of level.routeChoices) {
+    if (!Number.isFinite(route.startX) || !Number.isFinite(route.endX)
+      || route.startX < 0 || route.endX > level.worldWidth || route.startX >= route.endX) {
+      errors.push(`${level.id}/${route.id}: route leaves world bounds`);
+    }
+    if (!landingAt(route.startX) || !landingAt(route.endX)) {
+      errors.push(`${level.id}/${route.id}: missing landing target at route boundary`);
+    }
     for (const rewardId of route.rewardIds) {
+      const reward = level.rewards.find(({ id }) => id === rewardId);
       if (!rewardIds.has(rewardId)) errors.push(`${level.id}/${route.id}: missing route reward ${rewardId}`);
+      else if (reward.x < route.startX || reward.x > route.endX) {
+        errors.push(`${level.id}/${route.id}: route reward ${rewardId} is outside route`);
+      }
+    }
+    for (const encounterId of route.bypassEncounterIds ?? []) {
+      if (!encounterIds.has(encounterId)) errors.push(`${level.id}/${route.id}: missing bypass encounter ${encounterId}`);
+    }
+  }
+  let items;
+  try {
+    items = completeCompositionItemsForLevel(level);
+  } catch (error) {
+    errors.push(`${level.id}: ${error instanceof Error ? error.message : String(error)}`);
+    return errors;
+  }
+  for (const pickup of items.filter(({ kind }) => kind === "pickup")) {
+    const support = level.surfaces.find(({ id }) => id === pickup.surfaceId);
+    if (!support || pickup.bounds.x < support.x || pickup.bounds.x + pickup.bounds.w > support.x + support.w
+      || pickup.bounds.y + pickup.bounds.h >= support.y || pickup.bounds.x < 0
+      || pickup.bounds.x + pickup.bounds.w > level.worldWidth) {
+      errors.push(`${level.id}/${pickup.id}: pickup is not reachable on ${pickup.surfaceId}`);
+    }
+  }
+  const encounters = items.filter(({ kind }) => kind === "encounter");
+  for (const route of level.routeChoices) {
+    for (const encounterId of route.bypassEncounterIds ?? []) {
+      const encounter = encounters.find(({ id }) => id === encounterId);
+      if (encounter && (encounter.compositionBounds.x + encounter.compositionBounds.w < route.startX
+        || encounter.compositionBounds.x > route.endX)) {
+        errors.push(`${level.id}/${route.id}: bypass encounter ${encounterId} does not occupy route`);
+      }
+    }
+  }
+  for (const large of encounters.filter(({ id }) => level.encounters.find((group) => group.id === id)?.sizeClass === "large")) {
+    for (const other of encounters.filter(({ id }) => id !== large.id)) {
+      if (rectsIntersect(large.compositionBounds, other.compositionBounds)) {
+        errors.push(`${level.id}/${large.id}: large encounter footprint overlaps ${other.id}`);
+      }
+    }
+  }
+  for (const scenery of items.filter(({ kind }) => kind === "scenery")) {
+    if (RENDER_LAYERS[scenery.renderLayer].order >= RENDER_LAYERS.GAMEPLAY.order) {
+      errors.push(`${level.id}/${scenery.id}: scenery may occlude gameplay`);
     }
   }
   for (const window of rollingCompositionWindows(level, viewportWidth, step)) {
+    errors.push(...validateCompositionDensity(window.items, window.viewport).map((error) => (
+      `${level.id}/${window.x}: ${error}`
+    )));
     if (window.encounterIds.length > 2) {
       errors.push(`${level.id}: ${window.encounterIds.length} ordinary groups in viewport ${window.x}-${window.x + viewportWidth}`);
     }
@@ -219,8 +282,6 @@ export function validateRollingWorldComposition(level, viewportWidth = 960, step
       otherIndex > index && other.prop === item.prop
     )));
     if (repeated) errors.push(`${level.id}: repeated hero prop ${repeated.prop} in viewport ${window.x}-${window.x + viewportWidth}`);
-    const largeGroups = window.encounterIds.filter((id) => level.encounters.find((group) => group.id === id)?.sizeClass === "large");
-    if (largeGroups.length > 1) errors.push(`${level.id}: large encounter crowding in viewport ${window.x}-${window.x + viewportWidth}`);
   }
   return errors;
 }

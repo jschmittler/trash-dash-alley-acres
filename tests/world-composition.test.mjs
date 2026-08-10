@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import { LEVEL_ONE } from "../app/level-one.mjs";
@@ -48,9 +50,59 @@ test("rolling 960px viewports never expose more than two ordinary encounter grou
     for (const window of rollingCompositionWindows(level, 960, 120)) {
       assert.ok(window.encounterIds.length <= 2,
         `${level.id} viewport ${window.x}-${window.x + 960} contains ${window.encounterIds.join(", ")}`);
+      assert.deepEqual(
+        window.encounterIds,
+        window.items.filter(({ kind, compositionBounds }) => (
+          kind === "encounter"
+          && compositionBounds.x + compositionBounds.w / 2 >= window.x
+          && compositionBounds.x + compositionBounds.w / 2 < window.x + 960
+        )).map(({ id }) => id),
+        `${level.id} viewport ${window.x}-${window.x + 960} must count complete motion-envelope centers`,
+      );
     }
     assert.deepEqual(validateRollingWorldComposition(level, 960, 120), [], level.id);
   }
+});
+
+test("rolling encounter pacing follows the complete motion envelope instead of stale spawn metadata", () => {
+  const shifted = structuredClone(LEVEL_ONE);
+  const group = shifted.encounters.find(({ id }) => id === "woodland-clearing-snake");
+  const originalSpawnX = group.spawnX;
+  group.enemies[0].patrol = [1000, 1100];
+  assert.equal(group.spawnX, originalSpawnX);
+  assert.ok(!rollingCompositionWindows(shifted, 960, 120)[0].encounterIds.includes(group.id));
+});
+
+test("rolling validation rejects off-world pickups, broken routes, and missing landing targets", () => {
+  const offWorldPickup = structuredClone(LEVEL_ONE);
+  offWorldPickup.rewards.find(({ id }) => id === "starter-trash-trail").x = 999999;
+  assert.ok(validateRollingWorldComposition(offWorldPickup).some((error) => error.includes("starter-trash-trail")));
+
+  const offWorldRoute = structuredClone(LEVEL_TWO);
+  const route = offWorldRoute.routeChoices.find(({ id }) => id === "backyard-porch-route");
+  route.startX = 999999;
+  route.endX = 1000200;
+  assert.ok(validateRollingWorldComposition(offWorldRoute).some((error) => error.includes("backyard-porch-route")));
+
+  const missingLanding = structuredClone(LEVEL_TWO);
+  missingLanding.surfaces = missingLanding.surfaces.filter(({ id }) => !["backyard-lawn", "backyard-porch"].includes(id));
+  assert.ok(validateRollingWorldComposition(missingLanding).some((error) => error.includes("landing target")));
+});
+
+test("full motion footprints isolate large encounters and preserve foreground readability", () => {
+  for (const level of [LEVEL_ONE, LEVEL_TWO]) {
+    assert.deepEqual(validateRollingWorldComposition(level), [], level.id);
+  }
+  const crowded = structuredClone(LEVEL_TWO);
+  crowded.encounters.find(({ id }) => id === "street-squirrel-repeat").enemies[0].patrol = [2450, 2576];
+  assert.ok(validateRollingWorldComposition(crowded).some((error) => error.includes("large encounter footprint")));
+
+  const source = readFileSync(fileURLToPath(new URL("../app/trash-dash-game.tsx", import.meta.url)), "utf8");
+  const sceneryDraw = source.indexOf("for (const item of sceneryForLevel(world.levelId))");
+  const pickupDraw = source.indexOf("for (const pickup of world.pickups)", sceneryDraw);
+  const enemyDraw = source.indexOf("for (const enemy of world.enemies)", pickupDraw);
+  assert.ok(sceneryDraw >= 0 && pickupDraw > sceneryDraw && enemyDraw > pickupDraw,
+    "world scenery must render behind pickups and actors instead of occluding gameplay");
 });
 
 test("boss runways remain clear of every ordinary patrol's expanded visual envelope", () => {

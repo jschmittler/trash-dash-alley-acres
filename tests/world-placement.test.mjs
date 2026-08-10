@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import sharp from "sharp";
@@ -8,8 +9,10 @@ import {
   isValidWorldObjectPlacement,
   nearestValidWorldObjectPlacement,
   PLACEMENT_TYPES,
+  resolveEnemyWorldPatrol,
   WORLD_PLACEMENT_PADDING,
 } from "../app/world-placement.mjs";
+import { createLevelRuntime } from "../app/level-runtime.mjs";
 import { LEVEL_ONE } from "../app/level-one.mjs";
 import { LEVEL_TWO } from "../app/level-two.mjs";
 import { IMPLEMENTED_VISUAL_INVENTORY } from "../app/visual-inventory.mjs";
@@ -100,6 +103,47 @@ test("candidate resolver chooses the nearest legal placement or safely skips", (
   assert.equal(nearestValidWorldObjectPlacement(object, [ledge], [
     { x: 110, y: 170, w: 48, h: 50 },
   ], { x: 110, y: 170 }), null);
+});
+
+test("runtime enemy placement clamps complete footprints and safely omits illegal supports", () => {
+  const contract = {
+    placementFootprint: { x: -40, y: -70, w: 80, h: 70 },
+    groundAnchor: { x: 0, y: 0 },
+  };
+  assert.deepEqual(resolveEnemyWorldPatrol({
+    spawn: { x: 95, patrol: [70, 190], surfaceId: "ledge" },
+    supports: [ledge],
+    flightBands: [],
+    collisionWidth: 40,
+    contract,
+    grounded: true,
+    patrolRadius: 105,
+  }), { spawnX: 120, minX: 120, maxX: 160, surfaceY: 200, surfaceId: "ledge" });
+  assert.equal(resolveEnemyWorldPatrol({
+    spawn: { x: 110, patrol: [100, 120], surfaceId: "tiny" },
+    supports: [{ id: "tiny", x: 100, y: 200, w: 20, h: 20 }],
+    flightBands: [],
+    collisionWidth: 40,
+    contract,
+    grounded: true,
+    patrolRadius: 105,
+  }), null);
+
+  const runtime = createLevelRuntime({
+    surfaces: [ledge], encounters: [{ enemies: [{ id: "legal" }, { id: "illegal" }] }],
+    rewards: [], checkpoints: [], boss: {},
+  }, {
+    makeEnemy: ({ id }) => id === "legal" ? { id } : null,
+    makePickup: () => null,
+  });
+  assert.deepEqual(runtime.enemies, [{ id: "legal" }]);
+});
+
+test("production runtime consumes centralized placement and level-specific scenery", () => {
+  const source = readFileSync(fileURLToPath(new URL("../app/trash-dash-game.tsx", import.meta.url)), "utf8");
+  assert.match(source, /resolveEnemyWorldPatrol/);
+  assert.match(source, /sceneryForLevel\(world\.levelId\)/);
+  assert.doesNotMatch(source, /const scenery\s*=\s*\[/);
 });
 
 test("every current level scenery prop clears every incompatible platform body", () => {
@@ -272,7 +316,8 @@ test("every Level 2 environment and boss prop uses legal full visual bounds", as
     });
     if (item.kind === "sprinkler" && item.encounterId !== "brutus") return projected("sprinkler-idle", sprinklerBodyDrawRect(item));
     if (item.kind === "lamp-post") return lampPostDrawRect(item);
-    return projected("hydrant-idle", hydrantDrawRect(item));
+    if (item.kind === "porch-light") return item;
+    return projected(LEVEL_TWO_PROP_FRAMES["hydrant-idle"] ? "hydrant-idle" : "hydrant", hydrantDrawRect(item));
   };
   const environment = [
     ...levelTwoEnvironmentRecords(),

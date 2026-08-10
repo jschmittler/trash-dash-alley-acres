@@ -380,25 +380,25 @@ export function levelTwoEnemyAnimation(kind, state) {
 export const ENCOUNTER_TEST_ROUTES = Object.freeze({
   squirrel: Object.freeze({
     encounterId: "backyard-squirrel-tutorial", playerX: 620, playerSurfaceId: "backyard-lawn", cameraX: 430,
-    environment: Object.freeze([{ id: "backyard-bin-lids", kind: "bin-lid-source", x: 900, y: 306, w: 46, h: 18 }]),
+    environment: Object.freeze([{ id: "backyard-bin-lids", kind: "bin-lid-source", x: 900, y: 306, w: 46, h: 18, placementType: "ON_SURFACE", surfaceId: "backyard-fence" }]),
   }),
   terrier: Object.freeze({
     encounterId: "street-terrier-tutorial", playerX: 1370, playerSurfaceId: "street-ground", cameraX: 1230,
-    environment: Object.freeze([{ id: "street-charge-bin", kind: "charge-obstacle", x: 2440, y: 400, w: 54, h: 68 }]),
+    environment: Object.freeze([{ id: "street-charge-bin", kind: "charge-obstacle", x: 2440, y: 400, w: 54, h: 68, placementType: "ON_SURFACE", surfaceId: "street-ground" }]),
   }),
   skunk: Object.freeze({
     encounterId: "obstacle-skunk-tutorial", playerX: 2780, playerSurfaceId: "obstacle-lawn", cameraX: 2660,
-    environment: Object.freeze([{ id: "tutorial-sprinkler", kind: "sprinkler", x: 3060, y: 444, w: 34, h: 24 }]),
+    environment: Object.freeze([{ id: "tutorial-sprinkler", kind: "sprinkler", x: 3060, y: 444, w: 34, h: 24, placementType: "ON_SURFACE", surfaceId: "obstacle-lawn" }]),
   }),
   moth: Object.freeze({
     encounterId: "porch-light-moth-introduction", playerX: 3890, playerSurfaceId: "poolside-ledge", cameraX: 3540,
-    environment: Object.freeze([{ id: "porch-light", kind: "porch-light", x: 4020, y: 220, w: 20, h: 20, flightBand: "porch-light-orbit" }]),
+    environment: Object.freeze([{ id: "porch-light", kind: "porch-light", x: 4020, y: 220, w: 20, h: 20, flightBand: "porch-light-orbit", placementType: "EXPLICITLY_PLATFORM_ATTACHED", structureId: "porch-light-orbit" }]),
   }),
   interaction: Object.freeze({
     encounterId: "obstacle-interaction-test", playerX: 3260, playerSurfaceId: "obstacle-lawn", cameraX: 3120,
     environment: Object.freeze([
-      { id: "interaction-bin-lids", kind: "bin-lid-source", x: 3700, y: 226, w: 46, h: 18 },
-      { id: "interaction-sprinkler", kind: "sprinkler", x: 3480, y: 444, w: 34, h: 24 },
+      { id: "interaction-bin-lids", kind: "bin-lid-source", x: 3700, y: 226, w: 46, h: 18, placementType: "ON_SURFACE", surfaceId: "treehouse-platform" },
+      { id: "interaction-sprinkler", kind: "sprinkler", x: 3480, y: 444, w: 34, h: 24, placementType: "ON_SURFACE", surfaceId: "obstacle-lawn" },
     ]),
   }),
 });

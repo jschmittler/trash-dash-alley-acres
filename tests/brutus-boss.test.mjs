@@ -145,7 +145,7 @@ test("recovery leaves the hydrant boundary before faster phase charges can recon
   assert.ok(firstChargeStep.x < recovered.x);
 
   const elapsedToHydrant = (phase) => {
-    let actor = { x: phase === 1 ? LEVEL_TWO.boss.arenaStartX + 480 : LEVEL_TWO.boss.recoveryX, w: 96, facing: -1 };
+    let actor = { x: phase === 1 ? LEVEL_TWO.boss.spawnX : LEVEL_TWO.boss.recoveryX, w: 96, facing: -1 };
     let elapsed = 0;
     while (elapsed < 2) {
       const moved = moveBrutusInArena(actor, { ...createBrutusState(), phase, mode: "charge" }, {

@@ -20,6 +20,54 @@ export const LEVEL_TWO_PROP_FRAMES = Object.freeze({
   hydrant: Object.freeze({ frames: Object.freeze([cell(1, 3)]), fps: 0, loop: false }),
 });
 
+export const SPRINKLER_RENDER_METRICS = Object.freeze({
+  bodyWidth: 82, bodyHeight: 82, sourceNozzle: Object.freeze({ x: 74, y: 43 }), waterWidth: 132, waterHeight: 96,
+});
+export const HYDRANT_RENDER_METRICS = Object.freeze({
+  drawWidth: 72, drawHeight: 96, sourceNozzle: Object.freeze({ x: 96, y: 54 }), waterWidth: 144, waterHeight: 96,
+});
+export const LAMP_POST_RENDER_METRICS = Object.freeze({ drawWidth: 96, drawHeight: 208 });
+
+export function sprinklerBodyDrawRect(item) {
+  const groundY = item.y + item.h;
+  const { bodyWidth: w, bodyHeight: h } = SPRINKLER_RENDER_METRICS;
+  return { x: item.x + item.w / 2 - w / 2, y: groundY - LEVEL_TWO_PROP_ATLAS.baseline / LEVEL_TWO_PROP_ATLAS.cell * h, w, h };
+}
+
+export function sprinklerEmitterOrigin(item, direction = 1) {
+  const draw = sprinklerBodyDrawRect(item);
+  const sourceX = direction < 0 ? LEVEL_TWO_PROP_ATLAS.cell - SPRINKLER_RENDER_METRICS.sourceNozzle.x : SPRINKLER_RENDER_METRICS.sourceNozzle.x;
+  return { x: draw.x + sourceX / LEVEL_TWO_PROP_ATLAS.cell * draw.w, y: draw.y + SPRINKLER_RENDER_METRICS.sourceNozzle.y / LEVEL_TWO_PROP_ATLAS.cell * draw.h };
+}
+
+export function sprinklerWaterDrawRect(origin, direction = 1) {
+  const { waterWidth: w, waterHeight: h } = SPRINKLER_RENDER_METRICS;
+  return { x: direction < 0 ? origin.x + 4 - w : origin.x - 4, y: origin.y - h / 2, w, h };
+}
+
+export function hydrantDrawRect(item) {
+  const groundY = item.y + item.h;
+  const { drawWidth: w, drawHeight: h } = HYDRANT_RENDER_METRICS;
+  return { x: item.x + item.w / 2 - w / 2, y: groundY - LEVEL_TWO_PROP_ATLAS.baseline / LEVEL_TWO_PROP_ATLAS.cell * h, w, h };
+}
+
+export function hydrantNozzleOrigin(item, direction = 1) {
+  const draw = hydrantDrawRect(item);
+  const sourceX = direction < 0 ? LEVEL_TWO_PROP_ATLAS.cell - HYDRANT_RENDER_METRICS.sourceNozzle.x : HYDRANT_RENDER_METRICS.sourceNozzle.x;
+  return { x: draw.x + sourceX / LEVEL_TWO_PROP_ATLAS.cell * draw.w, y: draw.y + HYDRANT_RENDER_METRICS.sourceNozzle.y / LEVEL_TWO_PROP_ATLAS.cell * draw.h };
+}
+
+export function hydrantWaterDrawRect(origin, direction = 1) {
+  const { waterWidth: w, waterHeight: h } = HYDRANT_RENDER_METRICS;
+  return { x: direction < 0 ? origin.x + 4 - w : origin.x - 4, y: origin.y - h / 2, w, h };
+}
+
+export function lampPostDrawRect(item) {
+  const { drawWidth: w, drawHeight: h } = LAMP_POST_RENDER_METRICS;
+  const groundY = item.y + item.h;
+  return { x: item.x + item.w / 2 - w / 2, y: groundY - h, w, h };
+}
+
 export function levelTwoPropFrame(name, elapsed = 0) {
   const animation = LEVEL_TWO_PROP_FRAMES[name];
   if (!animation) return LEVEL_TWO_PROP_FRAMES.acorn.frames[0];

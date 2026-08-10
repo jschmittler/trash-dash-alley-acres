@@ -88,6 +88,9 @@ import {
   platformStripSegments,
 } from "./decorative-render.mjs";
 import { pickupYAboveSurface } from "./pickup-layout.mjs";
+import { sceneryForLevel } from "./world-scenery.mjs";
+import { resolveEnemyWorldPatrol } from "./world-placement.mjs";
+import { IMPLEMENTED_VISUAL_INVENTORY } from "./visual-inventory.mjs";
 import { CAMPAIGN_LEVELS } from "./campaign.mjs";
 import { campaignLevelById, campaignLightingAt, campaignZoneAt } from "./campaign-level.mjs";
 import {
@@ -529,19 +532,11 @@ const mapLevelSurfacesToPlatforms = (
     visual,
   }));
 
-const scenery = [
-  { x: 360, groundY: GROUND_Y, prop: "bush" as const },
-  { x: 1260, groundY: GROUND_Y, prop: "tree" as const },
-  { x: 2050, groundY: GROUND_Y, prop: "bush" as const },
-  { x: 2860, groundY: GROUND_Y, prop: "tree" as const },
-  { x: 3940, groundY: GROUND_Y, prop: "bin" as const },
-  { x: 4480, groundY: GROUND_Y, prop: "tires" as const },
-];
-
 const makeEnemy = (
   spawn: EnemySpawnDefinition,
   supports: CampaignLevelDefinition["surfaces"],
-): Enemy => {
+  flightBands: NonNullable<CampaignLevelDefinition["flightBands"]> = [],
+): Enemy | null => {
   const kind = spawn.kind as EnemyKind;
   const x = spawn.x;
   const sizes: Record<EnemyKind, [number, number]> = {
@@ -569,21 +564,17 @@ const makeEnemy = (
   const [w, h] = sizes[kind];
   const patrolRadius = kind === "boss" ? 360 : kind === "slime" ? 85 : 105;
   const grounded = spawn.movement ? spawn.movement !== "flying" : !flyingEnemies.has(kind);
-  const authoredSupport = grounded && spawn.surfaceId
-    ? supports.find(({ id }) => id === spawn.surfaceId)
-    : null;
-  const surfaceY = grounded
-    ? authoredSupport?.y ?? spawn.y ?? GROUND_Y
-    : spawn.flightY ?? spawn.y ?? GROUND_Y;
-  const patrol = createEnemyPatrol({
-    x,
-    width: w,
-    surfaceY,
-    surfaceId: spawn.surfaceId,
-    patrolRadius,
-    grounded,
-    patrolBounds: spawn.patrol,
-  }, supports);
+  const visualRecord = IMPLEMENTED_VISUAL_INVENTORY.find(({ category, id }) => category === "enemy" && id === kind);
+  const patrol = visualRecord
+    ? resolveEnemyWorldPatrol({
+        spawn, supports, flightBands, collisionWidth: w,
+        contract: visualRecord.contract, grounded, patrolRadius,
+      })
+    : createEnemyPatrol({
+        x, width: w, surfaceY: spawn.y ?? GROUND_Y, surfaceId: spawn.surfaceId,
+        patrolRadius, grounded, patrolBounds: spawn.patrol,
+      }, supports);
+  if (!patrol) return null;
   const patrolMinX = patrol.minX;
   const patrolMaxX = patrol.maxX;
   const spawnX = patrol.spawnX;
@@ -688,7 +679,7 @@ const makeWorld = (
 
   const runtime = createLevelRuntime(level, {
     makeEnemy: (spawn: EnemySpawnDefinition, supports: CampaignLevelDefinition["surfaces"]) => (
-      makeEnemy(spawn, supports)
+      makeEnemy(spawn, supports, level.flightBands ?? [])
     ),
     makePickup: (reward: CampaignLevelDefinition["rewards"][number], index: number) => makeSurfacePickup(
       reward.kind as PickupKind,
@@ -703,6 +694,7 @@ const makeWorld = (
     x: worldBossSpawnX(level),
     surfaceId: level.boss.surfaceId,
   }, runtime.surfaces);
+  if (!boss) throw new RangeError(`Boss placement is invalid for ${level.id}`);
   if (level.boss.kind === "brutus") {
     boss.brutusState = createBrutusState();
     boss.behaviorState = boss.brutusState.mode;
@@ -1012,11 +1004,12 @@ export function TrashDashGame() {
         playerSurfaceId: string;
         cameraX: number;
       };
-      nextWorld.enemies = selected.encounter.enemies.map((spawn) => {
-        const enemy = makeEnemy(spawn, nextWorld.surfaces);
+      nextWorld.enemies = selected.encounter.enemies.flatMap((spawn) => {
+        const enemy = makeEnemy(spawn, nextWorld.surfaces, nextWorld.level.flightBands ?? []);
+        if (!enemy) return [];
         enemy.spawned = true;
         enemy.active = true;
-        return enemy;
+        return [enemy];
       });
       nextWorld.environment = selected.environment;
       const surface = nextWorld.surfaces.find(({ id }) => id === selected.playerSurfaceId);
@@ -2378,7 +2371,7 @@ export function TrashDashGame() {
         context.fillRect(0, 0, WIDTH, GROUND_Y);
       }
 
-      for (const item of scenery) {
+      for (const item of sceneryForLevel(world.levelId)) {
         const x = item.x - camera;
         if (x < -160 || x > WIDTH + 160) continue;
         drawDecorativeProp(item.prop, item.x, item.groundY, camera);
