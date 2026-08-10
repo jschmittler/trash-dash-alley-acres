@@ -72,3 +72,9 @@ test("Level 2 preserves its complete encounter teaching sequence and immutable d
   assert.equal(Object.isFrozen(LEVEL_TWO), true);
   assert.equal(Object.isFrozen(LEVEL_TWO.encounters[0].enemies[0]), true);
 });
+
+test("Level 2 owns one explicit boss-arena hydrant and no auxiliary emitter placements", () => {
+  assert.equal(LEVEL_TWO.boss.hydrant.id, "brutus-hydrant");
+  assert.equal(Object.hasOwn(LEVEL_TWO.boss, "sprinklers"), false);
+  assert.equal(Object.isFrozen(LEVEL_TWO.boss.hydrant), true);
+});

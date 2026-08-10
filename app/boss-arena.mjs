@@ -67,7 +67,7 @@ export function validateBossArenaPlacement(level, { minimumRunway = 360, maximum
   if (arena.recoveryX !== undefined && (arena.recoveryX < arena.arenaStartX || arena.recoveryX > arena.arenaEndX)) {
     errors.push(`${level.id}: boss recovery point is outside arena`);
   }
-  for (const prop of [arena.hydrant, ...(arena.sprinklers ?? [])].filter(Boolean)) {
+  for (const prop of [arena.hydrant].filter(Boolean)) {
     if (prop.surfaceId !== arena.surfaceId || (floor && prop.y + prop.h !== floor.y)) {
       errors.push(`${level.id}/${prop.id}: boss prop is not grounded on ${arena.surfaceId}`);
     }

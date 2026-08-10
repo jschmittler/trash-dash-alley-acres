@@ -45,16 +45,6 @@ test("Level 2 has six optional routes, four ordered checkpoints, and Brutus meta
     spawnX: 6250,
     recoveryX: 6250,
     defeatExitX: 6740,
-    sprinklers: [
-      {
-        id: "brutus-sprinkler-left", side: "left", x: 6070, y: 444, w: 34, h: 24,
-        placementType: "ON_SURFACE", surfaceId: "cul-de-sac",
-      },
-      {
-        id: "brutus-sprinkler-right", side: "right", x: 6280, y: 444, w: 34, h: 24,
-        placementType: "ON_SURFACE", surfaceId: "cul-de-sac",
-      },
-    ],
     postBossStartX: 6550,
   });
   assert.deepEqual(LEVEL_TWO.exit, { nextLevelId: "level-3", x: 7120 });

@@ -27,7 +27,6 @@ export const BRUTUS_DURATIONS = Object.freeze({
   "defeat-slide": 0.55,
   "defeat-shake": 0.5,
   "defeat-exit": 0.55,
-  sprinkler: 0.72,
 });
 
 const phaseFromHp = (hp) => Math.min(3, Math.max(1, 4 - hp));
@@ -47,8 +46,6 @@ export function createBrutusState() {
     timer: BRUTUS_DURATIONS.intro,
     arenaUnlocked: false,
     rollingCanId: null,
-    sprinklerSide: "left",
-    sprinklerTimer: BRUTUS_DURATIONS.sprinkler,
     visualState: null,
     visualTimer: 0,
   };
@@ -184,22 +181,6 @@ export function moveBrutusInArena(actor, state, { dt = 0, boss }) {
     : { ...base, x: proposedX, vx };
 }
 
-const tickSprinkler = (state, dt) => {
-  if (state.phase !== 3 || state.arenaUnlocked) return state;
-  const current = state.sprinklerTimer ?? BRUTUS_DURATIONS.sprinkler;
-  const elapsed = Math.max(0, dt);
-  if (elapsed < current) return { ...state, sprinklerTimer: current - elapsed };
-  const remainder = elapsed - current;
-  const changes = 1 + Math.floor(remainder / BRUTUS_DURATIONS.sprinkler);
-  return {
-    ...state,
-    sprinklerSide: changes % 2 === 0
-      ? state.sprinklerSide
-      : state.sprinklerSide === "left" ? "right" : "left",
-    sprinklerTimer: BRUTUS_DURATIONS.sprinkler - (remainder % BRUTUS_DURATIONS.sprinkler),
-  };
-};
-
 const advanceDefeat = (state, dt, exitComplete = false) => {
   let next = state.mode === "defeat" ? { ...state, mode: "defeat-slide" } : { ...state };
   let remaining = Math.max(0, dt);
@@ -229,11 +210,11 @@ export function updateBrutus(state, input = {}) {
     return advanceDefeat(state, dt, input.exitComplete === true);
   }
 
-  let next = tickSprinkler({
+  let next = {
     ...state,
     visualTimer: Math.max(0, (state.visualTimer ?? 0) - dt),
     visualState: (state.visualTimer ?? 0) > dt ? state.visualState ?? null : null,
-  }, dt);
+  };
 
   // The overturned bin stays closed in every other state. Neither a wall,
   // ordinary prop, stomp, nor tail swipe can substitute for the hydrant.
@@ -256,7 +237,6 @@ export function updateBrutus(state, input = {}) {
       mode: "hit",
       timer: BRUTUS_DURATIONS.hit,
       rollingCanId: phase === 2 ? next.rollingCanId ?? "brutus-can" : null,
-      sprinklerTimer: phase === 3 ? BRUTUS_DURATIONS.sprinkler : next.sprinklerTimer,
     };
   }
 
@@ -282,9 +262,6 @@ export function brutusArenaHazards(state) {
   const hazards = [];
   if (state.phase === 2 && state.rollingCanId) {
     hazards.push({ kind: "rolling-can", id: state.rollingCanId });
-  }
-  if (state.phase === 3) {
-    hazards.push({ kind: "sprinkler", side: state.sprinklerSide ?? "left" });
   }
   return hazards;
 }

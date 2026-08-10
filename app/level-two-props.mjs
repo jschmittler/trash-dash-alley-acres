@@ -1,7 +1,7 @@
 export const LEVEL_TWO_PROP_ATLAS = Object.freeze({
   cell: 128,
   columns: 4,
-  rows: 7,
+  rows: 4,
   baseline: 112,
 });
 
@@ -16,25 +16,13 @@ export const LEVEL_TWO_PROP_FRAMES = Object.freeze({
   "boss-platform-left": Object.freeze({ frames: Object.freeze([cell(1, 1)]), fps: 0, loop: false }),
   "boss-platform-right": Object.freeze({ frames: Object.freeze([cell(2, 1)]), fps: 0, loop: false }),
   "rolling-can": Object.freeze({ frames: Object.freeze([cell(3, 1)]), fps: 0, loop: false }),
-  "sprinkler-idle": Object.freeze({ frames: Object.freeze([cell(0, 2)]), fps: 0, loop: false }),
-  "sprinkler-start": Object.freeze({ frames: Object.freeze([cell(1, 2)]), fps: 0, loop: false }),
-  "sprinkler-spray": Object.freeze({ frames: Object.freeze([cell(2, 2), cell(3, 2), cell(0, 3), cell(1, 3), cell(2, 3), cell(3, 3)]), fps: 9, loop: true }),
-  "sprinkler-stop": Object.freeze({ frames: Object.freeze([cell(0, 4)]), fps: 0, loop: false }),
-  "hydrant-idle": Object.freeze({ frames: Object.freeze([cell(1, 4)]), fps: 0, loop: false }),
-  "hydrant-build": Object.freeze({ frames: Object.freeze([cell(2, 4)]), fps: 0, loop: false }),
-  "hydrant-spray": Object.freeze({ frames: Object.freeze([cell(3, 4)]), fps: 0, loop: false }),
-  "hydrant-recover": Object.freeze({ frames: Object.freeze([cell(0, 5)]), fps: 0, loop: false }),
-  "hydrant-water-burst": Object.freeze({ frames: Object.freeze([cell(1, 5)]), fps: 0, loop: false }),
-  "hydrant-water-full": Object.freeze({ frames: Object.freeze([cell(2, 5), cell(3, 5)]), fps: 12, loop: true }),
-  "hydrant-water-taper": Object.freeze({ frames: Object.freeze([cell(0, 6)]), fps: 0, loop: false }),
-});
-
-export const SPRINKLER_RENDER_METRICS = Object.freeze({
-  bodyWidth: 82,
-  bodyHeight: 82,
-  sourceNozzle: Object.freeze({ x: 74, y: 43 }),
-  waterWidth: 132,
-  waterHeight: 132,
+  "hydrant-idle": Object.freeze({ frames: Object.freeze([cell(0, 2)]), fps: 0, loop: false }),
+  "hydrant-build": Object.freeze({ frames: Object.freeze([cell(1, 2)]), fps: 0, loop: false }),
+  "hydrant-spray": Object.freeze({ frames: Object.freeze([cell(2, 2)]), fps: 0, loop: false }),
+  "hydrant-recover": Object.freeze({ frames: Object.freeze([cell(3, 2)]), fps: 0, loop: false }),
+  "hydrant-water-burst": Object.freeze({ frames: Object.freeze([cell(0, 3)]), fps: 0, loop: false }),
+  "hydrant-water-full": Object.freeze({ frames: Object.freeze([cell(1, 3), cell(2, 3)]), fps: 12, loop: true }),
+  "hydrant-water-taper": Object.freeze({ frames: Object.freeze([cell(3, 3)]), fps: 0, loop: false }),
 });
 
 export const HYDRANT_RENDER_METRICS = Object.freeze({
@@ -75,53 +63,6 @@ export const LAMP_POST_RENDER_METRICS = Object.freeze({
   sourceLight: Object.freeze({ x: 136, y: 72 }),
 });
 
-export function sprinklerBodyDrawRect(item) {
-  const groundY = item.y + item.h;
-  const { bodyWidth: w, bodyHeight: h } = SPRINKLER_RENDER_METRICS;
-  return {
-    x: item.x + item.w / 2 - w / 2,
-    y: groundY - LEVEL_TWO_PROP_ATLAS.baseline / LEVEL_TWO_PROP_ATLAS.cell * h,
-    w,
-    h,
-  };
-}
-
-export function sprinklerEmitterOrigin(item, direction = 1) {
-  const draw = sprinklerBodyDrawRect(item);
-  const sourceX = direction < 0
-    ? LEVEL_TWO_PROP_ATLAS.cell - SPRINKLER_RENDER_METRICS.sourceNozzle.x
-    : SPRINKLER_RENDER_METRICS.sourceNozzle.x;
-  return {
-    x: draw.x + sourceX / LEVEL_TWO_PROP_ATLAS.cell * draw.w,
-    y: draw.y + SPRINKLER_RENDER_METRICS.sourceNozzle.y / LEVEL_TWO_PROP_ATLAS.cell * draw.h,
-  };
-}
-
-export function sprinklerWaterDrawRect(origin, direction = 1) {
-  const { waterWidth: w, waterHeight: h } = SPRINKLER_RENDER_METRICS;
-  return {
-    x: direction < 0 ? origin.x + 4 - w : origin.x - 4,
-    y: origin.y - h / 2,
-    w,
-    h,
-  };
-}
-
-export function sprinklerVisualState(active, progress = 0) {
-  if (!active) return { body: "sprinkler-idle", water: null };
-  const phase = Math.max(0, Math.min(1, progress));
-  if (phase < 0.16) return { body: "sprinkler-idle", water: "sprinkler-start" };
-  if (phase < 0.88) return { body: "sprinkler-idle", water: "sprinkler-spray" };
-  return { body: "sprinkler-idle", water: "sprinkler-stop" };
-}
-
-export function sprinklerCycleState(elapsed, seed = 0) {
-  const cycle = ((elapsed * 0.34 + seed) % 1 + 1) % 1;
-  const activeDuration = 0.72;
-  return cycle < activeDuration
-    ? { active: true, progress: cycle / activeDuration }
-    : { active: false, progress: 0 };
-}
 
 export function chargeObstacleDrawRect(item) {
   const size = CHARGE_OBSTACLE_RENDER_METRICS.drawSize;

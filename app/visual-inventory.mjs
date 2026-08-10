@@ -14,7 +14,6 @@ import {
   hydrantWaterDrawRect,
   lampPostDrawRect,
   lampPostVisibleDrawRect,
-  sprinklerWaterDrawRect,
 } from "./level-two-props.mjs";
 import { PLAYER_FORM_STATES } from "./player-animation.mjs";
 import { PLAYABLE_CHARACTERS } from "./playable-character.mjs";
@@ -46,6 +45,40 @@ const animationDestinations = (animations, fallback) => Object.fromEntries(
     h: animation.drawHeight ?? fallback.h,
   })]),
 );
+
+export function validateFixedAspectDestinations(record, tolerance = 0.01) {
+  const errors = [];
+  for (const [state, rawSources] of Object.entries(record?.sourceRects ?? {})) {
+    const sources = Array.isArray(rawSources) ? rawSources : [rawSources];
+    const destinations = record?.runtimeDestinations?.[state] ?? [];
+    for (let frame = 0; frame < Math.min(sources.length, destinations.length); frame += 1) {
+      const source = sources[frame];
+      const destination = destinations[frame];
+      const scaleX = destination.w / source.w;
+      const scaleY = destination.h / source.h;
+      if (!Number.isFinite(scaleX) || !Number.isFinite(scaleY) || Math.abs(scaleX - scaleY) > tolerance) {
+        errors.push(`${record.id}/${state}/${frame}: nonuniform fixed-aspect destination ${destination.w}x${destination.h}`);
+      }
+    }
+  }
+  return errors;
+}
+
+export function validateAnimationStateScale(record, tolerance = 0.01) {
+  const states = Object.entries(record?.runtimeDestinations ?? {});
+  const canonical = states[0]?.[1]?.[0];
+  if (!canonical) return [];
+  const errors = [];
+  for (const [state, destinations] of states) {
+    for (let frame = 0; frame < destinations.length; frame += 1) {
+      const destination = destinations[frame];
+      if (Math.abs(destination.w - canonical.w) > tolerance || Math.abs(destination.h - canonical.h) > tolerance) {
+        errors.push(`${record.id}/${state}/${frame}: state-dependent destination scale ${destination.w}x${destination.h}; expected ${canonical.w}x${canonical.h}`);
+      }
+    }
+  }
+  return errors;
+}
 const cloneAndFreeze = (value) => {
   if (Array.isArray(value)) return Object.freeze(value.map(cloneAndFreeze));
   if (value && typeof value === "object") return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, item]) => [key, cloneAndFreeze(item)])));
@@ -441,8 +474,6 @@ const lampPostRecord = makeRecord({
 
 const propRecords = [
   groundedPropRecord({ id: "charge-obstacle", category: "interactive-prop", sourceRects: { idle: [rect(0, 128, 128, 128)] }, renderedSize: { w: 112, h: 112 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
-  groundedPropRecord({ id: "sprinkler-body", category: "hazard", sourceRects: { idle: [rect(0, 256, 128, 128)] }, renderedSize: { w: 82, h: 82 }, renderLayer: "GAMEPLAY" }),
-  emitterEffectRecord({ id: "sprinkler-water", sourceRects: animationSourceRects({ start: LEVEL_TWO_PROP_FRAMES["sprinkler-start"], spray: LEVEL_TWO_PROP_FRAMES["sprinkler-spray"], stop: LEVEL_TWO_PROP_FRAMES["sprinkler-stop"] }, 128, 128), renderedSize: { w: 132, h: 132 }, drawRect: sprinklerWaterDrawRect, runtimeOwner: "level-two-prop-render" }),
   groundedPropRecord({ id: "hydrant-body", category: "interactive-prop", sourceRects: animationSourceRects({ idle: LEVEL_TWO_PROP_FRAMES["hydrant-idle"], build: LEVEL_TWO_PROP_FRAMES["hydrant-build"], spray: LEVEL_TWO_PROP_FRAMES["hydrant-spray"], recover: LEVEL_TWO_PROP_FRAMES["hydrant-recover"] }, 128, 128), renderedSize: { w: 96, h: 96 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
   emitterEffectRecord({ id: "hydrant-water", sourceRects: animationSourceRects({ burst: LEVEL_TWO_PROP_FRAMES["hydrant-water-burst"], full: LEVEL_TWO_PROP_FRAMES["hydrant-water-full"], taper: LEVEL_TWO_PROP_FRAMES["hydrant-water-taper"] }, 128, 128), renderedSize: { w: 144, h: 144 }, drawRect: hydrantWaterDrawRect, runtimeOwner: "level-two-prop-render" }),
 ];
@@ -532,7 +563,7 @@ export const RUNTIME_DRAW_FAMILY_MANIFEST = Object.freeze([
   drawFamily("bosses", "drawEnemy/bossAnimation+brutusDrawRect", ["trash-heap-tyrant", "brutus-bin-hound"]),
   drawFamily("pickups", "drawSprite/trashPickupRows+tacoPowerMotion+sprites.cap", ["trash", "taco", "cap"]),
   drawFamily("victory-dumpster", "drawSprite/dumpsterFrame+dumpsterDrawRect", ["victory-dumpster"]),
-  drawFamily("level-two-props", "drawSprite/levelTwoPropFrame", ["charge-obstacle", "sprinkler-body", "sprinkler-water", "hydrant-body", "hydrant-water"]),
+  drawFamily("level-two-props", "drawSprite/levelTwoPropFrame", ["charge-obstacle", "hydrant-body", "hydrant-water"]),
   drawFamily("level-two-lamp-post", "drawImage/lampPostDrawRect", ["lamp-post"]),
   drawFamily("level-two-visual-platforms", "drawSprite/levelTwoPlatformDrawRect", ["brutus-platform-left", "brutus-platform-right"]),
   drawFamily("bin-lid-source", "drawSprite/levelTwoPropFrame(acorn)", ["bin-lid-source"]),

@@ -164,10 +164,6 @@ export const LEVEL_TWO = freezeDeep({
     hydrant: { id: "brutus-hydrant", x: 5868, y: 400, w: 42, h: 68, placementType: "ON_SURFACE", surfaceId: "cul-de-sac" },
     recoveryX: 6250,
     defeatExitX: 6740,
-    sprinklers: [
-      { id: "brutus-sprinkler-left", side: "left", x: 6070, y: 444, w: 34, h: 24, placementType: "ON_SURFACE", surfaceId: "cul-de-sac" },
-      { id: "brutus-sprinkler-right", side: "right", x: 6280, y: 444, w: 34, h: 24, placementType: "ON_SURFACE", surfaceId: "cul-de-sac" },
-    ],
     postBossStartX: 6550,
   },
   exit: { nextLevelId: "level-3", x: 7120 },

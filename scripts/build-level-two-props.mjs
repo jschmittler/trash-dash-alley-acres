@@ -23,67 +23,15 @@ const slots = [
   { name: "boss-platform-left", col: 1, row: 1, crop: [341, 246, 187, 161], fit: [108, 88] },
   { name: "boss-platform-right", col: 2, row: 1, crop: [540, 246, 174, 161], fit: [96, 88] },
   { name: "rolling-can", col: 3, row: 1, crop: [902, 798, 130, 163], fit: [84, 104] },
-  { name: "sprinkler-idle", col: 0, row: 2, crop: [38, 502, 120, 102], fit: [82, 88] },
-  { name: "sprinkler-start", col: 1, row: 2, waterFrame: 0 },
-  { name: "sprinkler-spray-0", col: 2, row: 2, waterFrame: 1 },
-  { name: "sprinkler-spray-1", col: 3, row: 2, waterFrame: 2 },
-  { name: "sprinkler-spray-2", col: 0, row: 3, waterFrame: 3 },
-  { name: "sprinkler-spray-3", col: 1, row: 3, waterFrame: 4 },
-  { name: "sprinkler-spray-4", col: 2, row: 3, waterFrame: 5 },
-  { name: "sprinkler-spray-5", col: 3, row: 3, waterFrame: 6 },
-  { name: "sprinkler-stop", col: 0, row: 4, waterFrame: 7 },
-  { name: "hydrant-idle", col: 1, row: 4, source: "hydrant", grid: [0, 0], fit: [72, 92], mode: "hydrant-body" },
-  { name: "hydrant-build", col: 2, row: 4, source: "hydrant", grid: [1, 0], fit: [72, 92], mode: "hydrant-body" },
-  { name: "hydrant-spray", col: 3, row: 4, source: "hydrant", grid: [2, 0], fit: [72, 92], mode: "hydrant-body" },
-  { name: "hydrant-recover", col: 0, row: 5, source: "hydrant", grid: [3, 0], fit: [72, 92], mode: "hydrant-body" },
-  { name: "hydrant-water-burst", col: 1, row: 5, source: "hydrant", grid: [0, 1], fit: [120, 76], mode: "water", align: "left", top: 26 },
-  { name: "hydrant-water-full-0", col: 2, row: 5, source: "hydrant", grid: [1, 1], fit: [120, 76], fitMode: "fill", mode: "water", align: "left", top: 26 },
-  { name: "hydrant-water-full-1", col: 3, row: 5, source: "hydrant", grid: [2, 1], fit: [120, 76], fitMode: "fill", mode: "water", align: "left", top: 26 },
-  { name: "hydrant-water-taper", col: 0, row: 6, source: "hydrant", grid: [3, 1], fit: [120, 76], mode: "water", align: "left", top: 26 },
+  { name: "hydrant-idle", col: 0, row: 2, source: "hydrant", grid: [0, 0], fit: [72, 92], mode: "hydrant-body" },
+  { name: "hydrant-build", col: 1, row: 2, source: "hydrant", grid: [1, 0], fit: [72, 92], mode: "hydrant-body" },
+  { name: "hydrant-spray", col: 2, row: 2, source: "hydrant", grid: [2, 0], fit: [72, 92], mode: "hydrant-body" },
+  { name: "hydrant-recover", col: 3, row: 2, source: "hydrant", grid: [3, 0], fit: [72, 92], mode: "hydrant-body" },
+  { name: "hydrant-water-burst", col: 0, row: 3, source: "hydrant", grid: [0, 1], fit: [120, 76], mode: "water", align: "left", top: 26 },
+  { name: "hydrant-water-full-0", col: 1, row: 3, source: "hydrant", grid: [1, 1], fit: [120, 76], fitMode: "fill", mode: "water", align: "left", top: 26 },
+  { name: "hydrant-water-full-1", col: 2, row: 3, source: "hydrant", grid: [2, 1], fit: [120, 76], fitMode: "fill", mode: "water", align: "left", top: 26 },
+  { name: "hydrant-water-taper", col: 3, row: 3, source: "hydrant", grid: [3, 1], fit: [120, 76], mode: "water", align: "left", top: 26 },
 ];
-
-const waterPalette = [
-  [20, 82, 126, 255],
-  [37, 135, 177, 255],
-  [74, 192, 218, 255],
-  [168, 239, 243, 255],
-];
-
-function sprinklerWaterSprite(frame) {
-  const width = cell;
-  const height = cell;
-  const raw = Buffer.alloc(width * height * 4);
-  const lengths = [38, 66, 84, 104, 116, 108, 92, 48];
-  const arches = [7, 12, 18, 23, 28, 21, 16, 9];
-  const length = lengths[frame];
-  const arch = arches[frame];
-  const put = (x, y, colorIndex, radius = 1) => {
-    const color = waterPalette[colorIndex % waterPalette.length];
-    for (let yy = y - radius; yy <= y + radius; yy += 1) for (let xx = x - radius; xx <= x + radius; xx += 1) {
-      if (xx < 0 || xx >= width || yy < 0 || yy >= height) continue;
-      const offset = (yy * width + xx) * 4;
-      raw[offset] = color[0]; raw[offset + 1] = color[1]; raw[offset + 2] = color[2]; raw[offset + 3] = color[3];
-    }
-  };
-  for (let stream = -2; stream <= 2; stream += 1) {
-    const phaseOffset = (frame * 3 + stream * 5 + 40) % 11;
-    for (let step = 0; step <= length; step += 2) {
-      const t = step / length;
-      if (t > 0.76 && (step + phaseOffset) % 9 < 3) continue;
-      const breakup = t > 0.86 ? Math.round(Math.sin((step + frame) * 1.7) * 2) : 0;
-      const x = 4 + step;
-      const y = Math.round(64 + stream * 3 - Math.sin(Math.PI * t) * (arch + stream * 1.5) + breakup);
-      put(x, y, stream + 3, t < 0.28 ? 1 : 0);
-    }
-  }
-  const dropletCount = frame === 0 || frame === 7 ? 3 : 7;
-  for (let index = 0; index < dropletCount; index += 1) {
-    const x = Math.min(123, 8 + length * (0.66 + index * 0.055));
-    const y = 48 + ((frame * 13 + index * 17) % 38);
-    put(Math.round(x), y, index + frame, index % 3 === 0 ? 1 : 0);
-  }
-  return sharp(raw, { raw: { width, height, channels: 4 } }).png().toBuffer();
-}
 
 function despill(raw, slot) {
   for (let index = 0; index < raw.length; index += 4) {
@@ -92,24 +40,6 @@ function despill(raw, slot) {
     const blue = raw[index + 2];
     const alpha = raw[index + 3];
     raw[index + 3] = alpha === 0 ? 0 : 255;
-    if (slot.name.startsWith("sprinkler-spray")) {
-      const water = alpha > 0 && blue > 85 && green > 65 && blue > red * 1.12 && green > red * 1.03;
-      raw[index + 3] = water ? 255 : 0;
-      if (water) {
-        const value = (red + green + blue) / 3;
-        const color = value > 200
-          ? [168, 239, 243]
-          : value > 150
-            ? [74, 192, 218]
-            : value > 100
-              ? [37, 135, 177]
-              : [20, 82, 126];
-        raw[index] = color[0];
-        raw[index + 1] = color[1];
-        raw[index + 2] = color[2];
-      }
-      continue;
-    }
     if (alpha > 0 && red < 6 && green < 6 && blue < 6) {
       raw[index + 3] = 0;
       continue;
@@ -203,9 +133,6 @@ async function generatedInput(slot) {
 }
 
 async function normalizedSprite(slot) {
-  if (Number.isInteger(slot.waterFrame)) {
-    return { input: await sprinklerWaterSprite(slot.waterFrame), left: slot.col * cell, top: slot.row * cell };
-  }
   const [maxWidth, maxHeight] = slot.fit;
   const input = slot.source
     ? await generatedInput(slot)
@@ -231,16 +158,15 @@ await mkdir(path.dirname(contactPath), { recursive: true });
 const sprites = [];
 for (const slot of slots) sprites.push(await normalizedSprite(slot));
 
-const quantizedAtlas = await sharp({ create: { width: cell * 4, height: cell * 7, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+const quantizedAtlas = await sharp({ create: { width: cell * 4, height: cell * 4, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
   .composite(sprites)
   .png({ palette: true, colours: 28, dither: 0 })
   .toBuffer();
 
-// Palette quantization can make a few foam highlights neutral enough to look
-// like a second sprinkler body. Reassert one shared four-value water palette
-// after quantization while preserving the authored hard-alpha silhouettes.
+// Reassert one shared four-value water palette after quantization while
+// preserving the authored hard-alpha silhouettes.
 const atlasRaw = await sharp(quantizedAtlas).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-const waterSlots = slots.filter(({ name }) => name.startsWith("sprinkler-") && name !== "sprinkler-idle" || name.startsWith("hydrant-water"));
+const waterSlots = slots.filter(({ name }) => name.startsWith("hydrant-water"));
 for (const slot of waterSlots) {
   for (let y = slot.row * cell; y < (slot.row + 1) * cell; y += 1) {
     for (let x = slot.col * cell; x < (slot.col + 1) * cell; x += 1) {
@@ -262,7 +188,7 @@ for (const slot of waterSlots) {
 }
 await sharp(atlasRaw.data, { raw: atlasRaw.info }).png().toFile(outputPath);
 
-const checkerSvg = `<svg width="512" height="896" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="c" width="32" height="32" patternUnits="userSpaceOnUse"><rect width="32" height="32" fill="#172033"/><rect width="16" height="16" fill="#26344d"/><rect x="16" y="16" width="16" height="16" fill="#26344d"/></pattern></defs><rect width="512" height="896" fill="url(#c)"/><g stroke="#8aa0c0" stroke-opacity=".45">${[128,256,384].map((n) => `<path d="M${n} 0V896"/>`).join("")}${[128,256,384,512,640,768].map((n) => `<path d="M0 ${n}H512"/>`).join("")}</g></svg>`;
+const checkerSvg = `<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="c" width="32" height="32" patternUnits="userSpaceOnUse"><rect width="32" height="32" fill="#172033"/><rect width="16" height="16" fill="#26344d"/><rect x="16" y="16" width="16" height="16" fill="#26344d"/></pattern></defs><rect width="512" height="512" fill="url(#c)"/><g stroke="#8aa0c0" stroke-opacity=".45">${[128,256,384].map((n) => `<path d="M${n} 0V512"/>`).join("")}${[128,256,384].map((n) => `<path d="M0 ${n}H512"/>`).join("")}</g></svg>`;
 await sharp(Buffer.from(checkerSvg))
   .composite([{ input: outputPath }])
   .png()

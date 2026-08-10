@@ -64,8 +64,6 @@ import { evaluateVictoryRecord } from "./victory-phase.mjs";
 import {
   brutusAnimation,
   brutusAnimationFrame,
-  brutusArenaHazards,
-  BRUTUS_DURATIONS,
   brutusDrawRect,
   createBrutusState,
   isBrutusTopHit,
@@ -120,24 +118,15 @@ import {
   selectChargeObstacle,
   selectEncounterTestRoute,
   updateLevelTwoEnemy,
-  updateSprinkler,
   squirrelThrowAttachment,
 } from "./level-two-enemies.mjs";
 import {
   chargeObstacleDrawRect,
   hydrantDrawRect,
-  hydrantNozzleOrigin,
-  hydrantVisualState,
-  hydrantWaterDrawRect,
   lampEmitterOrigin,
   lampPostDrawRect,
   levelTwoPlatformDrawRect,
   levelTwoPropFrame,
-  sprinklerBodyDrawRect,
-  sprinklerCycleState,
-  sprinklerEmitterOrigin,
-  sprinklerVisualState,
-  sprinklerWaterDrawRect,
 } from "./level-two-props.mjs";
 import { RENDER_LAYERS } from "./visual-contract.mjs";
 
@@ -188,7 +177,6 @@ interface CampaignLevelDefinition {
     hydrant?: Omit<EnvironmentCollision, "kind" | "encounterId">;
     recoveryX?: number;
     defeatExitX?: number;
-    sprinklers?: Array<Omit<EnvironmentCollision, "kind" | "encounterId"> & { side: "left" | "right" }>;
     postBossStartX?: number;
   };
   exit: { nextLevelId: string | null; x: number };
@@ -269,7 +257,7 @@ interface BinLid extends Rect {
 
 interface EnvironmentCollision extends Rect {
   id: string;
-  kind: "bin-lid-source" | "charge-obstacle" | "sprinkler" | "lamp-post" | "hydrant";
+  kind: "bin-lid-source" | "charge-obstacle" | "lamp-post" | "hydrant";
   encounterId: string;
   flightBand?: string;
 }
@@ -735,7 +723,6 @@ const makeWorld = (
       ? [
           ...levelTwoEnvironmentRecords() as EnvironmentCollision[],
           ...(level.boss.hydrant ? [{ ...level.boss.hydrant, kind: "hydrant", encounterId: "brutus" } as EnvironmentCollision] : []),
-          ...(level.boss.sprinklers ?? []).map((item) => ({ ...item, kind: "sprinkler", encounterId: "brutus" } as EnvironmentCollision)),
         ]
       : [],
     pickups: runtime.pickups,
@@ -2116,38 +2103,6 @@ export function TrashDashGame() {
             playerFacing: player.facing,
           }));
         }
-        for (const sprinkler of world.environment.filter(({ kind }) => kind === "sprinkler")) {
-          const brutus = world.enemies.find((enemy) => enemy.kind === "boss" && enemy.brutusState);
-          const activeSide = brutus
-            ? brutusArenaHazards(brutus.brutusState).find(({ kind }) => kind === "sprinkler")?.side
-            : null;
-          const authoredSide = world.level.boss.sprinklers?.find(({ id }) => id === sprinkler.id)?.side;
-          const direction = authoredSide === "right" ? -1 : 1;
-          const cycle = sprinklerCycleState(world.elapsed, sprinkler.x * 0.001);
-          const sprinklerActive = sprinkler.encounterId === "brutus"
-            ? Boolean(activeSide && activeSide === authoredSide)
-            : cycle.active;
-          const stream: Rect = sprinkler.encounterId === "brutus"
-            ? hydrantWaterDrawRect(hydrantNozzleOrigin(sprinkler, direction), direction)
-            : sprinklerWaterDrawRect(sprinklerEmitterOrigin(sprinkler, direction), direction);
-          if (sprinklerActive && intersects(lid, stream)) {
-            Object.assign(lid, updateSprinkler(lid, {
-              active: true,
-              direction,
-            }));
-          }
-        }
-        for (const skunk of world.enemies.filter(({ kind, sprayActive }) => kind === "skunk" && sprayActive)) {
-          const stream: Rect = {
-            x: skunk.facing > 0 ? skunk.x - 126 : skunk.x + skunk.w,
-            y: skunk.y + 2,
-            w: 126,
-            h: skunk.h + 18,
-          };
-          if (intersects(lid, stream)) {
-            Object.assign(lid, updateSprinkler(lid, { active: true, direction: -skunk.facing }));
-          }
-        }
         lid.x += lid.vx * dt;
         if (lid.reflected) {
           for (const enemy of world.enemies) {
@@ -2168,23 +2123,6 @@ export function TrashDashGame() {
         if (lid.x < -80 || lid.x > world.worldWidth + 80) lid.active = false;
       }
       world.binLids = world.binLids.filter(({ active }) => active);
-
-      const brutus = world.enemies.find((enemy) => enemy.kind === "boss" && enemy.brutusState);
-      const activeBrutusSprinkler = brutus
-        ? brutusArenaHazards(brutus.brutusState).find(({ kind }) => kind === "sprinkler")
-        : null;
-      if (activeBrutusSprinkler) {
-        const sprinkler = world.environment.find((item) => (
-          item.kind === "sprinkler"
-          && item.encounterId === "brutus"
-          && (world.level.boss.sprinklers ?? []).find(({ id, side }) => id === item.id && side === activeBrutusSprinkler.side)
-        ));
-        if (sprinkler) {
-          const direction = activeBrutusSprinkler.side === "left" ? 1 : -1;
-          const stream: Rect = hydrantWaterDrawRect(hydrantNozzleOrigin(sprinkler, direction), direction);
-          if (intersects(player, stream)) hurtPlayer(world, activeBrutusSprinkler.side === "left" ? 1 : -1);
-        }
-      }
 
       for (const particle of world.particles) {
         particle.x += particle.vx * dt;
@@ -2515,74 +2453,7 @@ export function TrashDashGame() {
         const x = item.x - camera;
         if (x < -180 || x > WIDTH + 180) continue;
         context.save();
-        if (item.kind === "sprinkler") {
-          const brutus = world.enemies.find((enemy) => enemy.kind === "boss" && enemy.brutusState);
-          const activeSide = brutus
-            ? brutusArenaHazards(brutus.brutusState).find(({ kind }) => kind === "sprinkler")?.side
-            : null;
-          const authoredSide = world.level.boss.sprinklers?.find(({ id }) => id === item.id)?.side;
-          const cycle = sprinklerCycleState(world.elapsed, item.x * 0.001);
-          const sprinklerActive = item.encounterId === "brutus"
-            ? Boolean(activeSide && activeSide === authoredSide)
-            : cycle.active;
-          const direction = authoredSide === "right" ? -1 : 1;
-          if (item.encounterId === "brutus") {
-            const progress = brutus?.brutusState
-              ? 1 - (brutus.brutusState.sprinklerTimer ?? BRUTUS_DURATIONS.sprinkler) / BRUTUS_DURATIONS.sprinkler
-              : 0;
-            const visual = hydrantVisualState(sprinklerActive, progress);
-            const body = hydrantDrawRect(item);
-            drawSprite(
-              levelTwoPropFrame(visual.body, world.elapsed) as Frame,
-              body.x - camera,
-              body.y,
-              body.w,
-              body.h,
-              direction < 0,
-              1,
-              levelTwoPropMotionRef.current,
-            );
-            if (visual.water) {
-              const water = hydrantWaterDrawRect(hydrantNozzleOrigin(item, direction), direction);
-              drawSprite(
-                levelTwoPropFrame(visual.water, world.elapsed) as Frame,
-                water.x - camera,
-                water.y,
-                water.w,
-                water.h,
-                direction < 0,
-                1,
-                levelTwoPropMotionRef.current,
-              );
-            }
-          } else {
-            const visual = sprinklerVisualState(sprinklerActive, cycle.progress);
-            const body = sprinklerBodyDrawRect(item);
-            drawSprite(
-              levelTwoPropFrame(visual.body, world.elapsed) as Frame,
-              body.x - camera,
-              body.y,
-              body.w,
-              body.h,
-              direction < 0,
-              1,
-              levelTwoPropMotionRef.current,
-            );
-            if (visual.water) {
-              const water = sprinklerWaterDrawRect(sprinklerEmitterOrigin(item, direction), direction);
-              drawSprite(
-                levelTwoPropFrame(visual.water, world.elapsed) as Frame,
-                water.x - camera,
-                water.y,
-                water.w,
-                water.h,
-                direction < 0,
-                1,
-                levelTwoPropMotionRef.current,
-              );
-            }
-          }
-        } else if (item.kind === "charge-obstacle") {
+        if (item.kind === "charge-obstacle") {
           const draw = chargeObstacleDrawRect(item);
           drawSprite(
             levelTwoPropFrame("charge-obstacle", world.elapsed) as Frame,

@@ -32,7 +32,6 @@ import {
   updateMoth,
   updateLevelTwoEnemy,
   updateSkunk,
-  updateSprinkler,
   updateSquirrel,
   updateTerrier,
 } from "../app/level-two-enemies.mjs";
@@ -172,21 +171,6 @@ test("skunk telegraphs before a short authored spray", () => {
   assert.equal(spraying.sprayActive, true);
 });
 
-test("sprinkler push redirects reflected lids and lightweight rolling objects", () => {
-  assert.deepEqual(
-    updateSprinkler({ vx: -90, lightweight: true, reflected: true }, { active: true, direction: 1 }),
-    { vx: 150, lightweight: true, reflected: true },
-  );
-  assert.deepEqual(
-    updateSprinkler({ vx: -90, lightweight: false, reflected: true }, { active: true, direction: 1 }),
-    { vx: 150, lightweight: false, reflected: true },
-  );
-  assert.deepEqual(
-    updateSprinkler({ vx: -90, lightweight: false, reflected: false }, { active: true, direction: 1 }),
-    { vx: -90, lightweight: false, reflected: false },
-  );
-});
-
 test("moth returns to its authored light after a dive", () => {
   const next = updateMoth({ state: "climb", x: 800, y: 250 }, {
     dt: 1, lightX: 800, flightY: 180,
@@ -316,17 +300,17 @@ test("active behavior dispatch is explicit by enemy kind", () => {
 
 test("encounter test routes select one exact authored group and environment", () => {
   const expected = {
-    squirrel: "backyard-squirrel-tutorial",
-    terrier: "street-terrier-tutorial",
-    skunk: "obstacle-skunk-tutorial",
-    moth: "porch-light-moth-introduction",
-    interaction: "obstacle-interaction-test",
+    squirrel: ["backyard-squirrel-tutorial", true],
+    terrier: ["street-terrier-tutorial", true],
+    skunk: ["obstacle-skunk-tutorial", false],
+    moth: ["porch-light-moth-introduction", true],
+    interaction: ["obstacle-interaction-test", true],
   };
-  for (const [route, encounterId] of Object.entries(expected)) {
+  for (const [route, [encounterId, hasEnvironment]] of Object.entries(expected)) {
     const selected = selectEncounterTestRoute(LEVEL_TWO, route);
     assert.equal(selected.encounter.id, encounterId);
     assert.equal(selected.encounters.length, 1);
-    assert.ok(selected.environment.length > 0, `${route} needs nearby environment`);
+    assert.equal(selected.environment.length > 0, hasEnvironment, `${route} environment contract`);
     assert.ok(LEVEL_TWO.surfaces.some(({ id }) => id === selected.playerSurfaceId));
   }
 });

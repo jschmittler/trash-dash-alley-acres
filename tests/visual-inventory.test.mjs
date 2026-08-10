@@ -5,7 +5,6 @@ import { LEVEL_TWO } from "../app/level-two.mjs";
 import {
   hydrantWaterDrawRect,
   lampPostDrawRect,
-  sprinklerWaterDrawRect,
 } from "../app/level-two-props.mjs";
 import {
   IMPLEMENTED_VISUAL_INVENTORY,
@@ -105,14 +104,6 @@ test("animated prop consumers bind all committed source frames to runtime destin
     { x: 256, y: 0, w: 128, h: 128 }, { x: 384, y: 0, w: 128, h: 128 },
   ]);
   assert.deepEqual(binLid.runtimeDestinations.active, Array.from({ length: 4 }, () => ({ w: 44, h: 44 })));
-  const sprinklerWater = record("sprinkler-water");
-  assert.deepEqual(sprinklerWater.sourceRects.spray, [
-    { x: 256, y: 256, w: 128, h: 128 }, { x: 384, y: 256, w: 128, h: 128 },
-    { x: 0, y: 384, w: 128, h: 128 }, { x: 128, y: 384, w: 128, h: 128 },
-    { x: 256, y: 384, w: 128, h: 128 }, { x: 384, y: 384, w: 128, h: 128 },
-  ]);
-  assert.deepEqual(sprinklerWater.runtimeDestinations.spray, Array.from({ length: 6 }, () => ({ w: 132, h: 132 })));
-
   const lamp = record("lamp-post");
   const runtimeLamp = lampPostDrawRect({ x: 0, y: 0, w: 96, h: 208 });
   assert.deepEqual(lamp.sourceRects.idle, [{ x: 0, y: 0, w: 192, h: 256 }]);
@@ -122,10 +113,7 @@ test("animated prop consumers bind all committed source frames to runtime destin
 
 test("water effect contracts are emitter-relative for both facings", () => {
   const record = (id) => IMPLEMENTED_VISUAL_INVENTORY.find((candidate) => candidate.id === id);
-  for (const [id, drawRect] of [
-    ["sprinkler-water", sprinklerWaterDrawRect],
-    ["hydrant-water", hydrantWaterDrawRect],
-  ]) {
+  for (const [id, drawRect] of [["hydrant-water", hydrantWaterDrawRect]]) {
     const effect = record(id);
     const expected = {
       right: drawRect({ x: 0, y: 0 }, 1),

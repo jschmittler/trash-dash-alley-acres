@@ -26,9 +26,6 @@ import {
   lampPostVisibleDrawRect,
   LEVEL_TWO_PROP_FRAMES,
   levelTwoPlatformDrawRect,
-  sprinklerBodyDrawRect,
-  sprinklerEmitterOrigin,
-  sprinklerWaterDrawRect,
 } from "../app/level-two-props.mjs";
 
 const ledge = Object.freeze({ id: "ledge", x: 100, y: 200, w: 120, h: 40 });
@@ -314,7 +311,6 @@ test("every Level 2 environment and boss prop uses legal full visual bounds", as
     if (item.kind === "charge-obstacle") return projected("charge-obstacle", {
       x: item.x + item.w / 2 - 42, y: item.y + item.h - 98, w: 84, h: 112,
     });
-    if (item.kind === "sprinkler" && item.encounterId !== "brutus") return projected("sprinkler-idle", sprinklerBodyDrawRect(item));
     if (item.kind === "lamp-post") return lampPostVisibleDrawRect(item);
     if (item.kind === "porch-light") return item;
     return projected(LEVEL_TWO_PROP_FRAMES["hydrant-idle"] ? "hydrant-idle" : "hydrant", hydrantDrawRect(item));
@@ -322,7 +318,6 @@ test("every Level 2 environment and boss prop uses legal full visual bounds", as
   const environment = [
     ...levelTwoEnvironmentRecords(),
     { ...LEVEL_TWO.boss.hydrant, kind: "hydrant", encounterId: "brutus" },
-    ...LEVEL_TWO.boss.sprinklers.map((item) => ({ ...item, kind: "sprinkler", encounterId: "brutus" })),
   ];
   for (const item of environment) {
     const result = classifyWorldObjectPlacement({
@@ -377,29 +372,23 @@ test("boss utility-platform art, collision tops, floor contacts, and symmetry ag
   assert.ok(Math.abs(leftOffset - rightOffset) <= 1, `platform asymmetry ${leftOffset}/${rightOffset}`);
 });
 
-test("every water effect remains attached to its named emitter with independent bounds", () => {
-  const sprinklers = [
-    ...levelTwoEnvironmentRecords().filter(({ kind }) => kind === "sprinkler"),
-    ...LEVEL_TWO.boss.sprinklers.map((item) => ({ ...item, kind: "sprinkler", encounterId: "brutus" })),
-  ];
-  for (const item of sprinklers) {
-    for (const direction of [-1, 1]) {
-      const bossEffect = item.encounterId === "brutus";
-      const body = bossEffect ? hydrantDrawRect(item) : sprinklerBodyDrawRect(item);
-      const origin = bossEffect ? hydrantNozzleOrigin(item, direction) : sprinklerEmitterOrigin(item, direction);
-      const water = bossEffect ? hydrantWaterDrawRect(origin, direction) : sprinklerWaterDrawRect(origin, direction);
-      assert.ok(origin.x >= body.x && origin.x <= body.x + body.w && origin.y >= body.y && origin.y <= body.y + body.h,
-        `${item.id} emitter leaves body`);
-      assert.ok(origin.x >= water.x && origin.x <= water.x + water.w && origin.y >= water.y && origin.y <= water.y + water.h,
-        `${item.id} water detached from emitter`);
-      const relationship = classifyWorldObjectPlacement({
-        id: `${item.id}:water:${direction}`,
-        bounds: water,
-        placementType: PLACEMENT_TYPES.EXPLICITLY_PLATFORM_ATTACHED,
-        structureId: item.id,
-      }, LEVEL_TWO.surfaces);
-      assert.equal(relationship.valid, true);
-      assert.equal(relationship.support.structureId, item.id);
-    }
+test("hydrant water remains attached to its named emitter with independent bounds", () => {
+  const item = { ...LEVEL_TWO.boss.hydrant, kind: "hydrant", encounterId: "brutus" };
+  for (const direction of [-1, 1]) {
+    const body = hydrantDrawRect(item);
+    const origin = hydrantNozzleOrigin(item, direction);
+    const water = hydrantWaterDrawRect(origin, direction);
+    assert.ok(origin.x >= body.x && origin.x <= body.x + body.w && origin.y >= body.y && origin.y <= body.y + body.h,
+      `${item.id} emitter leaves body`);
+    assert.ok(origin.x >= water.x && origin.x <= water.x + water.w && origin.y >= water.y && origin.y <= water.y + water.h,
+      `${item.id} water detached from emitter`);
+    const relationship = classifyWorldObjectPlacement({
+      id: `${item.id}:water:${direction}`,
+      bounds: water,
+      placementType: PLACEMENT_TYPES.EXPLICITLY_PLATFORM_ATTACHED,
+      structureId: item.id,
+    }, LEVEL_TWO.surfaces);
+    assert.equal(relationship.valid, true);
+    assert.equal(relationship.support.structureId, item.id);
   }
 });

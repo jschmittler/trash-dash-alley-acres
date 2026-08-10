@@ -81,16 +81,15 @@ test("each damage reaction completes before advancing to the next phase", () => 
   assert.equal(updateBrutus(hit, { dt: 1 }).mode, "recover");
 });
 
-test("phase three exposes exactly one alternating sprinkler stream", () => {
-  const left = { ...createBrutusState(), hp: 1, phase: 3, sprinklerSide: "left", sprinklerTimer: 0.01 };
-  const leftHazards = brutusArenaHazards(left).filter(({ kind }) => kind === "sprinkler");
-  assert.deepEqual(leftHazards.map(({ side }) => side), ["left"]);
-  const right = updateBrutus(left, { dt: 0.02 });
-  assert.equal(right.sprinklerSide, "right");
-  assert.deepEqual(
-    brutusArenaHazards(right).filter(({ kind }) => kind === "sprinkler").map(({ side }) => side),
-    ["right"],
+test("phase three uses its existing faster charge without an auxiliary arena hazard", () => {
+  const state = { ...createBrutusState(), hp: 1, phase: 3, mode: "charge" };
+  assert.deepEqual(brutusArenaHazards(state), []);
+  const moved = moveBrutusInArena(
+    { x: 6250, w: 96, facing: -1 },
+    state,
+    { dt: 0.1, boss: LEVEL_TWO.boss },
   );
+  assert.equal(moved.x, 6208);
 });
 
 test("the Brutus atlas manifest includes every active and defeat beat", () => {
@@ -102,10 +101,10 @@ test("the Brutus atlas manifest includes every active and defeat beat", () => {
   assert.equal(BRUTUS_ANIMATIONS.hit.frames, 3);
 });
 
-test("Level 2 authors the hydrant, alternating sprinklers, and hostile-free release boundary", () => {
+test("Level 2 authors one hydrant and a hostile-free release boundary", () => {
   assert.equal(LEVEL_TWO.boss.surfaceId, "cul-de-sac");
   assert.equal(LEVEL_TWO.boss.hydrant.id, "brutus-hydrant");
-  assert.deepEqual(LEVEL_TWO.boss.sprinklers.map(({ side }) => side), ["left", "right"]);
+  assert.equal(Object.hasOwn(LEVEL_TWO.boss, "sprinklers"), false);
   assert.equal(LEVEL_TWO.boss.postBossStartX, LEVEL_TWO.boss.arenaEndX);
   const lockedCameraRight = LEVEL_TWO.boss.arenaStartX + 960;
   const renderLeftAtExit = LEVEL_TWO.boss.defeatExitX + 96 / 2 - 220 / 2;
