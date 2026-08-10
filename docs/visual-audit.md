@@ -615,6 +615,47 @@ Browser diagnostics:
 - Add new issues with a stable `VIS-###` identifier, observed route, root cause,
   changed files, automated evidence, and rendered screenshot evidence.
 
+### VIS-009: Short-viewport canvas distortion (Task 8)
+
+- Status: 🟩 Complete
+- Priority: 🟥 Critical
+- Locations: shared Level 1/Level 2 cabinet at short desktop and landscape
+  viewport heights
+- Reproduction: at 1024×640 the stage measured 991×528 (1.877:1); at
+  844×390 it measured 817×278 (2.939:1), while the logical canvas remained
+  960×540 (16:9). The base shell used `width: 100%` plus `max-height`, so CSS
+  clamped only one axis and stretched every rendered frame.
+- Fix: the shared base stage now derives width from available `svh`/`dvh`
+  height, keeps `height: auto`, and preserves a 16:9 aspect without modifying
+  gameplay geometry, sprite scale, or per-screen offsets.
+- Verification: browser measurements after the final change are 938.664×527.992
+  (1.7778) at 1024×640, 494.219×277.992 (1.7778) at 844×390, and 1280×720
+  (1.7778) at 1440×900. Canvas and stage rectangles agree and page scroll
+  dimensions equal the viewport. Fresh screenshots and logs are under
+  `docs/superpowers/reports/2026-08-09-game-wide-integrity/after/task8-*`.
+
+### VIS-010: Input retained across pause/fullscreen transitions (Task 8)
+
+- Status: 🟩 Complete for automated and controllable-browser paths
+- Priority: 🟥 Critical
+- Location: shared keyboard/touch lifecycle
+- Reproduction: `changeScreen` changed overlays without clearing held and
+  newly pressed input. A touch control could unmount during pause before its
+  release event, and the in-app browser demonstrated that fullscreen exit can
+  update through the control handler even when the expected event is delayed.
+- Fix: every screen transition clears both input sets, and the fullscreen
+  control independently applies the same interruption predicate used by the
+  browser-experience subscription. Orientation-lock rejection remains
+  non-blocking.
+- Verification: focused capability/input/shell tests pass. Browser fullscreen
+  entry/exit at 1024×640 returned to the same Level 2 run in the paused
+  `Snack break` state with empty warning/error logs; resume plus resize retained
+  score, time, lives, and active play state.
+- Limitation: real multi-touch, safe-area cutouts, native orientation lock,
+  browser background/restore, and iOS/Android fullscreen behavior remain
+  **CANNOT VERIFY** until the manual device checklist in the Task 8 report is
+  completed. Static CSS/desktop-pointer evidence is not promoted to touch PASS.
+
 Spatial validity is not sufficient. Every generated or placed asset must also
 pass a visual composition review.
 

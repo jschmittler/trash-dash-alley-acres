@@ -41,6 +41,11 @@ export function clearInputState(heldKeys, pressedKeys) {
   pressedKeys.clear();
 }
 
+export function shouldInterruptBrowserExperience(previous, next) {
+  return previous.portrait !== next.portrait
+    || (previous.fullscreen && !next.fullscreen);
+}
+
 export async function toggleGameFullscreen(target, browserDocument, orientation) {
   try {
     if (browserDocument.fullscreenElement) {

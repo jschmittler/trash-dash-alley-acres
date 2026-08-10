@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   clearInputState,
   readBrowserExperience,
+  shouldInterruptBrowserExperience,
   subscribeBrowserExperience,
   toggleGameFullscreen,
 } from "./mobile-experience.mjs";
@@ -888,6 +889,7 @@ export function TrashDashGame() {
   const [campaignContinuationAvailable, setCampaignContinuationAvailable] = useState(false);
 
   const changeScreen = useCallback((next: Screen) => {
+    clearInputState(keysRef.current, pressedRef.current);
     if (next !== "playing") pauseGameMusic(musicRef.current);
     screenRef.current = next;
     setScreen(next);
@@ -1191,12 +1193,14 @@ export function TrashDashGame() {
   const handleFullscreen = useCallback(async () => {
     if (fullscreenPendingRef.current) return;
     fullscreenPendingRef.current = true;
+    const previous = browserExperienceRef.current;
     await toggleGameFullscreen(cabinetRef.current, document, window.screen.orientation);
     fullscreenPendingRef.current = false;
     const next = readBrowserExperience(window, document);
     browserExperienceRef.current = next;
     setBrowserExperience(next);
-  }, []);
+    if (shouldInterruptBrowserExperience(previous, next)) interruptGame();
+  }, [interruptGame]);
 
   useEffect(() => {
     const storedScore = Number(window.localStorage.getItem("trash-dash-high-score") ?? 0);
@@ -1287,7 +1291,7 @@ export function TrashDashGame() {
       browserExperienceRef.current = next;
       setBrowserExperience(next);
 
-      if (initialized && (previous.portrait !== next.portrait || (previous.fullscreen && !next.fullscreen))) {
+      if (initialized && shouldInterruptBrowserExperience(previous, next)) {
         interruptGame();
       }
       initialized = true;

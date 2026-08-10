@@ -200,9 +200,11 @@ button {
 
 .game-stage {
   position: relative;
-  width: 100%;
+  width: min(100%, calc((100svh - 112px) * 16 / 9));
+  width: min(100%, calc((100dvh - 112px) * 16 / 9));
+  height: auto;
+  justify-self: center;
   aspect-ratio: 16 / 9;
-  max-height: calc(100svh - 112px);
   overflow: hidden;
   border-radius: 16px;
   background: var(--sky);
