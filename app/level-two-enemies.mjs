@@ -58,22 +58,8 @@ export function levelTwoEnemyDrawRect(enemy, renderX = enemy.x) {
 }
 
 const SQUIRREL_TELL = 0.48;
-export const TERRIER_SEQUENCE_DURATIONS = Object.freeze({
-  wake: 4 / 7,
-  impact: 2 / 9,
-  recover: 4 / 7,
-});
-
-const TERRIER_TELL = TERRIER_SEQUENCE_DURATIONS.wake;
 const SKUNK_TELL = 0.52;
 const MOTH_TELL = 0.42;
-
-export const ATTACK_TELLS = Object.freeze({
-  squirrel: SQUIRREL_TELL,
-  terrier: TERRIER_TELL,
-  skunk: SKUNK_TELL,
-  moth: MOTH_TELL,
-});
 
 export const SQUIRREL_THROW = Object.freeze({
   anticipation: SQUIRREL_TELL,
@@ -356,6 +342,25 @@ export const LEVEL_TWO_ENEMY_ANIMATIONS = Object.freeze({
   }),
 });
 
+export function levelTwoEnemyAnimationDuration(animationState) {
+  return animationState.frames / animationState.fps;
+}
+
+export const TERRIER_SEQUENCE_DURATIONS = Object.freeze({
+  wake: levelTwoEnemyAnimationDuration(LEVEL_TWO_ENEMY_ANIMATIONS.terrier.wake),
+  impact: levelTwoEnemyAnimationDuration(LEVEL_TWO_ENEMY_ANIMATIONS.terrier.impact),
+  recover: levelTwoEnemyAnimationDuration(LEVEL_TWO_ENEMY_ANIMATIONS.terrier.recover),
+});
+
+const TERRIER_TELL = TERRIER_SEQUENCE_DURATIONS.wake;
+
+export const ATTACK_TELLS = Object.freeze({
+  squirrel: SQUIRREL_TELL,
+  terrier: TERRIER_TELL,
+  skunk: SKUNK_TELL,
+  moth: MOTH_TELL,
+});
+
 export const LEVEL_TWO_ENEMY_STATE_ANIMATION_KEYS = Object.freeze({
   squirrel: Object.freeze({
     idle: "locomotion", "throw-anticipation": "anticipation", "throw-release": "release",
@@ -382,34 +387,69 @@ export function enemyAnimationFrame(animationState, elapsed) {
 }
 
 export function beginLevelTwoEnemyHit(enemy) {
+  const hitDuration = levelTwoEnemyAnimationDuration(levelTwoEnemyAnimation(enemy.kind, "hit"));
+  const defeatDuration = levelTwoEnemyAnimationDuration(levelTwoEnemyAnimation(enemy.kind, "defeated"));
   return {
     ...enemy,
     behaviorState: "defeated",
     visualState: "hit",
-    visualTimer: 0.18,
+    visualTimer: hitDuration,
     stateElapsed: 0,
-    actionTimer: 0.55,
+    actionTimer: hitDuration + defeatDuration,
     vx: 0,
   };
 }
 
 export function advanceLevelTwoEnemyPlayback(enemy, dt) {
-  const visualTimer = Math.max(0, (enemy.visualTimer ?? 0) - dt);
-  const visualExpired = Boolean(enemy.visualState) && visualTimer === 0;
+  let remaining = Math.max(0, dt);
+  let visualState = enemy.visualState ?? null;
+  let visualTimer = enemy.visualTimer ?? 0;
+  let stateElapsed = enemy.stateElapsed ?? 0;
+  let actionTimer = enemy.actionTimer ?? 0;
+  const decrease = (timer, amount) => {
+    const next = timer - amount;
+    return next <= 1e-9 ? 0 : next;
+  };
+
+  if (visualState) {
+    const visualStep = Math.min(remaining, visualTimer);
+    visualTimer = decrease(visualTimer, visualStep);
+    stateElapsed += visualStep;
+    remaining -= visualStep;
+    if (enemy.behaviorState === "defeated") actionTimer = decrease(actionTimer, visualStep);
+    if (visualTimer === 0) {
+      visualState = null;
+      stateElapsed = 0;
+      if (enemy.behaviorState === "defeated") {
+        actionTimer = levelTwoEnemyAnimationDuration(levelTwoEnemyAnimation(enemy.kind, "defeated"));
+      }
+    }
+  }
+  if (remaining > 0 || !enemy.visualState) {
+    stateElapsed += remaining;
+    if (enemy.behaviorState === "defeated") actionTimer = decrease(actionTimer, remaining);
+  }
+
   return {
     ...enemy,
-    visualState: visualExpired ? null : enemy.visualState ?? null,
+    visualState,
     visualTimer,
-    stateElapsed: visualExpired ? 0 : (enemy.stateElapsed ?? 0) + dt,
+    stateElapsed,
+    actionTimer,
   };
 }
 
-export function applyLevelTwoBehaviorTransition(enemy, state) {
+export function applyLevelTwoBehaviorTransition(enemy, state, actionTimer = enemy.actionTimer) {
   return {
     ...enemy,
     behaviorState: state,
-    stateElapsed: state !== enemy.behaviorState && !enemy.visualState ? 0 : enemy.stateElapsed,
+    actionTimer,
+    stateElapsed: state !== enemy.behaviorState ? 0 : enemy.stateElapsed,
   };
+}
+
+export function beginLevelTwoTerrierWake(enemy) {
+  return applyLevelTwoBehaviorTransition(enemy, "wake", TERRIER_SEQUENCE_DURATIONS.wake);
 }
 
 export function levelTwoEnemyAnimation(kind, state) {

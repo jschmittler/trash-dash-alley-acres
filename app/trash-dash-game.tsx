@@ -107,6 +107,7 @@ import {
   advanceLevelTwoEnemyPlayback,
   applyLevelTwoBehaviorTransition,
   beginLevelTwoEnemyHit,
+  beginLevelTwoTerrierWake,
   enemyAnimationFrame,
   facingFromVelocity,
   LEVEL_TWO_ENEMY_COLLISION,
@@ -1937,7 +1938,6 @@ export function TrashDashGame() {
         if (enemy.kind !== "boss") {
           if (levelTwoEnemyKinds.has(enemy.kind)) {
             if (enemy.behaviorState === "defeated") {
-              enemy.actionTimer = Math.max(0, enemy.actionTimer - dt);
               if (enemy.actionTimer === 0) enemy.active = false;
               continue;
             }
@@ -1982,8 +1982,11 @@ export function TrashDashGame() {
               flightY: mothLight?.y ?? enemy.surfaceY - enemy.h,
               flightBand,
             });
-            Object.assign(enemy, applyLevelTwoBehaviorTransition(enemy, next.state));
-            enemy.actionTimer = next.timer ?? enemy.actionTimer;
+            Object.assign(enemy, applyLevelTwoBehaviorTransition(
+              enemy,
+              next.state,
+              next.timer ?? enemy.actionTimer,
+            ));
             enemy.x = next.x ?? enemy.x;
             enemy.y = enemy.kind === "moth" ? next.y ?? enemy.y : enemy.surfaceY - enemy.h;
             enemy.vx = next.vx ?? enemy.vx;
@@ -2000,8 +2003,7 @@ export function TrashDashGame() {
               if (intersects(player, sprayRect)) player.vx = enemy.facing > 0 ? -280 : 280;
               for (const other of world.enemies) {
                 if (other.kind === "terrier" && other.behaviorState === "sleep" && intersects(other, sprayRect)) {
-                  other.behaviorState = "wake";
-                  other.actionTimer = 0.5;
+                  Object.assign(other, beginLevelTwoTerrierWake(other));
                 }
               }
             }
@@ -2670,7 +2672,7 @@ export function TrashDashGame() {
       context.globalAlpha = 1;
 
       if (debugVisuals) {
-        // Developer-only rendered QA: collision (cyan), visible destination
+        // Developer-only rendered QA: collision (cyan), render destination
         // bounds (yellow), ground/action anchors (magenta), and authored
         // support geometry (blue). Normal gameplay never enters this branch.
         context.save();
@@ -2693,13 +2695,25 @@ export function TrashDashGame() {
           context.strokeRect(x, enemy.y, enemy.w, enemy.h);
           context.fillStyle = "#ff58d4";
           context.fillRect(x + enemy.w / 2 - 2, enemy.y + enemy.h - 2, 4, 4);
-          context.fillStyle = "rgba(7, 20, 28, 0.82)";
-          context.fillRect(x, enemy.y - 14, Math.max(58, (enemy.visualState ?? enemy.animationState ?? enemy.kind).length * 6 + 6), 13);
-          context.fillStyle = "#fff8b5";
           const debugState = levelTwoEnemyKinds.has(enemy.kind)
             ? enemy.visualState ?? enemy.behaviorState
             : enemy.visualState ?? enemy.animationState;
-          context.fillText(`${enemy.kind}:${debugState ?? "move"}`, x + 3, enemy.y - 13);
+          let debugLabel = `${enemy.kind}:${debugState ?? "move"}`;
+          if (levelTwoEnemyKinds.has(enemy.kind)) {
+            const renderBounds = levelTwoEnemyDrawRect(enemy, x);
+            context.strokeStyle = "#ffe45f";
+            context.strokeRect(renderBounds.x, renderBounds.y, renderBounds.w, renderBounds.h);
+            context.strokeStyle = "#ff58d4";
+            context.beginPath();
+            context.moveTo(renderBounds.x, enemy.y + enemy.h);
+            context.lineTo(renderBounds.x + renderBounds.w, enemy.y + enemy.h);
+            context.stroke();
+            debugLabel += ` render:${renderBounds.w}x${renderBounds.h} collision:${enemy.w}x${enemy.h} facing:${enemy.facing}`;
+          }
+          context.fillStyle = "rgba(7, 20, 28, 0.82)";
+          context.fillRect(x, enemy.y - 14, Math.max(58, debugLabel.length * 6 + 6), 13);
+          context.fillStyle = "#fff8b5";
+          context.fillText(debugLabel, x + 3, enemy.y - 13);
         }
         const visualX = playerX + player.w / 2 - drawW / 2;
         const visualY = player.y + player.h - drawH + playerAnimation.offsetY;

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -9,6 +10,7 @@ import * as enemies from "../app/level-two-enemies.mjs";
 const CELL = 192;
 const SOURCE = fileURLToPath(new URL("../concepts/level-two/source/terrier-motion-source.png", import.meta.url));
 const ATLAS = fileURLToPath(new URL("../public/assets/generated/level2-enemy-motion.png", import.meta.url));
+const GAME_SOURCE = fileURLToPath(new URL("../app/trash-dash-game.tsx", import.meta.url));
 
 async function alphaBoundsByCell(path, rows, columns = 4) {
   const { data, info } = await sharp(path).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -124,7 +126,7 @@ test("terrier runtime draw geometry is invariant across state and facing", () =>
   }
 });
 
-test("wake, impact, and recover are clamped state-local one-shots", () => {
+test("every terrier one-shot is clamped and owns its exact declared duration", () => {
   const { terrier } = enemies.LEVEL_TWO_ENEMY_ANIMATIONS;
   for (const state of [terrier.wake, terrier.impact, terrier.recover, terrier.hit, terrier.defeat]) {
     assert.equal(state.loop, false);
@@ -133,9 +135,80 @@ test("wake, impact, and recover are clamped state-local one-shots", () => {
       (state.startFrame ?? 0) + state.frames - 1,
     );
   }
-  assert.ok(enemies.TERRIER_SEQUENCE_DURATIONS.wake >= terrier.wake.frames / terrier.wake.fps);
-  assert.ok(enemies.TERRIER_SEQUENCE_DURATIONS.impact >= terrier.impact.frames / terrier.impact.fps);
-  assert.ok(enemies.TERRIER_SEQUENCE_DURATIONS.recover >= terrier.recover.frames / terrier.recover.fps);
+  assert.equal(enemies.TERRIER_SEQUENCE_DURATIONS.wake, terrier.wake.frames / terrier.wake.fps);
+  assert.equal(enemies.TERRIER_SEQUENCE_DURATIONS.impact, terrier.impact.frames / terrier.impact.fps);
+  assert.equal(enemies.TERRIER_SEQUENCE_DURATIONS.recover, terrier.recover.frames / terrier.recover.fps);
+});
+
+test("production damage playback completes hit then defeat without truncating either one-shot", () => {
+  for (const kind of ["squirrel", "terrier", "skunk", "moth"]) {
+    const hitAnimation = enemies.LEVEL_TWO_ENEMY_ANIMATIONS[kind].hit;
+    const defeatAnimation = enemies.LEVEL_TWO_ENEMY_ANIMATIONS[kind].defeat;
+    const hitDuration = hitAnimation.frames / hitAnimation.fps;
+    const defeatDuration = defeatAnimation.frames / defeatAnimation.fps;
+    const epsilon = 1e-6;
+
+    let actor = enemies.beginLevelTwoEnemyHit({
+      kind,
+      behaviorState: "idle",
+      stateElapsed: 99,
+      actionTimer: 0,
+    });
+    assert.equal(actor.visualTimer, hitDuration, `${kind} hit timer`);
+    assert.equal(actor.actionTimer, hitDuration + defeatDuration, `${kind} complete reaction budget`);
+
+    actor = enemies.advanceLevelTwoEnemyPlayback(actor, hitDuration - epsilon);
+    assert.equal(actor.visualState, "hit", `${kind} holds hit until its exact end`);
+    assert.equal(
+      enemies.enemyAnimationFrame(hitAnimation, actor.stateElapsed),
+      hitAnimation.frames - 1,
+      `${kind} reaches the final hit cell`,
+    );
+
+    actor = enemies.advanceLevelTwoEnemyPlayback(actor, epsilon);
+    assert.equal(actor.visualState, null, `${kind} reveals defeat at the hit boundary`);
+    assert.equal(actor.stateElapsed, 0, `${kind} defeat owns a fresh local timer`);
+    assert.equal(actor.actionTimer, defeatDuration, `${kind} retains the full defeat duration`);
+
+    actor = enemies.advanceLevelTwoEnemyPlayback(actor, defeatDuration - epsilon);
+    assert.ok(actor.actionTimer > 0, `${kind} remains active through the last defeat cell`);
+    assert.equal(
+      enemies.enemyAnimationFrame(defeatAnimation, actor.stateElapsed),
+      defeatAnimation.frames - 1,
+      `${kind} reaches the final defeat cell`,
+    );
+
+    actor = enemies.advanceLevelTwoEnemyPlayback(actor, epsilon);
+    assert.equal(actor.actionTimer, 0, `${kind} completes at the exact authored boundary`);
+  }
+});
+
+test("skunk spray wake uses the canonical transition owner and resets stale elapsed time", async () => {
+  const sleeping = {
+    kind: "terrier",
+    behaviorState: "sleep",
+    actionTimer: 0,
+    stateElapsed: 99,
+    visualState: null,
+  };
+  const waking = enemies.beginLevelTwoTerrierWake(sleeping);
+  assert.equal(waking.behaviorState, "wake");
+  assert.equal(waking.actionTimer, enemies.TERRIER_SEQUENCE_DURATIONS.wake);
+  assert.equal(waking.stateElapsed, 0);
+
+  const source = await readFile(GAME_SOURCE, "utf8");
+  assert.match(source, /Object\.assign\(other, beginLevelTwoTerrierWake\(other\)\)/);
+  assert.doesNotMatch(source, /other\.behaviorState\s*=\s*["']wake["']/);
+  assert.doesNotMatch(source, /other\.actionTimer\s*=\s*0\.5/);
+});
+
+test("debug renderer distinguishes the 82px destination from terrier collision", async () => {
+  const source = await readFile(GAME_SOURCE, "utf8");
+  const debugBranch = source.slice(source.indexOf("if (debugVisuals)"));
+  assert.match(debugBranch, /const renderBounds = levelTwoEnemyDrawRect\(enemy, x\)/);
+  assert.match(debugBranch, /strokeRect\(renderBounds\.x, renderBounds\.y, renderBounds\.w, renderBounds\.h\)/);
+  assert.match(debugBranch, /render:\$\{renderBounds\.w\}x\$\{renderBounds\.h\}/);
+  assert.match(debugBranch, /collision:\$\{enemy\.w\}x\$\{enemy\.h\}/);
 });
 
 test("terrier completes three sleep-wake-charge-impact-recover-charge cycles across both facings", () => {

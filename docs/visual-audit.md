@@ -963,3 +963,15 @@ worktree-preservation evidence is recorded in
   rectangle, stable foot contact, and no size/position pop. Both route-scoped
   warning/error logs were empty. Evidence:
   `.superpowers/sdd/2026-08-10-trash-dash-v2-failed-visual-audit-remediation/task-3-runtime-contact-sheet.jpg`.
+- **Fix Round 1:** review reopened two production paths and the evidence claim.
+  Damage playback now derives terrier hit (`2/9s`) and defeat (`2/5s`) from
+  animation metadata, resets local elapsed time at their boundary, and retains
+  both complete final cells. Skunk spray wake now uses the shared transition
+  owner with the canonical `4/7s` wake duration and a forced elapsed reset.
+  Debug rendering separately identifies the cyan 64×42 collision rectangle,
+  yellow 82×82 renderer destination, magenta support anchor/line, state, and
+  facing. Mutation tests cover all three repaired paths. The original 12-sample
+  artifact does not prove three complete consecutive cycles; a fresh runtime
+  recapture is **CANNOT VERIFY** because browser selection returned `No browser
+  is available` after the local server started. Focused tests passed 39/39 and
+  the shared build/default gate passed 305/305; no new runtime PASS is claimed.

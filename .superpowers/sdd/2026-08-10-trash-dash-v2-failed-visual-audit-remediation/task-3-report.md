@@ -141,3 +141,62 @@ The shared dirty worktree also passed its then-current 296-test default matrix b
 Only Task 3 files/hunks were staged. The unrelated crate-position and formatting edits in `app/trash-dash-game.tsx`, the unrelated `tests/rendered-html.test.mjs` edit, and all unrelated untracked work remain unstaged and preserved.
 
 No implementation blocker remains. The only verification note is the existing lint warning for a separate `<img>` element; Task 3 adds no lint error or warning.
+
+## Fix Round 1 — review findings I1–I3
+
+This section supersedes the original runtime-evidence claim where the review found it insufficient. Code findings I1 and I2 are fixed. Finding I3's debug instrumentation is fixed and mutation-tested, but new running-game evidence is **CANNOT VERIFY** because the in-app browser returned `No browser is available`; the historical 12-sample contact sheet remains incomplete evidence and is not relabeled as proof.
+
+### RED evidence
+
+Before the correction, the focused command
+
+```text
+node --test tests/terrier-animation-integrity.test.mjs tests/level-two-enemies.test.mjs
+```
+
+reported **28 passed / 3 expected failures**:
+
+- the production damage path exposed `0.18s` for a `2/9s` hit one-shot and did not reserve a complete defeat duration;
+- no canonical spray-wake transition helper existed, leaving the direct `behaviorState = "wake"` / `actionTimer = 0.5` mutation reachable;
+- the developer overlay drew only collision geometry and did not expose the renderer's destination rectangle or distinct dimension labels.
+
+### I1 — exact animation-owned hit and defeat timing
+
+- `levelTwoEnemyAnimationDuration` now derives duration directly from each animation's `frames / fps` metadata.
+- Terrier wake, impact, and recover timers are derived from their declared animations rather than separately repeated literals.
+- `beginLevelTwoEnemyHit` reserves the complete hit plus defeat durations for every Level 2 enemy family.
+- `advanceLevelTwoEnemyPlayback` owns the damage reaction countdown, clamps timer subtraction, carries an oversized step across the hit boundary, resets `stateElapsed` to zero for defeat, and snaps the remaining budget to the exact declared defeat duration.
+- Runtime no longer decrements the defeated action timer a second time outside the playback owner.
+- Mutation-sensitive tests step to immediately before, exactly at, and immediately after both boundaries, proving that the final hit and defeat cells are reached without early removal.
+
+For the terrier, hit owns exactly `2/9s` and defeat then owns a fresh `2/5s`.
+
+### I2 — shared spray-wake transition ownership
+
+- `applyLevelTwoBehaviorTransition` now owns both the next `actionTimer` and the required state-local elapsed reset.
+- `beginLevelTwoTerrierWake` binds wake to the canonical metadata-derived `4/7s` duration.
+- The skunk spray integration calls `Object.assign(other, beginLevelTwoTerrierWake(other))`; the direct half-second state/timer mutation was removed.
+- The regression starts from a sleeping terrier with stale `stateElapsed: 99`, asserts `wake`, exact `4/7s`, and `stateElapsed: 0`, and source-checks that the production spray route cannot regress to either direct assignment.
+
+### I3 — honest render/collision instrumentation and evidence status
+
+Development debug rendering now shows:
+
+- cyan: the terrier's 64×42 collision rectangle;
+- yellow: the actual 82×82 result of `levelTwoEnemyDrawRect` used by the Canvas renderer;
+- magenta: bottom-center anchor plus the support/ground line;
+- label: behavior/visual state, `render:82x82`, `collision:64x42`, and facing.
+
+Tests bind the debug branch to the authoritative draw helper and both dimension labels. This corrects the prior misidentification of the cyan collision box as render geometry.
+
+The required fresh cache-busted playthrough capture of three complete cycles, both facings, and consecutive transition frames could not be produced in this round: after the local server started on `http://localhost:3001`, browser selection returned `No browser is available`. Per the Visual QA completion rule, the renderer-level evidence remains **CANNOT VERIFY**, not PASS. No static fixture, old screenshot, or pure state-machine trace is used to upgrade that status.
+
+### Fix-round verification
+
+- Focused animation/runtime matrix: **39/39 passed**.
+- Shared worktree `npm test`: production build passed; canonical skill tests **5/5**; default suite **305/305**.
+- Shared worktree `npm run lint`: **0 errors**, one pre-existing Next.js `<img>` performance warning.
+- Exact staged snapshot `npm test`: production build passed; canonical skill tests **5/5**; default suite **304/304**. The shared worktree's additional passing test belongs to the deliberately unstaged `tests/rendered-html.test.mjs` edit.
+- Exact staged snapshot `npm run lint`: **0 errors**, the same pre-existing Next.js `<img>` warning.
+- `git diff --cached --check`: passed.
+- Source art and deterministic atlas bytes were unchanged by this correction.
