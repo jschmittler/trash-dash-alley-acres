@@ -76,6 +76,30 @@ Representative evidence:
 Evidence directory:
 `docs/superpowers/reports/2026-08-09-game-wide-integrity/after/`.
 
+### Corrected 844×390 evidence (review fix round 1)
+
+After review commit `243713d` identified four stale pre-fix captures, the
+controller recaptured and replaced the Level 1 park, Level 1 boss, Brutus, and
+Level 2 victory files after the final CSS. Each fresh route used its own
+`visualQa=...-final` URL and produced the same inspected geometry:
+
+- viewport: 844×390;
+- stage: `x=174.890625`, `y=88`, `width=494.21875`,
+  `height=277.9921875`, ratio `1.7778152488547903`;
+- canvas: the identical rectangle and ratio;
+- document scroll dimensions: 844×390; and
+- route-scoped `warn`/`warning`/`error` logs: `[]`.
+
+The replaced files are `task8-level1-landscape-844x390.png`,
+`task8-boss1-landscape-844x390.png`,
+`task8-brutus-landscape-844x390.png`, and
+`task8-victory2-landscape-844x390.png`. Visual inspection confirms a centered,
+uncropped cabinet with no viewport overflow in all four captures. PNG pixel
+dimensions alone cannot prove the internal stage aspect ratio; the inspected
+stage/canvas DOM rectangles above are the primary geometry evidence, with the
+screenshots serving as corroborating visual evidence. No runtime or test code
+changed in this evidence-only review fix.
+
 ## Capability boundary
 
 The selected browser reported `touchFirst: false` at every viewport. Therefore:

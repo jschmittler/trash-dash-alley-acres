@@ -630,9 +630,16 @@ Browser diagnostics:
   gameplay geometry, sprite scale, or per-screen offsets.
 - Verification: browser measurements after the final change are 938.664×527.992
   (1.7778) at 1024×640, 494.219×277.992 (1.7778) at 844×390, and 1280×720
-  (1.7778) at 1440×900. Canvas and stage rectangles agree and page scroll
-  dimensions equal the viewport. Fresh screenshots and logs are under
-  `docs/superpowers/reports/2026-08-09-game-wide-integrity/after/task8-*`.
+  (1.7778) at 1440×900. In the controller's post-review recapture of Level 1
+  park, Level 1 boss, Brutus, and Level 2 victory, every 844×390 route measured
+  `x=174.890625`, `y=88`, `width=494.21875`, `height=277.9921875`, ratio
+  `1.7778152488547903`; the canvas matched exactly, document scroll dimensions
+  were 844×390, and route-scoped warning/error logs were empty. The four
+  corrected screenshots are the corresponding
+  `task8-{level1,boss1,brutus,victory2}-landscape-844x390.png` files under the
+  Task 8 evidence directory. DOM rectangles are the primary aspect-ratio
+  evidence because PNG dimensions alone cannot establish the internal stage
+  geometry; the screenshots corroborate centering, clipping, and overflow.
 
 ### VIS-010: Input retained across pause/fullscreen transitions (Task 8)
 
