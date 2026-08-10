@@ -243,6 +243,7 @@ interface Enemy extends Rect {
   ragePlayed: boolean;
   rageQueued: boolean;
   behaviorState: string;
+  resumeFacing?: 1 | -1 | null;
   surfaceId?: string;
   flightBand?: string;
   sprayActive: boolean;
@@ -2012,6 +2013,7 @@ export function TrashDashGame() {
             enemy.x = next.x ?? enemy.x;
             enemy.y = enemy.kind === "moth" ? next.y ?? enemy.y : enemy.surfaceY - enemy.h;
             enemy.vx = next.vx ?? enemy.vx;
+            if ("resumeFacing" in next) enemy.resumeFacing = next.resumeFacing;
             enemy.sprayActive = next.sprayActive ?? false;
             enemy.phase = next.phase ?? enemy.phase;
             enemy.facing = facingFromVelocity(enemy.vx, enemy.facing);

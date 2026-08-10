@@ -256,3 +256,16 @@ The repeated fixture now performs three complete `sit → wake → charge → hi
 - `git diff --cached --check`: passed.
 - Source art and generated atlas files were unchanged.
 - Browser/runtime QA was not required for this code finding and is not newly claimed. The earlier final-code continuous-playthrough limitations remain **CANNOT VERIFY / INCOMPLETE** until the deferred normal gameplay pass is performed.
+
+## Final Fix Round 2 — production impact-direction propagation
+
+The final rereview found one integration seam left open after the semantic lifecycle fix: `updateTerrier` returned `resumeFacing`, but the production update boundary discarded that field before recovery consumed it. A new mutation-sensitive source/runtime-equivalent regression failed RED at **35 passed / 1 expected failure**, proving the runtime contract and copy were absent.
+
+The production `Enemy` contract now owns optional `resumeFacing`, and the update boundary copies the field whenever the behavior result explicitly owns it. The presence check intentionally preserves actors whose behavior does not return the field while also allowing terrier recovery to clear it with an explicit `null`. The regression carries a right-facing charge through wall impact, verifies `resumeFacing === -1` survives into recovery, and verifies the final charge is left-facing at `vx === -420`.
+
+- Focused GREEN: **36/36 passed**.
+- Exact staged snapshot `npm test`: production build passed; canonical skill tests **5/5**; default suite **319/319**.
+- Exact staged snapshot `npm run lint`: **0 errors**, one pre-existing Next.js `<img>` performance warning.
+- `git diff --cached --check`: passed.
+- No atlas, cell, timer, draw-size, or anchor changes were made.
+- No browser/runtime QA is newly claimed or required for this scoped integration correction.

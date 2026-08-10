@@ -215,6 +215,53 @@ test("wall impact remains distinct and reverses after its own recovery", () => {
   assert.equal(actor.vx, -420);
 });
 
+test("production update boundary preserves wall reversal through recovery", async () => {
+  const source = await readFile(GAME_SOURCE, "utf8");
+  assert.match(source, /resumeFacing\??:\s*1\s*\|\s*-1\s*\|\s*null/);
+  assert.match(source, /if \("resumeFacing" in next\) enemy\.resumeFacing = next\.resumeFacing/);
+
+  const context = { patrolMinX: 200, patrolMaxX: 600, playerInRange: true, playerX: 900 };
+  let runtime = {
+    state: "charge",
+    x: 300,
+    y: 426,
+    w: 64,
+    h: 42,
+    vx: 420,
+    facing: 1,
+    timer: 0,
+    resumeFacing: null,
+  };
+  const applyProductionBoundary = (next) => {
+    runtime = {
+      ...runtime,
+      state: next.state,
+      timer: next.timer,
+      x: next.x ?? runtime.x,
+      vx: next.vx ?? runtime.vx,
+      facing: (next.vx ?? runtime.vx) < 0 ? -1 : (next.vx ?? runtime.vx) > 0 ? 1 : runtime.facing,
+      resumeFacing: "resumeFacing" in next ? next.resumeFacing : runtime.resumeFacing,
+    };
+  };
+
+  applyProductionBoundary(enemies.updateTerrier(runtime, { ...context, dt: 0.1, obstacleHit: true }));
+  assert.equal(runtime.state, "impact");
+  assert.equal(runtime.resumeFacing, -1);
+  applyProductionBoundary(enemies.updateTerrier(runtime, {
+    ...context,
+    dt: enemies.TERRIER_SEQUENCE_DURATIONS.impact,
+  }));
+  assert.equal(runtime.state, "recover");
+  assert.equal(runtime.resumeFacing, -1);
+  applyProductionBoundary(enemies.updateTerrier(runtime, {
+    ...context,
+    dt: enemies.TERRIER_SEQUENCE_DURATIONS.recover,
+  }));
+  assert.equal(runtime.state, "charge");
+  assert.equal(runtime.facing, -1);
+  assert.equal(runtime.vx, -420);
+});
+
 test("production damage playback completes hit then defeat without truncating either one-shot", () => {
   for (const kind of ["squirrel", "terrier", "skunk", "moth"]) {
     const hitAnimation = enemies.LEVEL_TWO_ENEMY_ANIMATIONS[kind].hit;
