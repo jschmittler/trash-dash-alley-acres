@@ -27,6 +27,16 @@ Result: **DONE_WITH_CONCERNS**
 - Browser: canonical routes 27/27 PASS for static load/render integrity and
   clean route-scoped logs; Jimothy matrix 4/4 PASS.
 
+## Review correction
+
+Review commit `2bcd3bf` found that nine evidence files named `-1440x900.png`
+contained 1280×720 PNGs. The in-app browser was disconnected during this fix
+round, so the approved truthful fallback was used: all nine files were renamed
+to `-1280x720.png`, their dimensions were verified from the bytes, and every
+affected audit/report viewport claim was narrowed. The final report now owns an
+exact per-route file/dimension/log table and states that no per-route DOM
+rectangle was retained for those captures. No runtime file changed.
+
 ## Files in the scoped close
 
 - `docs/visual-audit.md`
@@ -47,6 +57,8 @@ Commit: `docs: close game-wide integrity audit` (hash supplied in handoff).
   restarted in a fresh tab and completed without that nonessential measure.
 - Evidence paths, counts, measurements, hashes, and warnings were transcribed
   from the observed commands/browser session.
+- Every `task10-*` filename now agrees with its PNG byte dimensions; no
+  1280×720 capture is presented as 1440×900 evidence.
 - Staging is restricted to Task 10 documentation and `task10-*` evidence.
 
 ## Concerns

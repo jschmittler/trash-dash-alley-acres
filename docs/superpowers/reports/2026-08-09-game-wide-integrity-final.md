@@ -42,10 +42,12 @@ shared repository check above is authoritative.
 
 ## Browser route ledger
 
-Protocol: 1440×900, title → **Start rummaging** → **Start as Trashy**, then
-the exact canonical URL. A first attempt included an optional canvas-locator
-measurement; after that locator timed out, the sweep was restarted in a fresh
-tab without the optional measurement. Route verification itself completed.
+Protocol: browser controller → title → **Start rummaging** → **Start as
+Trashy** → exact canonical URL. A first attempt included an optional
+canvas-locator measurement; after that locator timed out, the sweep was
+restarted in a fresh tab without the optional measurement. The session did not
+persist a per-route outer-viewport/DOM ledger, so this sweep proves static
+route loading and rendered integrity, not one uniform 1440×900 viewport.
 
 | Family | Routes | Result |
 | --- | --- | --- |
@@ -65,7 +67,7 @@ Alternate-character static matrix: Jimothy `start`, `squirrel`, `Brutus`, and
 
 | Sample | Measured stage/canvas | Result |
 | --- | --- | --- |
-| 1440×900 representative routes | 16:9 centered cabinet | PASS |
+| 1440×900 L1-start and four Jimothy PNG captures | Screenshot byte dimensions verified; per-capture DOM rectangle not retained | INCOMPLETE for viewport geometry; PASS for captured static rendering |
 | 1024×640 Level 2 middle | 938.664×527.992; ratio 1.777799 | PASS |
 | 844×390 L1 end/boss and L2 end/boss | 494.219×277.992 at x=174.891, y=88; ratio 1.777815 | PASS; document 844×390; clean logs |
 | 390×844 title | 390×219.375 at x=0, y=52; ratio 1.777778 | PASS; document 390×844; clean logs |
@@ -98,6 +100,29 @@ Task 10 screenshots are under
 `task10-` prefix. They cover L1 start/creek/boss/victory; L2 moth,
 interaction, boss, victory, and smaller desktop; player/enemy state fixtures;
 four 844×390 samples; portrait title; and four Jimothy samples.
+
+Exact controller/browser attribution for the corrected evidence:
+
+| Browser-controlled route/state | Evidence file | PNG bytes | Route logs |
+| --- | --- | --- | --- |
+| Level 1 creek | `task10-l1-creek-1280x720.png` | 1280×720 | `[]` |
+| Level 1 boss | `task10-l1-boss-1280x720.png` | 1280×720 | `[]` |
+| Level 1 victory | `task10-l1-victory-1280x720.png` | 1280×720 | `[]` |
+| Level 2 moth | `task10-l2-moth-1280x720.png` | 1280×720 | `[]` |
+| Level 2 interaction | `task10-l2-interaction-1280x720.png` | 1280×720 | `[]` |
+| Level 2 Brutus | `task10-l2-boss-1280x720.png` | 1280×720 | `[]` |
+| Level 2 victory | `task10-l2-victory-1280x720.png` | 1280×720 | `[]` |
+| Player state fixture | `task10-player-states-1280x720.png` | 1280×720 | `[]` |
+| Enemy state fixture | `task10-enemy-states-1280x720.png` | 1280×720 | `[]` |
+| Level 1 start | `task10-l1-start-1440x900.png` | 1440×900 | `[]` |
+| Jimothy start/squirrel/Brutus/victory | four `task10-jimothy-*-1440x900.png` files | 1440×900 each | `[]` |
+
+These are outer PNG byte dimensions, not inferred stage rectangles. The nine
+misnamed files found by final review were renamed from `-1440x900` to their
+true `-1280x720` dimensions. Because the in-app browser was disconnected
+during the correction pass, no replacement capture or new DOM measurement is
+claimed. The independent 1440×900 16:9 PASS under VIS-009 comes from Task 8's
+recorded 1280×720 stage/canvas DOM measurement, not from these nine PNGs.
 
 Final contact sheets inspected:
 

@@ -117,7 +117,7 @@ Verification:
   and full-world-placement tests pass. The widened full texture uses its
   measured visible bounds for platform exclusion, and the lamp's grounded
   placement shifts 12px so the visible silhouette clears the poolside ledge.
-- Task 10 captured the post-fix moth route at 1440×900. The complete fixture is
+- Task 10 captured the post-fix moth route in a 1280×720 PNG. The complete fixture is
   grounded, uniformly scaled, unobstructed, and produced no warning/error logs.
 
 Screenshot reference:
@@ -216,7 +216,9 @@ Screenshot references:
 ## Baseline evidence — 2026-08-09 game-wide integrity sweep
 
 - The complete `VISUAL_QA_ROUTES` catalog was re-entered through the title and
-  character-selection screens as Trashy at 1440×900. The dedicated
+  character-selection screens as Trashy in the desktop browser. The session
+  did not persist one per-route viewport/DOM ledger, so this is static route
+  coverage rather than a uniform 1440×900 claim. The dedicated
   `l1-park` and `l2-main-street` samples were repeated at 844×390.
 - No new visible defect was reproduced, so no `VIS-###` record was opened and
   no `before/` screenshot was created. This preserves the evidence rule that
@@ -799,24 +801,31 @@ the individual unsupported observation, never as a substitute for failure.
 | Issue | Final status | Closure evidence / remaining limitation |
 | --- | --- | --- |
 | VIS-001 | PASS | Fresh Level 2 interaction fixture and emitter/body contracts show grounded hardware and attached water. |
-| VIS-002 | PASS | Fresh 1440×900 moth fixture shows a uniformly scaled, grounded lamp; console is clean. |
+| VIS-002 | PASS | Fresh 1280×720 moth evidence shows a uniformly scaled, grounded lamp; console is clean. |
 | VIS-003 | PASS | Separated crates pass composition/support tests and final route inspection. |
 | VIS-004 | INCOMPLETE | Contact sheets, manifests, deterministic state routes, and representative boss/enemy frames pass; uninterrupted all-state/all-facing action sequences are CANNOT VERIFY. |
 | VIS-005 | INCOMPLETE | Both character atlases, contact sheets, spawn/debug routes, baselines, and destinations pass; full keyboard-driven state and facing traversal is CANNOT VERIFY. |
 | VIS-006 | INCOMPLETE | Enemy/boss atlases and representative direct fixtures pass; live attack, hit, recovery, defeat, and both-facing sequences are CANNOT VERIFY. |
 | VIS-007 | INCOMPLETE | Level 2 prop/effect runtime repair passes; the separately documented one-pixel decorative tire rounding remains open. |
 | VIS-008 | INCOMPLETE | Automated defeat/release contract and direct boss/victory fixtures pass; continuous player-controlled defeat-to-release is CANNOT VERIFY. |
-| VIS-009 | PASS | 16:9 DOM geometry and uncropped rendering pass at 1440×900, 1024×640, 844×390, and 390×844. |
+| VIS-009 | PASS | Task 8 DOM geometry plus Task 10 responsive checks establish 16:9 and uncropped rendering at 1440×900, 1024×640, 844×390, and 390×844; the nine corrected 1280×720 PNGs are not used as 1440×900 evidence. |
 | VIS-010 | INCOMPLETE | Desktop pause/resume, mute, fullscreen entry/exit, and input clearing pass; real-device touch, safe-area, orientation, and mobile fullscreen are CANNOT VERIFY. |
 
 Canonical route result: PASS for loading and static rendered integrity on all
-27 routes, entered through title and character selection as Trashy at
-1440×900, with zero route-scoped warning/error logs. Jimothy's start,
+27 routes, entered through title and character selection as Trashy in the
+desktop browser, with zero route-scoped warning/error logs. The sweep did not
+retain one per-route viewport ledger. Jimothy's start,
 squirrel, Brutus, and victory fixtures also PASS for static rendered integrity.
 The optional canvas-locator measurement timed out after the first route; the
 route sweep was restarted in a fresh tab without that optional measurement and
 completed. This does not convert continuous normal campaign traversal into a
 PASS.
+
+Evidence correction: review measured nine `task10-*-1440x900.png` files as
+1280×720. They are now named `task10-*-1280x720.png`; the final report records
+their route, byte dimensions, and empty logs individually. The in-app browser
+was disconnected during correction, so no recapture or inferred DOM rectangle
+is claimed.
 
 Required state classification:
 
