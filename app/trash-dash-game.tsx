@@ -50,6 +50,7 @@ import {
   activateBossArena,
   clampArenaBossX as metadataClampArenaBossX,
   clampArenaPlayerX as metadataClampArenaPlayerX,
+  completeBossArena,
   selectBossTestRoute,
 } from "./boss-arena.mjs";
 import {
@@ -1541,7 +1542,10 @@ export function TrashDashGame() {
     const finishBossDefeat = (world: World, boss: Enemy) => {
       boss.active = false;
       boss.vx = 0;
-      world.bossDefeated = true;
+      const completed = completeBossArena();
+      world.arenaActive = completed.arenaActive;
+      world.bossTransition = completed.bossTransition;
+      world.bossDefeated = completed.bossDefeated;
       world.dumpsterRevealStartedAt = world.elapsed;
       setMessage(world, "Alley cleared — depot ahead!", 3);
       tone(420, 0.12);

@@ -655,3 +655,31 @@ pass a visual composition review.
   introduction.
 - Runtime/browser visual observation remains **CANNOT VERIFY**; this repair
   closes the deterministic review findings only.
+
+### 2026-08-09 — Task 6 Level 1 and Trash Heap Tyrant acceptance
+
+- **Baseline:** the required Level 1 definition, route, background, boss-arena,
+  boss-transition, and victory matrix passed 27/27 before Task 6 edits. The
+  broader deterministic route/lifecycle matrix passed 89/89 and covered both
+  playable profiles, damage/shrink, terminal and non-terminal pits, pickups,
+  state-local player/enemy/boss animation, parallax transitions, placement,
+  boss geometry, the dumpster reveal, and the explicit `YOU WIN!` shell.
+- **VIS-008 — Level 1 boss arena did not release after defeat:** static runtime
+  investigation reproduced that `finishBossDefeat` marked the Trash Heap
+  Tyrant defeated but left `arenaActive` true. The player and camera therefore
+  remained arena-locked after the committed defeat sequence instead of being
+  released into the reward/exit flow. A RED regression first failed on the
+  missing completion contract. `completeBossArena` now clears the arena lock
+  and transition while setting `bossDefeated`; the runtime invokes it only
+  after the 0.9-second defeat state reaches `finishBossDefeat`. Focused boss,
+  transition, animation, dumpster, and victory tests pass 28/28 after repair.
+- **Runtime limitation:** localhost could not be started inside the sandbox
+  because the development inspector failed with `listen EPERM`; the escalated
+  restart did not complete before the approval attempt was aborted. No browser
+  session was initialized, and no retry was made after the control path hung.
+  Normal Trashy/Jimothy traversal, live movement/action/facing sequences,
+  visual parallax motion, boss combat, post-defeat camera release, dumpster
+  reveal, and victory presentation are therefore **CANNOT VERIFY** in Task 6.
+  Automated evidence is not presented as visual PASS for those conditions.
+- No source art, generated asset, atlas, contact sheet, background, scale,
+  anchor, support, collision, or encounter coordinate changed in this pass.

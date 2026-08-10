@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFile } from "node:fs/promises";
 
 import {
   BOSS_ARENA_CAMERA_X,
@@ -11,6 +12,7 @@ import {
   bossArenaCameraX,
   clampArenaBossX,
   clampArenaPlayerX,
+  completeBossArena,
   selectBossTestRoute,
   validateBossArenaPlacement,
 } from "../app/boss-arena.mjs";
@@ -24,6 +26,18 @@ test("arena activation removes every ordinary enemy and preserves the boss", () 
   assert.deepEqual(activated.enemies.map((enemy) => enemy.kind), ["boss"]);
   assert.equal(activated.enemies[0].active, true);
   assert.notEqual(activated.enemies, enemies);
+});
+
+test("Trash Heap Tyrant defeat releases the arena only after its committed defeat sequence", async () => {
+  assert.deepEqual(completeBossArena(), {
+    arenaActive: false,
+    bossDefeated: true,
+    bossTransition: null,
+  });
+
+  const runtime = await readFile(new URL("../app/trash-dash-game.tsx", import.meta.url), "utf8");
+  assert.match(runtime, /if \(boss\.actionTimer <= 0\) finishBossDefeat\(world, boss\)/);
+  assert.match(runtime, /const completed = completeBossArena\(\);[\s\S]{0,240}world\.arenaActive = completed\.arenaActive;[\s\S]{0,160}world\.bossDefeated = completed\.bossDefeated;/);
 });
 
 test("boss intro duration matches the camera runway", () => {

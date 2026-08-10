@@ -32,6 +32,14 @@ export function activateBossArena(enemies) {
   };
 }
 
+export function completeBossArena() {
+  return {
+    arenaActive: false,
+    bossDefeated: true,
+    bossTransition: null,
+  };
+}
+
 export function clampArenaPlayerX(x, width, arena = defaultArena) {
   return clamp(x, arena.arenaStartX + 24, arena.arenaEndX - width - 24);
 }
