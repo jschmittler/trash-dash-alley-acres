@@ -119,7 +119,10 @@ import {
   updateLevelTwoEnemy,
   squirrelThrowAttachment,
 } from "./level-two-enemies.mjs";
-import { createLevelTwoEnvironment } from "./level-two-environment.mjs";
+import {
+  applyLevelTwoEnvironmentTransition,
+  createLevelTwoEnvironmentRuntime,
+} from "./level-two-environment.mjs";
 import {
   chargeObstacleDrawRect,
   hydrantDrawRect,
@@ -311,7 +314,8 @@ interface World {
   player: Player;
   enemies: Enemy[];
   binLids: BinLid[];
-  environment: EnvironmentCollision[];
+  environment: readonly EnvironmentCollision[];
+  environmentState: ReturnType<typeof createLevelTwoEnvironmentRuntime>["environmentState"];
   pickups: Pickup[];
   particles: Particle[];
   cameraX: number;
@@ -643,6 +647,7 @@ const makeWorld = (
   selectedCharacterId = "raccoon",
   levelId = "level-1",
   carried: CarriedCampaignProgress | null = null,
+  environmentTransition = "entry",
 ): World => {
   const level = campaignLevelById(levelId) as CampaignLevelDefinition;
   const selectedProfile = getPlayableCharacter(carried?.selectedCharacterId ?? selectedCharacterId);
@@ -706,6 +711,8 @@ const makeWorld = (
     boss.behaviorState = boss.brutusState.mode;
   }
 
+  const environmentRuntime = createLevelTwoEnvironmentRuntime(level, environmentTransition);
+
   return {
     levelId: level.id,
     level,
@@ -719,7 +726,8 @@ const makeWorld = (
     player,
     enemies: runtime.enemies.concat(boss),
     binLids: [],
-    environment: createLevelTwoEnvironment(level) as EnvironmentCollision[],
+    environment: environmentRuntime.environment as readonly EnvironmentCollision[],
+    environmentState: environmentRuntime.environmentState,
     pickups: runtime.pickups,
     particles: [],
     cameraX: 0,
@@ -960,6 +968,7 @@ export function TrashDashGame() {
     characterId = selectedCharacterRef.current,
     levelIdOverride: string | null = null,
     carried: CarriedCampaignProgress | null = null,
+    environmentTransition = "entry",
   ) => {
     clearHeldInput();
     dismissPowerupNotice();
@@ -1003,7 +1012,7 @@ export function TrashDashGame() {
           lives: 3,
         }
       : null;
-    const nextWorld = makeWorld(selectedProfile.id, levelId, carried ?? testCarry);
+    const nextWorld = makeWorld(selectedProfile.id, levelId, carried ?? testCarry, environmentTransition);
     if (encounterTest !== null) {
       const selected = selectEncounterTestRoute(nextWorld.level, encounterTest) as {
         encounter: { enemies: EnemySpawnDefinition[] };
@@ -1133,7 +1142,7 @@ export function TrashDashGame() {
       carried: CarriedCampaignProgress;
     } | null;
     if (!transition || !CAMPAIGN_LEVELS.has(transition.levelId)) return;
-    startGame(transition.carried.selectedCharacterId, transition.levelId, transition.carried);
+    startGame(transition.carried.selectedCharacterId, transition.levelId, transition.carried, "re-entry");
   }, [startGame]);
 
   const confirmCharacter = useCallback(() => {
@@ -1317,7 +1326,7 @@ export function TrashDashGame() {
         if (event.code === "Enter" || event.code === "Space") confirmCharacter();
       }
       if (event.code === "Escape" || event.code === "KeyP") togglePause();
-      if (event.code === "KeyR" && screenRef.current !== "title" && screenRef.current !== "characterSelect") startGame();
+      if (event.code === "KeyR" && screenRef.current !== "title" && screenRef.current !== "characterSelect") startGame(selectedCharacterRef.current, worldRef.current.levelId, null, "retry");
       if (event.code === "KeyM") toggleMute();
     };
     const onKeyUp = (event: KeyboardEvent) => keysRef.current.delete(event.code);
@@ -1363,6 +1372,7 @@ export function TrashDashGame() {
     };
 
     const respawn = (world: World) => {
+      applyLevelTwoEnvironmentTransition(world, "checkpoint-recovery");
       const player = world.player;
       player.x = world.arenaActive
         ? clampArenaPlayerX(world, world.level.boss.triggerX, player.w)
@@ -1594,6 +1604,7 @@ export function TrashDashGame() {
         hydrantHit: movement.hydrantHit,
         exitComplete: movement.exitComplete,
       });
+      if (next.phase !== state.phase) applyLevelTwoEnvironmentTransition(world, "phase-change");
       if (next.mode !== state.mode || next.visualState !== state.visualState) boss.stateElapsed = 0;
       else boss.stateElapsed += dt;
       boss.brutusState = next;
@@ -2827,7 +2838,7 @@ export function TrashDashGame() {
             <p>The alley is paused. Your checkpoint and collected trash are safe.</p>
             <div className="button-row">
               <button className="primary-button" type="button" onClick={togglePause}>Keep rummaging</button>
-              <button className="secondary-button" type="button" onClick={() => startGame()}>Restart run</button>
+              <button className="secondary-button" type="button" onClick={() => startGame(selectedCharacterRef.current, worldRef.current.levelId, null, "retry")}>Restart run</button>
             </div>
           </div>
         </div>

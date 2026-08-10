@@ -136,3 +136,31 @@ CANNOT VERIFY for this fix round: the in-app browser route was explicitly aborte
 ### Fix-round concerns
 
 No implementation blocker. Unrelated dirty/untracked work remains preserved and excluded, including the crate-position/formatting hunks in `app/trash-dash-game.tsx` and the unrelated rendered-HTML test changes.
+
+## Fix Round 2
+
+Status: DONE
+
+### RED evidence
+
+`node --test tests/v2-visual-remediation.test.mjs` failed before implementation because the real runtime lifecycle owner export `applyLevelTwoEnvironmentTransition` did not exist. The replacement regression also requires concrete `trash-dash-game.tsx` bindings for world creation, restart, checkpoint recovery, Brutus phase changes, and campaign re-entry.
+
+### Runtime lifecycle fix
+
+- `createLevelTwoEnvironmentRuntime` now creates the environment state consumed by `makeWorld`, with the requested lifecycle transition instead of a hard-coded entry-only wrapper.
+- `startGame` forwards the lifecycle reason; keyboard and pause-screen restarts use `retry`, campaign continuation uses `re-entry`, checkpoint respawn uses `checkpoint-recovery`, and each real Brutus phase advance uses `phase-change`.
+- `applyLevelTwoEnvironmentTransition` rematerializes authoritative records into the actual runtime world and advances its revision/state.
+- Runtime environment arrays and records are frozen. Tests prove duplicate append and stable-ID mutation attempts throw, and shipped runtime source is forbidden from direct append-style environment construction.
+
+### GREEN evidence
+
+- Focused lifecycle/deletion/Brutus/placement/inventory matrix: 52/52 passed.
+- Production build: passed.
+- Dirty-worktree default gate: canonical skill tests 5/5 and default suite 289/289 passed.
+- Exact staged-tree archive: focused matrix 52/52, canonical skill tests 5/5, production build, and default suite 288/288 passed.
+- C1/C2/C3 prevention suites remain included and green.
+- `git diff --check`: passed.
+
+### Concerns
+
+None. This fix changes no art, scale, registry, or unrelated user-owned work.

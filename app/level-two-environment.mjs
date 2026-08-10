@@ -35,3 +35,20 @@ export function transitionLevelTwoEnvironment(previous, level, transition = "ent
 export function createLevelTwoEnvironment(level) {
   return transitionLevelTwoEnvironment(undefined, level, "entry").records;
 }
+
+export function createLevelTwoEnvironmentRuntime(level, transition = "entry") {
+  const environmentState = transitionLevelTwoEnvironment(undefined, level, transition);
+  return {
+    level,
+    environmentState,
+    environment: Object.freeze([...environmentState.records]),
+  };
+}
+
+export function applyLevelTwoEnvironmentTransition(runtime, transition) {
+  if (!runtime?.level) throw new TypeError("Level 2 environment runtime requires a level");
+  const environmentState = transitionLevelTwoEnvironment(runtime.environmentState, runtime.level, transition);
+  runtime.environmentState = environmentState;
+  runtime.environment = Object.freeze([...environmentState.records]);
+  return runtime;
+}
