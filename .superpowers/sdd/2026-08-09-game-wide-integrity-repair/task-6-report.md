@@ -82,6 +82,30 @@ node --test tests/boss-arena.test.mjs tests/boss-transition.test.mjs tests/boss-
 
 Result: **28 passed, 0 failed**.
 
+## Fix Round 1 — mutation-sensitive completion wiring
+
+Review commit `e6b2025` confirmed the production completion block was correct
+but found that the regression did not require the runtime to apply
+`completed.bossTransition`. Removing that assignment from a clean export left
+the original focused test green, so the weakness was isolated to test coverage;
+the production implementation did not change.
+
+RED first replaced the loose two-field source expression with an intentionally
+missing completion-wiring validator and three field-removal mutants. The
+focused run failed **7/8** with `assertBossCompletionWiring is not defined`.
+GREEN added a validator that isolates the Level 1 `finishBossDefeat` block and
+requires all three ordered assignments:
+
+- `world.arenaActive = completed.arenaActive;`
+- `world.bossTransition = completed.bossTransition;`
+- `world.bossDefeated = completed.bossDefeated;`
+
+The same regression removes each assignment one at a time, proves the mutation
+actually changed the source, and requires the wiring validator to throw for
+every mutant. The unmodified runtime passes the strengthened focused test
+**8/8**. Browser checks were not retried because the earlier runtime path was
+already classified `CANNOT VERIFY`.
+
 ## Files owned by Task 6
 
 - `app/boss-arena.mjs`
@@ -96,6 +120,13 @@ not applicable.
 
 ## Final verification
 
+- Fix Round 1 shared focused boss matrix: **28/28 PASS**.
+- Fix Round 1 shared full Level 1 acceptance matrix: **28/28 PASS**.
+- Fix Round 1 clean-export focused boss matrix: **27/27 PASS**; the shared
+  tree's additional Level 2 dumpster assertion is unrelated unstaged work.
+- Fix Round 1 clean-export full Level 1 acceptance matrix: **28/28 PASS**
+  after linking the repository's existing dependency tree into the disposable
+  archive (`sharp` was unavailable in the dependency-free first attempt).
 - Clean staged-package required matrix: **28/28 PASS**.
 - Clean staged-package production build: **PASS**.
 - Shared expanded Level 1 route/lifecycle matrix: **117/117 PASS**.

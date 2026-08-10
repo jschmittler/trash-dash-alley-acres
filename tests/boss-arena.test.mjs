@@ -19,6 +19,20 @@ import {
 import { LEVEL_ONE } from "../app/level-one.mjs";
 import { LEVEL_TWO } from "../app/level-two.mjs";
 
+function assertBossCompletionWiring(runtime) {
+  const start = runtime.indexOf("const finishBossDefeat =");
+  assert.notEqual(start, -1, "runtime must define finishBossDefeat");
+
+  const end = runtime.indexOf("const finishBrutusDefeat =", start);
+  assert.notEqual(end, -1, "runtime must delimit the Level 1 completion block");
+
+  const completionBlock = runtime.slice(start, end);
+  assert.match(
+    completionBlock,
+    /const completed = completeBossArena\(\);\s+world\.arenaActive = completed\.arenaActive;\s+world\.bossTransition = completed\.bossTransition;\s+world\.bossDefeated = completed\.bossDefeated;/,
+  );
+}
+
 test("arena activation removes every ordinary enemy and preserves the boss", () => {
   const enemies = [{ kind: "rat", active: true }, { kind: "boss", active: true }, { kind: "crow", active: false }];
   const activated = activateBossArena(enemies);
@@ -37,7 +51,21 @@ test("Trash Heap Tyrant defeat releases the arena only after its committed defea
 
   const runtime = await readFile(new URL("../app/trash-dash-game.tsx", import.meta.url), "utf8");
   assert.match(runtime, /if \(boss\.actionTimer <= 0\) finishBossDefeat\(world, boss\)/);
-  assert.match(runtime, /const completed = completeBossArena\(\);[\s\S]{0,240}world\.arenaActive = completed\.arenaActive;[\s\S]{0,160}world\.bossDefeated = completed\.bossDefeated;/);
+  assertBossCompletionWiring(runtime);
+
+  for (const assignment of [
+    "world.arenaActive = completed.arenaActive;",
+    "world.bossTransition = completed.bossTransition;",
+    "world.bossDefeated = completed.bossDefeated;",
+  ]) {
+    const mutant = runtime.replace(assignment, "");
+    assert.notEqual(mutant, runtime, `mutation must remove ${assignment}`);
+    assert.throws(
+      () => assertBossCompletionWiring(mutant),
+      assert.AssertionError,
+      `completion wiring must reject removal of ${assignment}`,
+    );
+  }
 });
 
 test("boss intro duration matches the camera runway", () => {
