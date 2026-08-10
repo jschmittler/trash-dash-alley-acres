@@ -9,7 +9,9 @@ export const ATTACK_TELL_MAX = 0.65;
 export const SQUIRREL_STATES = Object.freeze([
   "idle", "throw-anticipation", "throw-release", "throw-follow-through", "throw-recover", "defeated",
 ]);
-export const TERRIER_STATES = Object.freeze(["sleep", "wake", "charge", "impact", "recover", "defeated"]);
+export const TERRIER_STATES = Object.freeze([
+  "sleep", "sit", "wake", "charge", "impact", "hit", "recover", "defeated",
+]);
 export const SKUNK_STATES = Object.freeze(["patrol", "telegraph", "spray", "recover", "defeated"]);
 export const MOTH_STATES = Object.freeze(["orbit", "telegraph", "dive", "climb", "defeated"]);
 
@@ -133,14 +135,14 @@ export function updateTerrier(terrier, context) {
     patrolMaxX,
     obstacleHit = false,
     obstacle = null,
-    playerInRange = false,
+    playerInRange,
     playerX = terrier.x,
     defeated = false,
   } = context;
   if (defeated || terrier.state === "defeated") {
     return { ...terrier, state: "defeated", timer: 0, vx: 0 };
   }
-  if (terrier.state === "sleep") {
+  if (terrier.state === "sleep" || terrier.state === "sit") {
     return playerInRange
       ? { ...terrier, state: "wake", timer: TERRIER_TELL, vx: 0 }
       : { ...terrier, vx: 0 };
@@ -152,6 +154,9 @@ export function updateTerrier(terrier, context) {
     return { ...terrier, state: "charge", timer: 0, facing, vx: facing * 420 };
   }
   if (terrier.state === "charge") {
+    if (playerInRange === false) {
+      return { ...terrier, state: "sit", timer: 0, vx: 0, resumeFacing: null };
+    }
     const targetX = terrier.x + terrier.vx * dt;
     const obstacleX = obstacle
       ? (terrier.vx < 0 ? obstacle.x + obstacle.w : obstacle.x - (terrier.w ?? 0))
@@ -159,7 +164,14 @@ export function updateTerrier(terrier, context) {
     const x = clamp(obstacleX, patrolMinX, patrolMaxX);
     const hitEdge = x === patrolMinX || x === patrolMaxX;
     return obstacle || obstacleHit || hitEdge
-      ? { ...terrier, x, state: "impact", timer: TERRIER_SEQUENCE_DURATIONS.impact, vx: 0 }
+      ? {
+          ...terrier,
+          x,
+          state: "impact",
+          timer: TERRIER_SEQUENCE_DURATIONS.impact,
+          vx: 0,
+          resumeFacing: terrier.facing === -1 ? 1 : -1,
+        }
       : { ...terrier, x };
   }
   if (terrier.state === "impact") {
@@ -167,10 +179,15 @@ export function updateTerrier(terrier, context) {
       ? { ...terrier, state: "recover", timer: TERRIER_SEQUENCE_DURATIONS.recover, vx: 0 }
       : { ...terrier, timer, vx: 0 };
   }
+  if (terrier.state === "hit") {
+    return timer === 0
+      ? { ...terrier, state: "recover", timer: TERRIER_SEQUENCE_DURATIONS.recover, vx: 0 }
+      : { ...terrier, timer, vx: 0 };
+  }
   if (terrier.state === "recover") {
     if (timer > 0) return { ...terrier, timer, vx: 0 };
-    const facing = terrier.facing === -1 ? 1 : -1;
-    return { ...terrier, state: "charge", timer: 0, facing, vx: facing * 420 };
+    const facing = terrier.resumeFacing ?? terrier.facing ?? 1;
+    return { ...terrier, state: "charge", timer: 0, facing, vx: facing * 420, resumeFacing: null };
   }
   return { ...terrier };
 }
@@ -196,7 +213,7 @@ export function selectChargeObstacle(terrier, obstacles, dt) {
 
 export function levelTwoEnemyCanContactDamage(kind, state) {
   if (state === "defeated") return false;
-  if (kind === "terrier" && (state === "impact" || state === "recover")) return false;
+  if (kind === "terrier" && (state === "impact" || state === "hit" || state === "recover")) return false;
   if (kind === "moth" && state === "climb") return false;
   return true;
 }
@@ -326,9 +343,11 @@ export const LEVEL_TWO_ENEMY_ANIMATIONS = Object.freeze({
     hit: animation(3, 2, 9), defeat: animation(4, 2, 5),
   }),
   terrier: Object.freeze({
-    locomotion: animation(5, 4, 9, true), sleep: animation(6, 1, 1), wake: animation(6, 4, 7),
-    telegraph: animation(6, 4, 7), charge: animation(7, 4, 12, true), attack: animation(7, 4, 12, true),
-    impact: animation(8, 2, 9), hit: animation(8, 2, 9), recover: animation(9, 4, 7), defeat: animation(10, 2, 5),
+    locomotion: animation(5, 4, 9, true), sleep: animation(6, 1, 1), sit: animation(6, 1, 1, false, 3),
+    wake: animation(6, 2, 5, false, 1), telegraph: animation(6, 2, 5, false, 1),
+    charge: animation(7, 4, 12, true), attack: animation(7, 4, 12, true),
+    impact: animation(8, 2, 9), hit: animation(8, 2, 9, false, 2),
+    recover: animation(9, 4, 7), defeat: animation(10, 2, 5),
   }),
   skunk: Object.freeze({
     locomotion: animation(11, 4, 7, true), telegraph: animation(12, 4, 7), attack: animation(13, 4, 12),
@@ -349,6 +368,7 @@ export function levelTwoEnemyAnimationDuration(animationState) {
 export const TERRIER_SEQUENCE_DURATIONS = Object.freeze({
   wake: levelTwoEnemyAnimationDuration(LEVEL_TWO_ENEMY_ANIMATIONS.terrier.wake),
   impact: levelTwoEnemyAnimationDuration(LEVEL_TWO_ENEMY_ANIMATIONS.terrier.impact),
+  hit: levelTwoEnemyAnimationDuration(LEVEL_TWO_ENEMY_ANIMATIONS.terrier.hit),
   recover: levelTwoEnemyAnimationDuration(LEVEL_TWO_ENEMY_ANIMATIONS.terrier.recover),
 });
 
@@ -367,7 +387,7 @@ export const LEVEL_TWO_ENEMY_STATE_ANIMATION_KEYS = Object.freeze({
     "throw-follow-through": "followThrough", "throw-recover": "recover", hit: "hit", defeated: "defeat",
   }),
   terrier: Object.freeze({
-    sleep: "sleep", wake: "wake", charge: "charge", impact: "impact", recover: "recover",
+    sleep: "sleep", sit: "sit", wake: "wake", charge: "charge", impact: "impact", recover: "recover",
     hit: "hit", defeated: "defeat",
   }),
   skunk: Object.freeze({
@@ -386,7 +406,7 @@ export function enemyAnimationFrame(animationState, elapsed) {
   return (animationState.startFrame ?? 0) + localFrame;
 }
 
-export function beginLevelTwoEnemyHit(enemy) {
+export function beginLevelTwoEnemyDefeat(enemy) {
   const hitDuration = levelTwoEnemyAnimationDuration(levelTwoEnemyAnimation(enemy.kind, "hit"));
   const defeatDuration = levelTwoEnemyAnimationDuration(levelTwoEnemyAnimation(enemy.kind, "defeated"));
   return {
@@ -398,6 +418,25 @@ export function beginLevelTwoEnemyHit(enemy) {
     actionTimer: hitDuration + defeatDuration,
     vx: 0,
   };
+}
+
+export function beginLevelTwoTerrierHit(enemy) {
+  return {
+    ...enemy,
+    behaviorState: "hit",
+    visualState: null,
+    visualTimer: 0,
+    stateElapsed: 0,
+    actionTimer: TERRIER_SEQUENCE_DURATIONS.hit,
+    resumeFacing: enemy.facing ?? 1,
+    vx: 0,
+  };
+}
+
+export function beginLevelTwoEnemyDamageReaction(enemy) {
+  if ((enemy.hp ?? 0) <= 0) return beginLevelTwoEnemyDefeat(enemy);
+  if (enemy.kind === "terrier") return beginLevelTwoTerrierHit(enemy);
+  return { ...enemy };
 }
 
 export function advanceLevelTwoEnemyPlayback(enemy, dt) {

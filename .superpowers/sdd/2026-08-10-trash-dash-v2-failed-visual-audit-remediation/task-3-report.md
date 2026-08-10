@@ -200,3 +200,59 @@ The required fresh cache-busted playthrough capture of three complete cycles, bo
 - Exact staged snapshot `npm run lint`: **0 errors**, the same pre-existing Next.js `<img>` warning.
 - `git diff --cached --check`: passed.
 - Source art and deterministic atlas bytes were unchanged by this correction.
+
+## Final Fix Wave — explicit sit and nonfatal hit-return lifecycle
+
+The whole-branch final review correctly found that the earlier sequence substituted repeated wall-impact recovery for the authoritative stable-sit and nonfatal-damage requirements. This correction supersedes that lifecycle description while preserving the normalized 192px cells, 82×82 runtime destination, bottom-center anchor, and deterministic atlas bytes.
+
+### RED evidence
+
+The final-wave focused command began at **36 passed / 6 expected failures**. The failures independently proved:
+
+- `sit` and behavior-owned `hit` were absent from `TERRIER_STATES`;
+- no dedicated stable-sit or disjoint wake/hit cell ownership existed;
+- hit duration was not exposed with the other metadata-derived terrier one-shots;
+- a seated terrier could neither hold nor wake, and charge could not return to sit;
+- no living-damage owner could enter `hit → recover → charge`;
+- wall impact lacked explicit reversal provenance, while the old three-cycle fixture still locked in the substitute impact-only sequence.
+
+### Final semantic lifecycle
+
+The production behavior contract now owns these distinct paths:
+
+```text
+sleep → wake → charge
+sit → wake → charge
+charge + outside aggro range → sit (stable hold)
+charge + nonfatal player damage → hit → recover → same-facing charge
+charge + wall/obstacle impact → impact → recover → reversed charge
+fatal player damage → hit presentation → defeat
+```
+
+The terrier now has two HP, making one nonfatal gameplay hit reachable before fatal damage. `beginLevelTwoEnemyDamageReaction` is the production owner: a living terrier enters behavior state `hit`, while zero HP enters the existing complete hit-to-defeat playback. Nonfatal hit stores the incoming facing as its locomotion return; wall impact stores the opposite facing, so the two recoveries remain behaviorally distinct.
+
+### Cell, timer, and geometry ownership
+
+- sleep: row 6 cell 0, stable single frame;
+- sit: row 6 cell 3, stable single frame;
+- wake: row 6 cells 1–2, clamped at 5 FPS (`2/5s`);
+- charge: row 7 cells 0–3, looping at 12 FPS;
+- impact: row 8 cells 0–1, clamped at 9 FPS (`2/9s`);
+- nonfatal/fatal hit: row 8 cells 2–3, clamped at 9 FPS (`2/9s`);
+- recover: row 9 cells 0–3, clamped at 7 FPS (`4/7s`);
+- defeat: row 10 cells 0–1, clamped at 5 FPS (`2/5s`).
+
+Wake excludes the stable sit cell; hit and impact own disjoint atlas cells; recovery remains on its dedicated row and borrows neither reaction. Every committed timer is derived from `frames / fps`, and state transitions reset local elapsed time. All eight terrier behavior states still resolve through the same 192×192 source rectangle and state/facing-invariant 82×82 bottom-center destination.
+
+The repeated fixture now performs three complete `sit → wake → charge → hit → recover → charge → sit` cycles, observes charge facings `[right, left, right]`, and separately proves that wall impact reverses after its own recovery.
+
+### Verification and runtime status
+
+- Focused RED: **36 passed / 6 expected failures**.
+- Focused GREEN: **43/43 passed**.
+- Shared worktree `npm test`: production build passed; canonical skill tests **5/5**; default suite **319/319**.
+- Exact staged snapshot `npm test`: production build passed; canonical skill tests **5/5**; default suite **318/318**. The shared worktree's additional passing test belongs to the deliberately unstaged `tests/rendered-html.test.mjs` edit.
+- Exact staged snapshot `npm run lint`: **0 errors**, one pre-existing Next.js `<img>` performance warning.
+- `git diff --cached --check`: passed.
+- Source art and generated atlas files were unchanged.
+- Browser/runtime QA was not required for this code finding and is not newly claimed. The earlier final-code continuous-playthrough limitations remain **CANNOT VERIFY / INCOMPLETE** until the deferred normal gameplay pass is performed.

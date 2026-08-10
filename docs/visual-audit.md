@@ -1002,6 +1002,18 @@ worktree-preservation evidence is recorded in
   recapture is **CANNOT VERIFY** because browser selection returned `No browser
   is available` after the local server started. Focused tests passed 39/39 and
   the shared build/default gate passed 305/305; no new runtime PASS is claimed.
+- **Final lifecycle correction:** the final branch review found that repeated
+  obstacle impact was still substituting for stable sit and nonfatal damage.
+  The terrier now explicitly owns sleep, stable sit, wake, charge, wall impact,
+  nonfatal hit, recovery, and defeat. Leaving aggro range reaches and holds sit;
+  sit wakes through a metadata-derived 0.4-second one-shot; the first of two HP
+  enters hit → recover → same-facing charge; wall impact remains a separate
+  impact → recover → reversed-charge path; fatal damage retains complete hit
+  and defeat one-shots. Sit, wake, impact, hit, and recovery own intentional,
+  non-borrowed cells while every state and facing keeps the same 192px source
+  cell, 82×82 destination, and bottom-center anchor. RED was 36/6 and focused
+  GREEN was 43/43. No new browser/runtime PASS is claimed; continuous final-code
+  lifecycle observation remains CANNOT VERIFY pending the deferred playthrough.
 
 ### 2026-08-10 — V2 Task 4 Brutus arena and victory composition
 

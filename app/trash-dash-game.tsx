@@ -107,7 +107,7 @@ import {
 import {
   advanceLevelTwoEnemyPlayback,
   applyLevelTwoBehaviorTransition,
-  beginLevelTwoEnemyHit,
+  beginLevelTwoEnemyDamageReaction,
   beginLevelTwoTerrierWake,
   enemyAnimationFrame,
   facingFromVelocity,
@@ -608,7 +608,7 @@ const makeEnemy = (
     spawned: kind === "boss" || spawnX <= 780,
     phase: x / 100,
     animationOffset: Math.floor(Math.abs(x / 100)) % 4,
-    hp: kind === "boss" ? 3 : 1,
+    hp: kind === "boss" ? 3 : kind === "terrier" ? 2 : 1,
     hitCooldown: 0,
     originX: spawnX,
     surfaceY: patrol.surfaceY,
@@ -1571,12 +1571,11 @@ export function TrashDashGame() {
           setBossState(enemy, "hit", BOSS_SEQUENCE_DURATIONS.hit);
           setMessage(world, `${enemy.hp} hits left!`, 1.2);
         }
+      } else if (levelTwoEnemyKinds.has(enemy.kind)) {
+        Object.assign(enemy, beginLevelTwoEnemyDamageReaction(enemy));
+        if (enemy.hp <= 0) world.score += stomp ? 250 : 180;
       } else if (enemy.hp <= 0) {
-        if (levelTwoEnemyKinds.has(enemy.kind)) {
-          Object.assign(enemy, beginLevelTwoEnemyHit(enemy));
-        } else {
-          enemy.active = false;
-        }
+        enemy.active = false;
         world.score += stomp ? 250 : 180;
       }
     };

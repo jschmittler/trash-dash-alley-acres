@@ -11,7 +11,7 @@ import {
   ATTACK_TELLS,
   advanceLevelTwoEnemyPlayback,
   applyLevelTwoBehaviorTransition,
-  beginLevelTwoEnemyHit,
+  beginLevelTwoEnemyDefeat,
   enemyAnimationFrame,
   facingFromVelocity,
   LEVEL_TWO_ENEMY_ANIMATIONS,
@@ -40,7 +40,9 @@ test("exports the authored state sets", () => {
   assert.deepEqual(SQUIRREL_STATES, [
     "idle", "throw-anticipation", "throw-release", "throw-follow-through", "throw-recover", "defeated",
   ]);
-  assert.deepEqual(TERRIER_STATES, ["sleep", "wake", "charge", "impact", "recover", "defeated"]);
+  assert.deepEqual(TERRIER_STATES, [
+    "sleep", "sit", "wake", "charge", "impact", "hit", "recover", "defeated",
+  ]);
   assert.deepEqual(SKUNK_STATES, ["patrol", "telegraph", "spray", "recover", "defeated"]);
   assert.deepEqual(MOTH_STATES, ["orbit", "telegraph", "dive", "climb", "defeated"]);
 });
@@ -220,13 +222,16 @@ test("moth clamps its full visible silhouette and reports committed motion", () 
 test("authored animation playback exposes key frames and clamps one-shots", () => {
   for (const [kind, animations] of Object.entries(LEVEL_TWO_ENEMY_ANIMATIONS)) {
     assert.equal(animations.locomotion.frames, 4, `${kind} locomotion`);
-    assert.equal(animations.telegraph.frames, 4, `${kind} telegraph`);
+    assert.ok(animations.telegraph.frames >= 2, `${kind} telegraph`);
     assert.equal(animations.attack.frames, 4, `${kind} attack`);
     assert.equal(animations.hit.frames, 2, `${kind} hit`);
     assert.equal(animations.telegraph.loop, false);
     assert.equal(animations.hit.loop, false);
-    assert.equal(enemyAnimationFrame(animations.telegraph, 0), 0);
-    assert.equal(enemyAnimationFrame(animations.telegraph, 99), 3);
+    assert.equal(enemyAnimationFrame(animations.telegraph, 0), animations.telegraph.startFrame);
+    assert.equal(
+      enemyAnimationFrame(animations.telegraph, 99),
+      animations.telegraph.startFrame + animations.telegraph.frames - 1,
+    );
   }
   assert.equal(enemyAnimationFrame(LEVEL_TWO_ENEMY_ANIMATIONS.squirrel.attack, 0.16), 3);
   assert.equal(enemyAnimationFrame(levelTwoEnemyAnimation("squirrel", "throw-anticipation"), 99), 0);
@@ -258,11 +263,14 @@ test("terrier pause playback uses a short ordered impact then a stable grounded 
 
 test("every Level 2 enemy enters reachable local hit playback before defeat", () => {
   for (const kind of ["squirrel", "terrier", "skunk", "moth"]) {
-    const next = beginLevelTwoEnemyHit({ kind, behaviorState: "idle", stateElapsed: 4 });
+    const next = beginLevelTwoEnemyDefeat({ kind, behaviorState: "idle", stateElapsed: 4 });
     assert.equal(next.visualState, "hit");
     assert.ok(next.visualTimer > 0);
     assert.equal(next.stateElapsed, 0);
-    assert.equal(enemyAnimationFrame(LEVEL_TWO_ENEMY_ANIMATIONS[kind].hit, next.stateElapsed), 0);
+    assert.equal(
+      enemyAnimationFrame(LEVEL_TWO_ENEMY_ANIMATIONS[kind].hit, next.stateElapsed),
+      LEVEL_TWO_ENEMY_ANIMATIONS[kind].hit.startFrame,
+    );
   }
 });
 
@@ -280,7 +288,7 @@ test("runtime playback advances locally, resets on transitions, and reveals defe
     0,
   );
 
-  const hit = beginLevelTwoEnemyHit({ kind: "squirrel", behaviorState: "idle", stateElapsed: 3 });
+  const hit = beginLevelTwoEnemyDefeat({ kind: "squirrel", behaviorState: "idle", stateElapsed: 3 });
   const afterHit = advanceLevelTwoEnemyPlayback(hit, hit.visualTimer);
   assert.equal(afterHit.visualState, null);
   assert.equal(afterHit.behaviorState, "defeated");
