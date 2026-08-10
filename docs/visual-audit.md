@@ -58,54 +58,45 @@ Evidence and exact deferred checklist:
   evidence and preserves each limitation; fixture evidence does not upgrade
   the missing continuous campaign to PASS.
 
-### VIS-001: Sprinkler rendering
+### VIS-001: Sprinkler feature removal
 
-- Status: PASS
+- Status: REMOVED IN V2; continuous traversal remains `CANNOT VERIFY`
 - Original priority: 🟥 Critical
-- Location: Level 2 obstacle course and Brutus arena
+- Former location: Level 2 obstacle course and Brutus arena
 
 Problem:
 
-- The old spray appeared as a rigid blue wedge.
-- The effect could look detached from its source.
-- Effect cells contained inappropriate source-body pixels.
-- The body/effect relationship lacked an explicit emitter contract.
+- Earlier remediation retained a visually disconnected sprinkler body, rigid
+  water wedge, emitter metadata, collisions, and boss behavior that no longer
+  fit the intended Level 2 design.
 
-Root cause:
+V2 resolution:
 
-- The runtime treated a poorly bounded combined crop as the animation instead
-  of composing one grounded body with water-only frames.
-- Start, active, taper, and stop states were incomplete.
-
-Fix applied:
-
-- Rebuilt the Level 2 prop atlas.
-- Rendered the sprinkler body once.
-- Added water-only start, six-frame spray, and stop cells.
-- Added explicit body bounds, nozzle origin, effect bounds, direction, scale,
-  and layer metadata.
-- Added hard-alpha, frame-bound, body-duplication, and emitter-attachment tests.
-
-Files changed:
-
-- `app/level-two-props.mjs`
-- `app/trash-dash-game.tsx`
-- `scripts/build-level-two-props.mjs`
-- `public/assets/generated/level2-props.png`
-- `concepts/level-two/level2-props-contact-sheet.png`
-- `tests/level-two-props.test.mjs`
+- Removed the sprinkler feature from shipped source/runtime ownership rather
+  than continuing to polish it.
+- Removed its sprite/effect atlas rows, builder inputs, emitter metadata,
+  placements, collision/hazard behavior, player and projectile pushes, Brutus
+  phase output, audio/configuration hooks, and dead rendering branches.
+- Repacked the Level 2 prop atlas without sprinkler cells and added
+  mutation-sensitive tests that reject reintroduction through aliases or dead
+  helpers.
 
 Verification:
 
-- Automated atlas/effect tests pass.
-- Local browser sequence shows grounded hardware and water connected to the
-  nozzle without a wedge or duplicate body.
+- Clean committed tests prove there is no shipped sprinkler sprite, effect,
+  emitter, placement, collision, hazard, audio, or boss-state path.
+- Earlier fixture-level browser inspection showed no visible sprinkler body or
+  effect at the former locations and recorded empty warning/error logs.
+- A player could not be walked through the former area during the final
+  uninterrupted campaign attempt because the available browser lacked held
+  movement input. Invisible-collision verification therefore remains
+  `CANNOT VERIFY`; this item must not be called a runtime PASS yet.
 
-Screenshot references:
+Historical evidence note:
 
-- `docs/superpowers/reports/2026-08-09-level1-level2-integrity/before/01-sprinkler-gameplay.png`
-- `docs/superpowers/reports/2026-08-09-level1-level2-integrity/after/01-sprinkler-frame-1.png`
-- Frames 1–7 are available in the same `after` folder.
+- The 2026-08-09 sprinkler screenshots document a superseded intermediate
+  implementation. They are retained as history only and do not describe the
+  current V2 game.
 
 ### VIS-002: Lamp-post scaling and grounding
 
