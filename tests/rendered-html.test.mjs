@@ -56,7 +56,7 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(styles, /character-cards/);
   assert.match(game, /aria-label="Sprint"/);
   assert.match(game, /visibilityState === "hidden"/);
-  assert.match(game, /raccoon-rush-loop\.m4a/);
+  assert.match(musicController, /raccoon-rush-loop\.m4a/);
   assert.match(game, /playGameMusic/);
   assert.match(game, /pauseGameMusic/);
   assert.match(game, /localStorage/);
@@ -121,7 +121,7 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /powerup-flash/);
   assert.match(game, /createPowerupNotice/);
   assert.match(game, /const activated = activateBossArena\(world\.enemies\)/);
-  assert.match(game, /trash-heap-tyrant-loop\.m4a/);
+  assert.match(musicController, /trash-heap-tyrant-loop\.m4a/);
   assert.match(game, /arenaActive: boolean/);
   assert.doesNotMatch(game, /bossFrameIndex\(enemy\.phase\)/);
   assert.doesNotMatch(game, /sprites\.bossHit/);

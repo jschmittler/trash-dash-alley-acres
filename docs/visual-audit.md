@@ -608,6 +608,31 @@ Browser diagnostics:
 
 ## Future audit items
 
+### 2026-08-09 — Task 9 existing music integration confirmation
+
+- **Scope:** Level 0 soundtrack decision. No audio was generated, replaced,
+  remixed, mastered, rescored, or judged for artistic quality.
+- **Track-role truth:** both levels share `raccoon-rush-loop.m4a` for
+  exploration and `trash-heap-tyrant-loop.m4a` for bosses. Level 2 has no
+  distinct authored exploration or Brutus track.
+- **Repaired integration defects:** same-track requests now apply mute/resume
+  without creating a second player; deterministic fades are injectable for
+  lifecycle coverage; and the pre-activated Brutus fixture starts the boss
+  role instead of exploration.
+- **Automated evidence:** controller/runtime/artifact coverage passes 15/15;
+  the shared full package suite passes 290/290. Rejected playback is contained,
+  previous sources are paused/removed/loaded, and sequential switches leave
+  one final player with no listeners.
+- **Browser evidence:** user-gesture Level 1 start observed the exploration
+  resource; Level 1 arena observed exploration then boss resources; Brutus
+  observed the boss resource; pause/mute/resume/restart remained functional;
+  sampled warning/error logs were empty.
+- **CANNOT VERIFY:** detached audio-element state, audible output, seamless
+  loop quality, loudness/SFX balance, forced live autoplay rejection, and
+  acoustic overlap. These remain for the explicitly deferred full audio pass.
+- Detailed report:
+  `docs/superpowers/reports/2026-08-09-audio-integration-confirmation.md`.
+
 - Perform a real-device mobile portrait and landscape visual pass.
 - Repeat the complete audit whenever a sprite atlas, platform footprint,
   background layer, player form, enemy state, boss phase, or viewport policy

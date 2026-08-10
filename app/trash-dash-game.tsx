@@ -11,6 +11,7 @@ import {
 import {
   createGameMusic,
   disposeGameMusic,
+  gameMusicTrackFor,
   pauseGameMusic,
   playGameMusic,
   setGameMusicMuted,
@@ -990,9 +991,6 @@ export function TrashDashGame() {
     }
     void audioRef.current.resume();
     musicSwitchIdRef.current += 1;
-    disposeGameMusic(musicRef.current);
-    musicRef.current = createGameMusic(assetUrl("assets/audio/raccoon-rush-loop.m4a"));
-    void playGameMusic(musicRef.current, { muted: mutedRef.current, restart: true });
     const selectedProfile = getPlayableCharacter(characterId);
     selectedCharacterRef.current = selectedProfile.id;
     const devParams = import.meta.env.DEV && !levelIdOverride ? new URLSearchParams(window.location.search) : null;
@@ -1010,6 +1008,11 @@ export function TrashDashGame() {
       || bossRoute?.levelId === "level-2"
       || victoryTest === "level2";
     const levelId = levelIdOverride ?? (levelTwoRequested ? "level-2" : "level-1");
+    const initialMusicRole = bossRoute?.activateArena ? "boss" : "exploration";
+    const initialTrack = gameMusicTrackFor(levelId, initialMusicRole);
+    disposeGameMusic(musicRef.current);
+    musicRef.current = initialTrack ? createGameMusic(assetUrl(initialTrack)) : null;
+    void playGameMusic(musicRef.current, { muted: mutedRef.current, restart: true });
     const testCarry = levelTest === "level2-start"
       ? {
           selectedCharacterId: selectedProfile.id,
@@ -1511,7 +1514,7 @@ export function TrashDashGame() {
       const switchId = ++musicSwitchIdRef.current;
       void switchGameMusic(
         musicRef.current,
-        assetUrl("assets/audio/trash-heap-tyrant-loop.m4a"),
+        assetUrl(gameMusicTrackFor(world.levelId, "boss") ?? ""),
         { muted: mutedRef.current },
       ).then((nextMusic) => {
         if (switchId === musicSwitchIdRef.current) musicRef.current = nextMusic;

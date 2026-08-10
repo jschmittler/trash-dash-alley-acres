@@ -1,5 +1,20 @@
 export const MUSIC_VOLUME = 0.32;
 
+export const GAME_MUSIC_TRACKS = Object.freeze({
+  "level-1": Object.freeze({
+    exploration: "assets/audio/raccoon-rush-loop.m4a",
+    boss: "assets/audio/trash-heap-tyrant-loop.m4a",
+  }),
+  "level-2": Object.freeze({
+    exploration: "assets/audio/raccoon-rush-loop.m4a",
+    boss: "assets/audio/trash-heap-tyrant-loop.m4a",
+  }),
+});
+
+export function gameMusicTrackFor(levelId, role) {
+  return GAME_MUSIC_TRACKS[levelId]?.[role] ?? null;
+}
+
 export function createGameMusic(source, AudioConstructor = globalThis.Audio) {
   if (typeof AudioConstructor !== "function") return null;
   const music = new AudioConstructor(source);
@@ -44,9 +59,13 @@ export async function switchGameMusic(
     muted = false,
     AudioConstructor = globalThis.Audio,
     fadeMs = 360,
+    wait = (delay) => new Promise((resolve) => globalThis.setTimeout(resolve, delay)),
   } = {},
 ) {
-  if (current?.source === source || current?.src === source) return current;
+  if (current?.source === source || current?.currentSrc === source || current?.src === source) {
+    await playGameMusic(current, { muted });
+    return current;
+  }
   const next = createGameMusic(source, AudioConstructor);
   if (!next) return current;
   next.muted = muted;
@@ -63,7 +82,7 @@ export async function switchGameMusic(
       const progress = step / steps;
       next.volume = MUSIC_VOLUME * progress;
       if (current) current.volume = MUSIC_VOLUME * (1 - progress);
-      await new Promise((resolve) => globalThis.setTimeout(resolve, delay));
+      await wait(delay);
     }
   }
 
