@@ -10,12 +10,8 @@ import {
 } from "./mobile-experience.mjs";
 import {
   createGameMusic,
-  disposeGameMusic,
+  createGameMusicOwner,
   gameMusicTrackFor,
-  pauseGameMusic,
-  playGameMusic,
-  setGameMusicMuted,
-  switchGameMusic,
 } from "./music-controller.mjs";
 import { createEnemyPatrol } from "./enemy-surface.mjs";
 import {
@@ -805,8 +801,8 @@ export function TrashDashGame() {
   const screenRef = useRef<Screen>("title");
   const selectedCharacterRef = useRef("raccoon");
   const audioRef = useRef<AudioContext | null>(null);
-  const musicRef = useRef<HTMLAudioElement | null>(null);
-  const musicSwitchIdRef = useRef(0);
+  const musicOwnerRef = useRef<ReturnType<typeof createGameMusicOwner> | null>(null);
+  musicOwnerRef.current ??= createGameMusicOwner();
   const mutedRef = useRef(false);
   const lastFrameRef = useRef(0);
   const hudTickRef = useRef(0);
@@ -891,7 +887,7 @@ export function TrashDashGame() {
 
   const changeScreen = useCallback((next: Screen) => {
     clearInputState(keysRef.current, pressedRef.current);
-    if (next !== "playing") pauseGameMusic(musicRef.current);
+    if (next !== "playing") musicOwnerRef.current?.pause();
     screenRef.current = next;
     setScreen(next);
   }, []);
@@ -990,7 +986,6 @@ export function TrashDashGame() {
       audioRef.current = new AudioContext();
     }
     void audioRef.current.resume();
-    musicSwitchIdRef.current += 1;
     const selectedProfile = getPlayableCharacter(characterId);
     selectedCharacterRef.current = selectedProfile.id;
     const devParams = import.meta.env.DEV && !levelIdOverride ? new URLSearchParams(window.location.search) : null;
@@ -1010,9 +1005,12 @@ export function TrashDashGame() {
     const levelId = levelIdOverride ?? (levelTwoRequested ? "level-2" : "level-1");
     const initialMusicRole = bossRoute?.activateArena ? "boss" : "exploration";
     const initialTrack = gameMusicTrackFor(levelId, initialMusicRole);
-    disposeGameMusic(musicRef.current);
-    musicRef.current = initialTrack ? createGameMusic(assetUrl(initialTrack)) : null;
-    void playGameMusic(musicRef.current, { muted: mutedRef.current, restart: true });
+    const initialMusic = initialTrack ? createGameMusic(assetUrl(initialTrack)) : null;
+    musicOwnerRef.current?.replace(initialMusic, {
+      active: true,
+      muted: mutedRef.current,
+      restart: true,
+    });
     const testCarry = levelTest === "level2-start"
       ? {
           selectedCharacterId: selectedProfile.id,
@@ -1171,17 +1169,14 @@ export function TrashDashGame() {
     else if (screenRef.current === "paused") {
       lastFrameRef.current = performance.now();
       changeScreen("playing");
-      void playGameMusic(musicRef.current, { muted: mutedRef.current });
+      musicOwnerRef.current?.resume();
     }
   }, [changeScreen]);
 
   const toggleMute = useCallback(() => {
     mutedRef.current = !mutedRef.current;
     setMuted(mutedRef.current);
-    setGameMusicMuted(musicRef.current, mutedRef.current);
-    if (!mutedRef.current && screenRef.current === "playing") {
-      void playGameMusic(musicRef.current);
-    }
+    musicOwnerRef.current?.setMuted(mutedRef.current);
   }, []);
 
   const setTouchKey = useCallback((code: string, active: boolean) => {
@@ -1278,8 +1273,7 @@ export function TrashDashGame() {
     return () => {
       if (powerupPauseTimerRef.current !== null) window.clearTimeout(powerupPauseTimerRef.current);
       if (powerupNoticeTimerRef.current !== null) window.clearTimeout(powerupNoticeTimerRef.current);
-      disposeGameMusic(musicRef.current);
-      musicRef.current = null;
+      musicOwnerRef.current?.dispose();
     };
   }, []);
 
@@ -1511,15 +1505,10 @@ export function TrashDashGame() {
       setMessage(world, boss?.brutusState ? "BRUTUS THE BIN-HOUND" : "TRASH HEAP TYRANT", 2.4);
       tone(92, 0.32, "sawtooth");
 
-      const switchId = ++musicSwitchIdRef.current;
-      void switchGameMusic(
-        musicRef.current,
+      void musicOwnerRef.current?.switch(
         assetUrl(gameMusicTrackFor(world.levelId, "boss") ?? ""),
         { muted: mutedRef.current },
-      ).then((nextMusic) => {
-        if (switchId === musicSwitchIdRef.current) musicRef.current = nextMusic;
-        else if (nextMusic !== musicRef.current) disposeGameMusic(nextMusic);
-      });
+      );
     };
 
     const damageEnemy = (world: World, enemy: Enemy, stomp = false) => {

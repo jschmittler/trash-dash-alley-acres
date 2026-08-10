@@ -31,6 +31,24 @@ continues to resolve the active level's boss role.
 Final focused result: **15/15 PASS** across controller, runtime source,
 rendered shell, and Pages artifact tests.
 
+### Independent-review Fix Round 1
+
+Review commit `a14dc54` reproduced two Important defects. RED used a
+browser-shaped fake whose `src` and `currentSrc` are absolute and an injected,
+blocked first fade step. The old controller created a duplicate same-track
+player, and pausing during the fade left the incoming player active.
+
+GREEN canonicalizes stored/requested source identities and routes runtime
+lifecycle through a single owner for current and pending players. The owner
+propagates pause/resume/mute to both, cancels stale generations on restart or
+disposal, and prevents a cancelled incoming player from settling as current.
+Negative mutation coverage confirms a genuinely distinct canonical URL still
+switches. A restart-during-fade case confirms the stale player is disposed and
+only the replacement remains active.
+
+Fix-round focused result: **17/17 PASS** across controller and rendered runtime
+source coverage; Pages verification is **1/1 PASS**.
+
 ## Track-role ledger
 
 | Level | Exploration | Boss | Truth |
@@ -46,6 +64,10 @@ rendered shell, and Pages artifact tests.
 - Zero and short fade completion — PASS.
 - Previous-track pause/source removal/load — PASS.
 - Same-track reuse — PASS; no new player/listener.
+- Browser absolute/base-path identity equivalence — PASS; same source reuses,
+  distinct canonical source replaces.
+- In-flight ownership — PASS; pause/mute survive nonzero fade settlement,
+  resume reaches the settled incoming player, and restart cancels stale work.
 - Rejected play/switch — PASS; no escaped rejection, rejected replacement is
   disposed, current remains alive.
 - Repeated switches — PASS; every predecessor disposed, one final active
@@ -83,10 +105,10 @@ No audio asset file changed.
 - Focused controller/runtime/rendered/Pages source matrix: **15/15 PASS**.
 - `npm run validate:skills`: PASS (7 canonical skills).
 - `npm run lint`: zero errors; one unrelated `no-img-element` warning.
-- `npm test`: production build PASS; skill system **5/5**; package **290/290**.
+- `npm test`: production build PASS; skill system **5/5**; package **293/293**.
 - Pages build PASS; Pages verification **1/1**.
 - Exact staged implementation tree (before recording this result): production
-  and Pages builds PASS, focused **14/14**, clean package **230/230**.
+  and Pages builds PASS, focused **16/16**, clean package **233/233**.
 - `git diff --cached --check`: PASS.
 
 ## Self-review and concerns

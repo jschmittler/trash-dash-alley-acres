@@ -34,6 +34,14 @@ them; this pass deliberately did not create missing music.
 3. Short fades used an implicit global timer, which made lifecycle coverage
    nondeterministic. The controller now accepts an injected wait function while
    retaining the same production default and twelve-step fade.
+4. Independent review found that browser `src` / `currentSrc` values normalize
+   to absolute URLs while the runtime requests base-path URLs. Source identity
+   is now canonicalized, so equivalent browser URLs reuse the existing player;
+   a distinct canonical URL still creates a replacement.
+5. Independent review also found that pause or mute during a nonzero fade only
+   reached the outgoing player. A single music owner now owns current and
+   pending players, propagates pause/resume/mute to both, cancels stale fades by
+   generation, and prevents a cancelled incoming source from becoming current.
 
 No audio bytes, loudness, encoding, loop points, or mix settings changed.
 
@@ -48,14 +56,20 @@ No audio bytes, loudness, encoding, loop points, or mix settings changed.
 - pause, source removal, load, and disposal;
 - zero-duration and deterministic short fades;
 - same-track reuse without creating another player or listener;
+- browser-shaped absolute URL reuse plus a distinct-URL mutation case;
+- pause and mute during an injected nonzero fade, including state after the
+  incoming player settles and resumes;
+- cancellation of an in-flight fade during restart, with the stale source
+  disposed and only the replacement active;
 - rejected replacement cleanup while the current player remains alive;
 - repeated exploration/boss switching with every predecessor disposed and
   exactly one final player left active; and
 - source-level runtime use of the canonical role resolver for initial and
   arena-entry music.
 
-Focused controller, rendered-shell, and Pages artifact matrix: **15/15 PASS**.
-The shared full package suite: **290/290 PASS**. Skill validation, production
+Focused controller and rendered-shell matrix: **17/17 PASS**; Pages artifact
+verification: **1/1 PASS**. The shared full package suite: **293/293 PASS**.
+Skill validation, production
 build, and lint also pass; lint retains one unrelated `no-img-element` warning.
 
 ## Running-browser evidence
@@ -81,6 +95,10 @@ SFX, exact pause position, concurrent acoustic output, and a forced live
 autoplay rejection are therefore **CANNOT VERIFY** from browser observation.
 Deterministic fake-audio coverage proves the corresponding controller state
 and cleanup behavior but is not promoted to an audible-quality PASS.
+
+The independent-review repairs were therefore rechecked deterministically with
+a browser-shaped fake rather than promoted to a new live-listening claim. No
+timer or browser observation was allowed to block the pass.
 
 ## Known gaps and deferred work
 

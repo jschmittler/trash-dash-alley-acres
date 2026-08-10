@@ -57,8 +57,8 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /aria-label="Sprint"/);
   assert.match(game, /visibilityState === "hidden"/);
   assert.match(musicController, /raccoon-rush-loop\.m4a/);
-  assert.match(game, /playGameMusic/);
-  assert.match(game, /pauseGameMusic/);
+  assert.match(game, /createGameMusicOwner/);
+  assert.match(game, /musicOwnerRef\.current\?\.pause/);
   assert.match(game, /localStorage/);
   assert.match(game, /const camera = Math\.round\(world\.cameraX\)/);
   assert.match(game, /trash-pickups-motion\.png/);

@@ -618,9 +618,11 @@ Browser diagnostics:
 - **Repaired integration defects:** same-track requests now apply mute/resume
   without creating a second player; deterministic fades are injectable for
   lifecycle coverage; and the pre-activated Brutus fixture starts the boss
-  role instead of exploration.
-- **Automated evidence:** controller/runtime/artifact coverage passes 15/15;
-  the shared full package suite passes 290/290. Rejected playback is contained,
+  role instead of exploration. Independent review additionally repaired
+  browser absolute-URL equivalence and centralized current/pending fade
+  ownership so pause, resume, mute, restart, and cancellation are race-safe.
+- **Automated evidence:** controller/runtime/rendered coverage passes 17/17,
+  Pages passes 1/1, and the shared full package suite passes 293/293. Rejected playback is contained,
   previous sources are paused/removed/loaded, and sequential switches leave
   one final player with no listeners.
 - **Browser evidence:** user-gesture Level 1 start observed the exploration

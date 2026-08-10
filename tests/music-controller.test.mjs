@@ -6,6 +6,7 @@ import {
   GAME_MUSIC_TRACKS,
   MUSIC_VOLUME,
   createGameMusic,
+  createGameMusicOwner,
   disposeGameMusic,
   gameMusicTrackFor,
   pauseGameMusic,
@@ -50,6 +51,15 @@ class FakeAudio {
 
   addEventListener(type) {
     this.listeners.push(type);
+  }
+}
+
+class BrowserLikeFakeAudio extends FakeAudio {
+  constructor(source) {
+    super(source);
+    delete this.source;
+    this.src = new URL(source, "https://example.test/trash-dash-alley-acres/").href;
+    this.currentSrc = this.src;
   }
 }
 
@@ -176,6 +186,106 @@ test("same-track switches reuse one player while applying mute and resuming safe
   assert.equal(current.removed.length, 0);
 });
 
+test("browser-normalized absolute URLs reuse the player for the same canonical track", async () => {
+  const current = createGameMusic(
+    "/trash-dash-alley-acres/assets/audio/raccoon-rush-loop.m4a",
+    BrowserLikeFakeAudio,
+  );
+
+  const reused = await switchGameMusic(
+    current,
+    "/trash-dash-alley-acres/assets/audio/raccoon-rush-loop.m4a",
+    { AudioConstructor: BrowserLikeFakeAudio, fadeMs: 0 },
+  );
+
+  assert.equal(reused, current);
+  assert.equal(FakeAudio.instances.length, 1);
+  assert.equal(current.playCount, 1);
+  assert.equal(current.removed.length, 0);
+
+  const different = await switchGameMusic(
+    current,
+    "/trash-dash-alley-acres/assets/audio/trash-heap-tyrant-loop.m4a",
+    { AudioConstructor: BrowserLikeFakeAudio, fadeMs: 0 },
+  );
+  assert.notEqual(different, current);
+  assert.equal(FakeAudio.instances.length, 2);
+});
+
+test("the owner keeps pause and mute state on the incoming player through a nonzero fade", async () => {
+  const owner = createGameMusicOwner();
+  const current = new FakeAudio("/level.m4a");
+  owner.replace(current, { active: true });
+  let releaseFirstFadeStep;
+  const firstFadeStep = new Promise((resolve) => {
+    releaseFirstFadeStep = resolve;
+  });
+  let waitCount = 0;
+  const switching = owner.switch("/boss.m4a", {
+    AudioConstructor: FakeAudio,
+    fadeMs: 24,
+    wait: async () => {
+      waitCount += 1;
+      if (waitCount === 1) await firstFadeStep;
+    },
+  });
+  await Promise.resolve();
+  await Promise.resolve();
+
+  const pending = owner.pending;
+  assert.ok(pending, "the transition must publish the incoming player before fading");
+  owner.pause();
+  owner.setMuted(true);
+  assert.deepEqual([current.paused, pending.paused], [true, true]);
+  assert.deepEqual([current.muted, pending.muted], [true, true]);
+
+  releaseFirstFadeStep();
+  const next = await switching;
+  assert.equal(next, pending);
+  assert.equal(owner.current, pending);
+  assert.equal(owner.pending, null);
+  assert.equal(next.paused, true);
+  assert.equal(next.muted, true);
+  assert.equal(current.paused, true);
+
+  owner.resume();
+  assert.equal(next.paused, false);
+  assert.equal(next.muted, true);
+});
+
+test("replacing music cancels an in-flight fade without stacking the stale player", async () => {
+  const owner = createGameMusicOwner();
+  const exploration = new FakeAudio("/level.m4a");
+  owner.replace(exploration, { active: true });
+  let releaseFirstFadeStep;
+  const firstFadeStep = new Promise((resolve) => {
+    releaseFirstFadeStep = resolve;
+  });
+
+  const switching = owner.switch("/boss.m4a", {
+    AudioConstructor: FakeAudio,
+    fadeMs: 24,
+    wait: () => firstFadeStep,
+  });
+  await Promise.resolve();
+  await Promise.resolve();
+  const staleBoss = owner.pending;
+  assert.ok(staleBoss);
+
+  const restarted = new FakeAudio("/level.m4a");
+  owner.replace(restarted, { active: true, restart: true });
+  releaseFirstFadeStep();
+  await switching;
+
+  assert.equal(owner.current, restarted);
+  assert.equal(owner.pending, null);
+  assert.equal(restarted.paused, false);
+  assert.equal(restarted.currentTime, 0);
+  assert.equal(staleBoss.paused, true);
+  assert.deepEqual(staleBoss.removed, ["src"]);
+  assert.deepEqual(FakeAudio.instances.map((music) => music.paused), [true, true, false]);
+});
+
 test("rejected replacement playback is contained and keeps the current player alive", async () => {
   class RejectingAudio extends FakeAudio {
     async play() {
@@ -225,5 +335,10 @@ test("runtime resolves both level roles through the canonical track table", asyn
   assert.match(game, /const initialMusicRole = bossRoute\?\.activateArena \? "boss" : "exploration"/);
   assert.match(game, /gameMusicTrackFor\(levelId, initialMusicRole\)/);
   assert.match(game, /gameMusicTrackFor\(world\.levelId, "boss"\)/);
+  assert.match(game, /createGameMusicOwner/);
+  assert.match(game, /musicOwnerRef\.current\?\.pause\(\)/);
+  assert.match(game, /musicOwnerRef\.current\?\.resume\(\)/);
+  assert.match(game, /musicOwnerRef\.current\?\.setMuted\(mutedRef\.current\)/);
+  assert.match(game, /musicOwnerRef\.current\?\.switch\(/);
   assert.doesNotMatch(game, /assetUrl\("assets\/audio\/(?:raccoon-rush|trash-heap-tyrant)-loop\.m4a"\)/);
 });
