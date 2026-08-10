@@ -108,3 +108,40 @@ Those paths have deterministic state/lifecycle/integration coverage, but no visu
 - No unrelated responsive/mobile test changes, skill-system files, Level 1 crate changes, or other pre-existing dirty work are included in the scoped package.
 - Concern: browser input automation did not complete the required normal traversal/action matrix, so dynamic visual feel is deliberately left CANNOT VERIFY and prevents an unconditional DONE status.
 - Concern: the lint warning is pre-existing and outside Task 7; it is recorded rather than suppressed.
+
+## Review fix round 1
+
+Review commit `3816a0e` found two genuine closure gaps.
+
+### RED / GREEN
+
+- **Lamp aspect and coverage:** RED measured actual source→runtime scales of
+  0.5 X and 0.8125 Y and proved the lamp had neither an inventory record nor a
+  draw-family binding. GREEN derives 156×208 from the 192×256 source with one
+  0.8125 scale, registers the complete source/destination path, and publishes
+  the measured 111×248 alpha-visible bounds. The bottom-center anchor is
+  unchanged; placement uses the visible silhouette and the fixture moves 12px
+  to clear the adjacent poolside ledge without floating.
+- **Emitter effects:** RED proved both water records inherited
+  `GROUND_CONTACT` and `walkable-surface`, with no mirrored origin-relative
+  bounds. GREEN creates dedicated emitter records whose right/left bounds come
+  directly from `sprinklerWaterDrawRect` and `hydrantWaterDrawRect`, whose
+  placement footprint is their mirrored motion envelope, and whose allowed
+  relationship is `named-emitter-envelope` under `FREE_ANCHOR`.
+
+No source or generated asset was rebuilt; the valid lamp art and water cells
+were repaired through runtime geometry and authoritative metadata. The focused
+prop/inventory/asset/placement/enemy matrix is green. Final browser appearance
+after this corrective change remains `CANNOT VERIFY` unless new evidence is
+captured; the original static screenshots are not reused as proof.
+
+Corrective verification:
+
+- Required plus directly affected working-tree matrix: **141/141 PASS**.
+- Full repository suite: **278/278 PASS**, plus **5/5** skill-system pretests.
+- Exact staged package: **124/124 PASS** and production build PASS from tree
+  `bbcf19362fee331f800d17b52d8da552206c429d`.
+- Skill validation and Pages build/test pass. Lint remains zero errors with the
+  same recorded pre-existing `<img>` warning.
+- Browser attempt returned `Browser is not available`; no post-fix screenshot
+  or runtime visual PASS is claimed.

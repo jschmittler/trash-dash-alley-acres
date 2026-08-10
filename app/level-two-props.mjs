@@ -62,11 +62,16 @@ export const PORCH_LIGHT_RENDER_METRICS = Object.freeze({
   sourceAttachment: Object.freeze({ x: 18, y: 52 }),
 });
 
+const LAMP_POST_SOURCE_WIDTH = 192;
+const LAMP_POST_SOURCE_HEIGHT = 256;
+const LAMP_POST_DRAW_HEIGHT = 208;
+
 export const LAMP_POST_RENDER_METRICS = Object.freeze({
-  sourceWidth: 192,
-  sourceHeight: 256,
-  drawWidth: 96,
-  drawHeight: 208,
+  sourceWidth: LAMP_POST_SOURCE_WIDTH,
+  sourceHeight: LAMP_POST_SOURCE_HEIGHT,
+  drawWidth: LAMP_POST_SOURCE_WIDTH / LAMP_POST_SOURCE_HEIGHT * LAMP_POST_DRAW_HEIGHT,
+  drawHeight: LAMP_POST_DRAW_HEIGHT,
+  visibleBounds: Object.freeze({ x: 41, y: 7, w: 111, h: 248 }),
   sourceLight: Object.freeze({ x: 136, y: 72 }),
 });
 
@@ -183,6 +188,17 @@ export function lampPostDrawRect(item) {
   const { drawWidth: w, drawHeight: h } = LAMP_POST_RENDER_METRICS;
   const groundY = item.y + item.h;
   return { x: item.x + item.w / 2 - w / 2, y: groundY - h, w, h };
+}
+
+export function lampPostVisibleDrawRect(item) {
+  const draw = lampPostDrawRect(item);
+  const { sourceWidth, sourceHeight, visibleBounds } = LAMP_POST_RENDER_METRICS;
+  return {
+    x: draw.x + visibleBounds.x / sourceWidth * draw.w,
+    y: draw.y + visibleBounds.y / sourceHeight * draw.h,
+    w: visibleBounds.w / sourceWidth * draw.w,
+    h: visibleBounds.h / sourceHeight * draw.h,
+  };
 }
 
 export function lampEmitterOrigin(item) {

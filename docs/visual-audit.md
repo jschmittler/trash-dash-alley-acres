@@ -73,7 +73,7 @@ Screenshot references:
 
 ### VIS-002: Lamp-post scaling and grounding
 
-- Status: 🟩 Complete
+- Status: 🟨 Corrective automated repair complete; final running-game recheck pending
 - Original priority: 🟧 High
 - Location: Level 2 moth encounter
 
@@ -93,7 +93,12 @@ Fix applied:
 
 - Created a full-height 192×256 pixel-art lamp post with a grounded base,
   vertical support, arm, housing, and compatible perspective.
-- Preserved aspect ratio through a single declared render policy.
+- Corrective review found the first pass still drew the complete 192×256 image
+  at 96×208. Runtime now derives 156×208 from one uniform 0.8125 scale.
+- Canonical inventory now owns the full source rectangle, actual destination,
+  measured 111×248 alpha bounds, grounded anchor, and a dedicated runtime draw
+  family. Mutation-sensitive tests compare the actual helper output rather than
+  repeating selected constants.
 - Attached glow and moth behavior to the fixture emitter.
 
 Files changed:
@@ -108,9 +113,13 @@ Files changed:
 
 Verification:
 
-- Asset dimensions, aspect ratio, baseline, and emitter tests pass.
-- Local browser review confirms the base meets the terrain and the moth/glow
-  align with the housing.
+- Source→destination aspect, alpha-visible ground contact, emitter, inventory,
+  and full-world-placement tests pass. The widened full texture uses its
+  measured visible bounds for platform exclusion, and the lamp's grounded
+  placement shifts 12px so the visible silhouette clears the poolside ledge.
+- The earlier browser evidence predates this corrective geometry. Final runtime
+  appearance is `CANNOT VERIFY` until a post-fix moth-route screenshot is
+  captured; no automated check is reported as visual PASS.
 
 Screenshot reference:
 
@@ -718,3 +727,12 @@ pass a visual composition review.
   controlled reflection/damage/stomp timing, both facings through every enemy
   action, utility-platform jump feel, and the complete live Brutus combat/exit
   sequence remain manual acceptance items.
+- **Review fix round 1:** the review correctly reopened the standalone lamp and
+  emitter-effect contracts. The lamp now maps 192×256→156×208 with one scale,
+  publishes its measured alpha-visible bounds and dedicated inventory/draw
+  family, and retains bottom-center ground contact. Sprinkler and hydrant water
+  now publish right/left bounds directly from their runtime draw helpers around
+  a named emitter origin, use `FREE_ANCHOR`, and allow only a named emitter
+  envelope rather than a walkable surface. Focused tests are mutation-sensitive
+  to helper/dimension changes. Post-correction browser appearance remains
+  `CANNOT VERIFY` unless separately recorded after this change.

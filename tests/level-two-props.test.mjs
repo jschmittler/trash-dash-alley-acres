@@ -19,6 +19,7 @@ import {
   levelTwoPropFrame,
   lampEmitterOrigin,
   lampPostDrawRect,
+  lampPostVisibleDrawRect,
   sprinklerBodyDrawRect,
   sprinklerEmitterOrigin,
   sprinklerVisualState,
@@ -297,14 +298,19 @@ test("sprinkler and lamp share explicit grounded anchors and effect origins", ()
   for (const direction of [1, -1]) {
     const origin = sprinklerEmitterOrigin(sprinkler, direction);
     const water = sprinklerWaterDrawRect(origin, direction);
-    assert.ok(Math.abs((direction > 0 ? water.x : water.x + water.w) - origin.x) <= 5);
+  assert.ok(Math.abs((direction > 0 ? water.x : water.x + water.w) - origin.x) <= 5);
   }
 
-  assert.equal(LAMP_POST_RENDER_METRICS.drawWidth, 96);
-  assert.equal(LAMP_POST_RENDER_METRICS.drawHeight, 208);
   const lamp = { x: 3972, y: 260, w: 96, h: 208 };
   const lampDraw = lampPostDrawRect(lamp);
+  const lampVisible = lampPostVisibleDrawRect(lamp);
+  assert.equal(
+    lampDraw.w / LAMP_POST_RENDER_METRICS.sourceWidth,
+    lampDraw.h / LAMP_POST_RENDER_METRICS.sourceHeight,
+    "lamp texture must use one runtime scale",
+  );
   assert.equal(lampDraw.y + lampDraw.h, 468);
+  assert.ok(Math.abs(lampVisible.y + lampVisible.h - 468) <= 2, "lamp visible pixels retain ground contact");
   const light = lampEmitterOrigin(lamp);
   assert.ok(light.x > lampDraw.x && light.x < lampDraw.x + lampDraw.w);
   assert.ok(light.y > lampDraw.y && light.y < lampDraw.y + lampDraw.h * 0.5);
@@ -329,4 +335,11 @@ test("fixed-aspect Level 2 atlas cells use one uniform runtime scale", () => {
   ]) {
     assert.equal(rect.w, rect.h, `${name} applies unequal X/Y scale to a 128px atlas cell`);
   }
+
+  const lamp = lampPostDrawRect({ x: 3972, y: 260, w: 96, h: 208 });
+  assert.equal(
+    lamp.w / LAMP_POST_RENDER_METRICS.sourceWidth,
+    lamp.h / LAMP_POST_RENDER_METRICS.sourceHeight,
+    "lamp post applies unequal X/Y scale to its complete source image",
+  );
 });

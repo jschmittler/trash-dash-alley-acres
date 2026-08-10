@@ -23,7 +23,7 @@ import {
   hydrantDrawRect,
   hydrantNozzleOrigin,
   hydrantWaterDrawRect,
-  lampPostDrawRect,
+  lampPostVisibleDrawRect,
   LEVEL_TWO_PROP_FRAMES,
   levelTwoPlatformDrawRect,
   sprinklerBodyDrawRect,
@@ -315,7 +315,7 @@ test("every Level 2 environment and boss prop uses legal full visual bounds", as
       x: item.x + item.w / 2 - 42, y: item.y + item.h - 98, w: 84, h: 112,
     });
     if (item.kind === "sprinkler" && item.encounterId !== "brutus") return projected("sprinkler-idle", sprinklerBodyDrawRect(item));
-    if (item.kind === "lamp-post") return lampPostDrawRect(item);
+    if (item.kind === "lamp-post") return lampPostVisibleDrawRect(item);
     if (item.kind === "porch-light") return item;
     return projected(LEVEL_TWO_PROP_FRAMES["hydrant-idle"] ? "hydrant-idle" : "hydrant", hydrantDrawRect(item));
   };

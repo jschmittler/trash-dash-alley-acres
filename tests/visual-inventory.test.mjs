@@ -3,6 +3,11 @@ import test from "node:test";
 
 import { LEVEL_TWO } from "../app/level-two.mjs";
 import {
+  hydrantWaterDrawRect,
+  lampPostDrawRect,
+  sprinklerWaterDrawRect,
+} from "../app/level-two-props.mjs";
+import {
   IMPLEMENTED_VISUAL_INVENTORY,
   RUNTIME_DRAW_FAMILY_MANIFEST,
   VISUAL_QA_ROUTES,
@@ -66,7 +71,7 @@ test("renderer draw-family manifest binds every named runtime path to canonical 
   const expectedFamilies = [
     "decorative-props", "level-one-enemies", "level-two-enemies", "players", "bosses", "pickups",
     "victory-dumpster", "level-two-props", "level-two-visual-platforms", "bin-lid-source",
-    "ordinary-bin-lid", "brutus-rolling-can", "procedural-effects",
+    "level-two-lamp-post", "ordinary-bin-lid", "brutus-rolling-can", "procedural-effects",
   ];
   assert.deepEqual([...families].sort(), expectedFamilies.sort(), "renderer draw families are exhaustive");
   for (const id of expectedFamilies) {
@@ -107,6 +112,37 @@ test("animated prop consumers bind all committed source frames to runtime destin
     { x: 256, y: 384, w: 128, h: 128 }, { x: 384, y: 384, w: 128, h: 128 },
   ]);
   assert.deepEqual(sprinklerWater.runtimeDestinations.spray, Array.from({ length: 6 }, () => ({ w: 132, h: 132 })));
+
+  const lamp = record("lamp-post");
+  const runtimeLamp = lampPostDrawRect({ x: 0, y: 0, w: 96, h: 208 });
+  assert.deepEqual(lamp.sourceRects.idle, [{ x: 0, y: 0, w: 192, h: 256 }]);
+  assert.deepEqual(lamp.runtimeDestinations.idle, [{ w: runtimeLamp.w, h: runtimeLamp.h }]);
+  assert.equal(runtimeLamp.w / 192, runtimeLamp.h / 256);
+});
+
+test("water effect contracts are emitter-relative for both facings", () => {
+  const record = (id) => IMPLEMENTED_VISUAL_INVENTORY.find((candidate) => candidate.id === id);
+  for (const [id, drawRect] of [
+    ["sprinkler-water", sprinklerWaterDrawRect],
+    ["hydrant-water", hydrantWaterDrawRect],
+  ]) {
+    const effect = record(id);
+    const expected = {
+      right: drawRect({ x: 0, y: 0 }, 1),
+      left: drawRect({ x: 0, y: 0 }, -1),
+    };
+    assert.equal(effect.anchorPolicy, "FREE_ANCHOR", `${id}: emitter anchor`);
+    assert.deepEqual(effect.contract.effectOrigin, { x: 0, y: 0 }, `${id}: named emitter`);
+    assert.deepEqual(effect.runtimeBoundsByFacing, expected, `${id}: mirrored runtime bounds`);
+    assert.deepEqual(effect.contract.allowedZones, ["named-emitter-envelope"], `${id}: effect zone`);
+    assert.ok(!effect.contract.allowedZones.includes("walkable-surface"), `${id}: not ground placement`);
+    const left = Math.min(expected.right.x, expected.left.x);
+    const top = Math.min(expected.right.y, expected.left.y);
+    const right = Math.max(expected.right.x + expected.right.w, expected.left.x + expected.left.w);
+    const bottom = Math.max(expected.right.y + expected.right.h, expected.left.y + expected.left.h);
+    assert.deepEqual(effect.contract.visualBounds, { x: left, y: top, w: right - left, h: bottom - top });
+    assert.deepEqual(effect.contract.placementFootprint, effect.contract.visualBounds);
+  }
 });
 
 test("Level 2 visual platforms are fixed-aspect records with their source cells and runtime rectangles", () => {

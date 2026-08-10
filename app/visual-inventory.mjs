@@ -6,7 +6,16 @@ import { LEVEL_ONE_ENEMY_ANIMATIONS } from "./level-one-enemy-animation.mjs";
 import { LEVEL_ONE, LEVEL_ONE_ENEMY_KINDS } from "./level-one.mjs";
 import { LEVEL_TWO, LEVEL_TWO_ENEMY_KINDS } from "./level-two.mjs";
 import { LEVEL_TWO_ENEMY_ANIMATIONS, LEVEL_TWO_ENEMY_COLLISION } from "./level-two-enemies.mjs";
-import { LEVEL_TWO_PROP_ASSET, LEVEL_TWO_PROP_ATLAS, LEVEL_TWO_PROP_FRAMES } from "./level-two-props.mjs";
+import {
+  LEVEL_TWO_PROP_ASSET,
+  LEVEL_TWO_PROP_ATLAS,
+  LEVEL_TWO_PROP_FRAMES,
+  LAMP_POST_RENDER_METRICS,
+  hydrantWaterDrawRect,
+  lampPostDrawRect,
+  lampPostVisibleDrawRect,
+  sprinklerWaterDrawRect,
+} from "./level-two-props.mjs";
 import { PLAYER_FORM_STATES } from "./player-animation.mjs";
 import { PLAYABLE_CHARACTERS } from "./playable-character.mjs";
 import {
@@ -83,6 +92,7 @@ const makeRecord = (record, geometry) => {
   renderedSize: cloneAndFreeze(record.renderedSize ?? null),
   sourceRects: cloneAndFreeze(record.sourceRects ?? null),
   runtimeDestinations: cloneAndFreeze(record.runtimeDestinations ?? null),
+  runtimeBoundsByFacing: cloneAndFreeze(record.runtimeBoundsByFacing ?? null),
   anchorPolicy: geometry.anchorPolicy ?? FREE_ANCHOR,
   contract: createVisualContract({
     id: record.id,
@@ -334,7 +344,7 @@ const decorativeRecords = Object.entries(DECORATIVE_PROPS).map(([id, meta]) => m
   allowedZones: ["walkable-surface"], forbiddenZones: ["platform-interior", "hazard", "pickup-clearance", "enemy-footprint"], minimumClearance: clearance(6),
 }));
 
-const legacyPropRecord = ({ id, category, sourceRects, renderedSize, runtimeDestinations = null, renderLayer, effectOrigin = null, runtimeOwner = null }) => makeRecord({
+const groundedPropRecord = ({ id, category, sourceRects, renderedSize, runtimeDestinations = null, renderLayer, runtimeOwner = null }) => makeRecord({
   id,
   category,
   levelIds: ["level-2"],
@@ -347,7 +357,7 @@ const legacyPropRecord = ({ id, category, sourceRects, renderedSize, runtimeDest
     repeated(Array.isArray(sources) ? sources.length : 1, renderedSize),
   ])),
   runtimeOwner,
-  origin: effectOrigin ? "named emitter origin" : "source baseline to destination ground",
+  origin: "source baseline to destination ground",
   facing: "mirrored around named attachment origin",
   animations: null,
   requiredStates: [],
@@ -357,15 +367,84 @@ const legacyPropRecord = ({ id, category, sourceRects, renderedSize, runtimeDest
   allowedZones: ["walkable-surface"],
   forbiddenZones: ["unrelated-platform-interior", "player-spawn"],
   minimumClearance: clearance(4),
-  effectOrigin,
+});
+
+const emitterEffectRecord = ({ id, sourceRects, renderedSize, drawRect, runtimeOwner }) => {
+  const effectOrigin = { x: 0, y: 0 };
+  const runtimeBoundsByFacing = {
+    right: drawRect(effectOrigin, 1),
+    left: drawRect(effectOrigin, -1),
+  };
+  const envelope = motionEnvelope(Object.values(runtimeBoundsByFacing));
+  return makeRecord({
+    id,
+    category: "effect",
+    levelIds: ["level-2"],
+    assetSource: LEVEL_TWO_PROP_ASSET,
+    nativeSize: { cellW: LEVEL_TWO_PROP_ATLAS.cell, cellH: LEVEL_TWO_PROP_ATLAS.cell },
+    sourceRects,
+    renderedSize,
+    runtimeDestinations: Object.fromEntries(Object.entries(sourceRects).map(([state, sources]) => [
+      state,
+      repeated(Array.isArray(sources) ? sources.length : 1, renderedSize),
+    ])),
+    runtimeBoundsByFacing,
+    runtimeOwner,
+    origin: "named emitter origin",
+    facing: "mirrored around named emitter origin",
+    animations: null,
+    requiredStates: [],
+  }, {
+    visualBounds: envelope,
+    collisionBounds: rect(0, 0, 0, 0),
+    placementFootprint: envelope,
+    groundAnchor: effectOrigin,
+    renderLayer: "GAMEPLAY_EFFECTS",
+    allowedZones: ["named-emitter-envelope"],
+    forbiddenZones: ["unrelated-emitter", "effect-clip-region"],
+    minimumClearance: clearance(0),
+    scalePolicy: canonicalScale(1, 1),
+    anchorPolicy: FREE_ANCHOR,
+    effectOrigin,
+  });
+};
+
+const lampDraw = lampPostDrawRect({ x: 0, y: 0, w: 96, h: 208 });
+const lampVisibleBounds = lampPostVisibleDrawRect({ x: -48, y: -208, w: 96, h: 208 });
+const lampCollisionBounds = rect(-48, -208, 96, 208);
+const lampPostRecord = makeRecord({
+  id: "lamp-post",
+  category: "interactive-prop",
+  levelIds: ["level-2"],
+  assetSource: "assets/generated/level2-lamp-post.png",
+  nativeSize: { w: LAMP_POST_RENDER_METRICS.sourceWidth, h: LAMP_POST_RENDER_METRICS.sourceHeight },
+  renderedSize: { w: lampDraw.w, h: lampDraw.h },
+  sourceRects: { idle: [rect(0, 0, LAMP_POST_RENDER_METRICS.sourceWidth, LAMP_POST_RENDER_METRICS.sourceHeight)] },
+  runtimeDestinations: { idle: [{ w: lampDraw.w, h: lampDraw.h }] },
+  runtimeOwner: "level-two-lamp-post-render",
+  origin: "source bottom-center to destination ground",
+  facing: "not applicable",
+  animations: null,
+  requiredStates: [],
+}, {
+  visualBounds: lampVisibleBounds,
+  collisionBounds: lampCollisionBounds,
+  placementFootprint: motionEnvelope([lampVisibleBounds, lampCollisionBounds]),
+  groundAnchor: { x: 0, y: 0 },
+  renderLayer: "GAMEPLAY",
+  allowedZones: ["walkable-surface"],
+  forbiddenZones: ["unrelated-platform-interior", "player-spawn"],
+  minimumClearance: clearance(4),
+  scalePolicy: canonicalScale(1, 1),
+  anchorPolicy: GROUND_CONTACT,
 });
 
 const propRecords = [
-  legacyPropRecord({ id: "charge-obstacle", category: "interactive-prop", sourceRects: { idle: [rect(0, 128, 128, 128)] }, renderedSize: { w: 112, h: 112 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
-  legacyPropRecord({ id: "sprinkler-body", category: "hazard", sourceRects: { idle: [rect(0, 256, 128, 128)] }, renderedSize: { w: 82, h: 82 }, renderLayer: "GAMEPLAY" }),
-  legacyPropRecord({ id: "sprinkler-water", category: "effect", sourceRects: animationSourceRects({ start: LEVEL_TWO_PROP_FRAMES["sprinkler-start"], spray: LEVEL_TWO_PROP_FRAMES["sprinkler-spray"], stop: LEVEL_TWO_PROP_FRAMES["sprinkler-stop"] }, 128, 128), renderedSize: { w: 132, h: 132 }, renderLayer: "GAMEPLAY_EFFECTS", effectOrigin: { x: 0, y: 0 }, runtimeOwner: "level-two-prop-render" }),
-  legacyPropRecord({ id: "hydrant-body", category: "interactive-prop", sourceRects: animationSourceRects({ idle: LEVEL_TWO_PROP_FRAMES["hydrant-idle"], build: LEVEL_TWO_PROP_FRAMES["hydrant-build"], spray: LEVEL_TWO_PROP_FRAMES["hydrant-spray"], recover: LEVEL_TWO_PROP_FRAMES["hydrant-recover"] }, 128, 128), renderedSize: { w: 96, h: 96 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
-  legacyPropRecord({ id: "hydrant-water", category: "effect", sourceRects: animationSourceRects({ burst: LEVEL_TWO_PROP_FRAMES["hydrant-water-burst"], full: LEVEL_TWO_PROP_FRAMES["hydrant-water-full"], taper: LEVEL_TWO_PROP_FRAMES["hydrant-water-taper"] }, 128, 128), renderedSize: { w: 144, h: 144 }, renderLayer: "GAMEPLAY_EFFECTS", effectOrigin: { x: 0, y: 0 }, runtimeOwner: "level-two-prop-render" }),
+  groundedPropRecord({ id: "charge-obstacle", category: "interactive-prop", sourceRects: { idle: [rect(0, 128, 128, 128)] }, renderedSize: { w: 112, h: 112 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
+  groundedPropRecord({ id: "sprinkler-body", category: "hazard", sourceRects: { idle: [rect(0, 256, 128, 128)] }, renderedSize: { w: 82, h: 82 }, renderLayer: "GAMEPLAY" }),
+  emitterEffectRecord({ id: "sprinkler-water", sourceRects: animationSourceRects({ start: LEVEL_TWO_PROP_FRAMES["sprinkler-start"], spray: LEVEL_TWO_PROP_FRAMES["sprinkler-spray"], stop: LEVEL_TWO_PROP_FRAMES["sprinkler-stop"] }, 128, 128), renderedSize: { w: 132, h: 132 }, drawRect: sprinklerWaterDrawRect, runtimeOwner: "level-two-prop-render" }),
+  groundedPropRecord({ id: "hydrant-body", category: "interactive-prop", sourceRects: animationSourceRects({ idle: LEVEL_TWO_PROP_FRAMES["hydrant-idle"], build: LEVEL_TWO_PROP_FRAMES["hydrant-build"], spray: LEVEL_TWO_PROP_FRAMES["hydrant-spray"], recover: LEVEL_TWO_PROP_FRAMES["hydrant-recover"] }, 128, 128), renderedSize: { w: 96, h: 96 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
+  emitterEffectRecord({ id: "hydrant-water", sourceRects: animationSourceRects({ burst: LEVEL_TWO_PROP_FRAMES["hydrant-water-burst"], full: LEVEL_TWO_PROP_FRAMES["hydrant-water-full"], taper: LEVEL_TWO_PROP_FRAMES["hydrant-water-taper"] }, 128, 128), renderedSize: { w: 144, h: 144 }, drawRect: hydrantWaterDrawRect, runtimeOwner: "level-two-prop-render" }),
 ];
 
 const pickupRecords = [["trash", 46, 46], ["taco", 58, 58], ["cap", 51, 42]].map(([id, w, h]) => makeRecord({
@@ -437,7 +516,7 @@ const miscRecords = [
 ];
 
 export const IMPLEMENTED_VISUAL_INVENTORY = Object.freeze([
-  ...backgroundRecords, ...surfaceRecords, ...levelTwoVisualPlatformRecords, ...decorativeRecords, ...propRecords, ...pickupRecords,
+  ...backgroundRecords, ...surfaceRecords, ...levelTwoVisualPlatformRecords, ...decorativeRecords, ...propRecords, lampPostRecord, ...pickupRecords,
   dumpsterRecord, ...miscRecords, ...playerRecords, ...levelOneEnemyRecords, ...levelTwoEnemyRecords, ...bossRecords,
 ]);
 
@@ -454,6 +533,7 @@ export const RUNTIME_DRAW_FAMILY_MANIFEST = Object.freeze([
   drawFamily("pickups", "drawSprite/trashPickupRows+tacoPowerMotion+sprites.cap", ["trash", "taco", "cap"]),
   drawFamily("victory-dumpster", "drawSprite/dumpsterFrame+dumpsterDrawRect", ["victory-dumpster"]),
   drawFamily("level-two-props", "drawSprite/levelTwoPropFrame", ["charge-obstacle", "sprinkler-body", "sprinkler-water", "hydrant-body", "hydrant-water"]),
+  drawFamily("level-two-lamp-post", "drawImage/lampPostDrawRect", ["lamp-post"]),
   drawFamily("level-two-visual-platforms", "drawSprite/levelTwoPlatformDrawRect", ["brutus-platform-left", "brutus-platform-right"]),
   drawFamily("bin-lid-source", "drawSprite/levelTwoPropFrame(acorn)", ["bin-lid-source"]),
   drawFamily("ordinary-bin-lid", "drawSprite/binLids", ["ordinary-bin-lid"]),

@@ -404,7 +404,7 @@ export const ENCOUNTER_TEST_ROUTES = Object.freeze({
   }),
   moth: Object.freeze({
     encounterId: "porch-light-moth-introduction", playerX: 3890, playerSurfaceId: "poolside-ledge", cameraX: 3540,
-    environment: Object.freeze([{ id: "moth-lamp-post", kind: "lamp-post", x: 4090, y: 260, w: 96, h: 208, flightBand: "porch-light-orbit", placementType: "ON_SURFACE", surfaceId: "obstacle-lawn" }]),
+    environment: Object.freeze([{ id: "moth-lamp-post", kind: "lamp-post", x: 4102, y: 260, w: 96, h: 208, flightBand: "porch-light-orbit", placementType: "ON_SURFACE", surfaceId: "obstacle-lawn" }]),
   }),
   interaction: Object.freeze({
     encounterId: "obstacle-interaction-test", playerX: 3260, playerSurfaceId: "obstacle-lawn", cameraX: 3120,
