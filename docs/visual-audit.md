@@ -9,7 +9,7 @@ runtime result, and inspect the change in the running game.
 
 ## Audit status
 
-- Last updated: 2026-08-09
+- Last updated: 2026-08-10
 - Audited by: Codex with automated contract checks and localhost browser review
 - Current scope: Levels 1 and 2
 
@@ -21,6 +21,42 @@ Legend:
 - 🟩 Complete — verified fixed
 
 ## Known issues
+
+### V2 failed-audit remediation release gate
+
+- Status: **INCOMPLETE**
+- Priority: 🟥 Critical release verification
+- Scope: nine supplied Level 2 visual failures and the continuous Level 1 →
+  Level 2 Jimothy campaign
+
+Current evidence:
+
+- The clean committed snapshot passes canonical skill validation, the 74-test
+  focused V2 matrix, the full 314-test committed suite, production and Pages
+  builds, the Pages artifact test, lint with zero errors, deterministic asset
+  rebuilds, and whitespace validation.
+- A normal browser session completed title → character select → Jimothy →
+  ordinary Level 1 gameplay at 1280×720 with no warning/error logs.
+
+Release blocker:
+
+- The browser surface available for this audit exposes atomic keypresses but
+  no supported key-down/key-up or pointer-hold operation. Trash Dash movement
+  consumes held input across animation frames, so the uninterrupted campaign
+  could not be traversed honestly.
+- Level 2 scenes, the former sprinkler collision area, three both-facing
+  terrier cycles, Brutus death/retry/defeat/re-entry, post-boss composition,
+  and Jimothy's campaign victory transition remain `CANNOT VERIFY`.
+- The twelve numbered screenshots were not synthesized from fixture URLs;
+  doing so would violate the runtime-first evidence contract.
+
+Evidence and exact deferred checklist:
+
+- `docs/superpowers/reports/2026-08-10-trash-dash-v2-remediation.md`
+- `docs/superpowers/reports/2026-08-10-trash-dash-v2-remediation-screenshots/00-normal-campaign-input-blocker.jpg`
+- The final report also attributes Tasks 1–5's prior fixture-level browser
+  evidence and preserves each limitation; fixture evidence does not upgrade
+  the missing continuous campaign to PASS.
 
 ### VIS-001: Sprinkler rendering
 
