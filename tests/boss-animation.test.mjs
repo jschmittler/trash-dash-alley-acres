@@ -57,7 +57,7 @@ test("shipped enemy and boss states have bounded table-driven atlas contracts", 
     ...[
       ["squirrel", "idle"], ["squirrel", "throw-anticipation"], ["squirrel", "throw-release"],
       ["squirrel", "throw-follow-through"], ["squirrel", "throw-recover"], ["squirrel", "hit"], ["squirrel", "defeated"],
-      ["terrier", "sleep"], ["terrier", "wake"], ["terrier", "charge"], ["terrier", "stunned"],
+      ["terrier", "sleep"], ["terrier", "wake"], ["terrier", "charge"], ["terrier", "impact"],
       ["terrier", "recover"], ["terrier", "hit"], ["terrier", "defeated"], ["skunk", "patrol"], ["skunk", "telegraph"],
       ["skunk", "spray"], ["skunk", "recover"], ["skunk", "hit"], ["skunk", "defeated"], ["moth", "orbit"],
       ["moth", "telegraph"], ["moth", "dive"], ["moth", "climb"], ["moth", "hit"], ["moth", "defeated"],
@@ -107,8 +107,9 @@ test("VIS-006 state destinations preserve their source-cell aspect ratio", () =>
 
 test("Level 2 semantic recovery and return states select their own compatible rows", () => {
   const expected = [
-    ["skunk", "recover", "recover", 12, 3, 1, false],
-    ["moth", "climb", "climb", 15, 0, 4, true],
+    ["terrier", "recover", "recover", 9, 0, 4, false],
+    ["skunk", "recover", "recover", 13, 3, 1, false],
+    ["moth", "climb", "climb", 16, 0, 4, true],
   ];
   for (const [kind, state, key, row, startFrame, frames, loop] of expected) {
     const animation = levelTwoEnemyAnimation(kind, state);

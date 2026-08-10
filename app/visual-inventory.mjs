@@ -5,7 +5,11 @@ import { DUMPSTER_CELL, DUMPSTER_DRAW_HEIGHT, DUMPSTER_DRAW_WIDTH, DUMPSTER_STAT
 import { LEVEL_ONE_ENEMY_ANIMATIONS } from "./level-one-enemy-animation.mjs";
 import { LEVEL_ONE, LEVEL_ONE_ENEMY_KINDS } from "./level-one.mjs";
 import { LEVEL_TWO, LEVEL_TWO_ENEMY_KINDS } from "./level-two.mjs";
-import { LEVEL_TWO_ENEMY_ANIMATIONS, LEVEL_TWO_ENEMY_COLLISION } from "./level-two-enemies.mjs";
+import {
+  LEVEL_TWO_ENEMY_ANIMATIONS,
+  LEVEL_TWO_ENEMY_COLLISION,
+  LEVEL_TWO_ENEMY_DRAW_GEOMETRY,
+} from "./level-two-enemies.mjs";
 import {
   LEVEL_TWO_PROP_ASSET,
   LEVEL_TWO_PROP_ATLAS,
@@ -238,22 +242,16 @@ const levelOneEnemyRecords = LEVEL_ONE_ENEMY_KINDS.map((kind) => {
   }, isFlying ? flying(drawW, drawH, collisionW, collisionH) : grounded(drawW, drawH, collisionW, collisionH, 8, 4));
 });
 
-// Authoritative Task 4 animation manifest and actual runtime destinations.
-const LEVEL_TWO_ENEMY_DRAW_GEOMETRY = Object.freeze({
-  squirrel: Object.freeze({ w: 76, h: 76 }),
-  terrier: Object.freeze({ w: 82, h: 82 }),
-  skunk: Object.freeze({ w: 78, h: 78 }),
-  moth: Object.freeze({ w: 82, h: 82 }),
-});
+// Authoritative animation manifest and actual runtime destinations.
 const levelTwoEnemyRecords = LEVEL_TWO_ENEMY_KINDS.map((kind) => {
-  const { w: drawW, h: drawH } = LEVEL_TWO_ENEMY_DRAW_GEOMETRY[kind];
+  const { drawWidth: drawW, drawHeight: drawH } = LEVEL_TWO_ENEMY_DRAW_GEOMETRY[kind];
   const [collisionW, collisionH] = LEVEL_TWO_ENEMY_COLLISION[kind];
   return makeRecord({
     id: kind,
     category: "enemy",
     levelIds: ["level-2"],
     assetSource: "assets/generated/level2-enemy-motion.png",
-    nativeSize: { w: 768, h: 3840, cellW: 192, cellH: 192, rows: 20, columns: 4 },
+    nativeSize: { w: 768, h: 4032, cellW: 192, cellH: 192, rows: 21, columns: 4 },
     renderedSize: { w: drawW, h: drawH },
     sourceRects: animationSourceRects(LEVEL_TWO_ENEMY_ANIMATIONS[kind], 192, 192),
     runtimeDestinations: animationDestinations(LEVEL_TWO_ENEMY_ANIMATIONS[kind], { w: drawW, h: drawH }),

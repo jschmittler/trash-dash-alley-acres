@@ -929,3 +929,37 @@ worktree-preservation evidence is recorded in
   gap before the unchanged left crate; a one-pixel trigger mutation fails. The
   focused matrix passed 106/106, and the exact staged production build and
   295/295 tests passed with zero lint errors.
+
+### 2026-08-10 — V2 Task 3 terrier lifecycle remediation
+
+- **Recording reproduction:** the supplied 4.65-second, 286-frame dog movie
+  repeats the visible sleep/sit → wake → charge → wall impact → settle pop
+  three times. Source, atlas, renderer, and state inspection isolated two
+  independent defects: the keyed source was not a registered 192px-cell
+  master, and runtime recovery selected a hit-row cell before returning to
+  sleep instead of locomotion.
+- **RED evidence:** the dedicated mutation-sensitive suite began at 30 passes
+  and 6 expected failures for source-cell geometry, owned state cells, atlas
+  row count, pure destination geometry, clamped local durations, and the
+  repeated both-facing transition fixture.
+- **Source/runtime repair:** existing approved pixels were reframed into a
+  transparent 4×4 192px source master. The runtime atlas now has 21 rows so
+  impact/hit, four-frame recovery, and defeat each own cells. Every terrier
+  frame is bottom-center registered on local foot row 175; measured visible
+  widths are 120–168px inside the canonical 192px canvas. The renderer now
+  consumes one state- and facing-invariant 82×82 destination helper rather
+  than owning a second size table.
+- **Lifecycle repair:** the authored sequence is sleep → wake → charge →
+  impact → recover → reverse charge. Wake, impact, recover, hit, and defeat
+  are clamped local one-shots; recovery never selects row 8 hit cells. The
+  deterministic fixture completes three cycles and exercises both facings.
+- **Determinism:** two consecutive `npm run build:level-two-enemies` runs
+  reproduced source `45683cac…`, contact sheet `bd11c499…`, and runtime atlas
+  `294a19fd…` SHA-256 hashes byte-for-byte.
+- **Runtime evidence:** the cache-busted terrier fixture and normal Level 2
+  street route were entered through title and character selection in the
+  in-app browser. An eight-second quarter-second sequence showed repeated
+  right/left charges, labeled impact/recover ownership, a constant 82×82 debug
+  rectangle, stable foot contact, and no size/position pop. Both route-scoped
+  warning/error logs were empty. Evidence:
+  `.superpowers/sdd/2026-08-10-trash-dash-v2-failed-visual-audit-remediation/task-3-runtime-contact-sheet.jpg`.

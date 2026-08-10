@@ -40,7 +40,7 @@ test("exports the authored state sets", () => {
   assert.deepEqual(SQUIRREL_STATES, [
     "idle", "throw-anticipation", "throw-release", "throw-follow-through", "throw-recover", "defeated",
   ]);
-  assert.deepEqual(TERRIER_STATES, ["sleep", "wake", "charge", "stunned", "recover", "defeated"]);
+  assert.deepEqual(TERRIER_STATES, ["sleep", "wake", "charge", "impact", "recover", "defeated"]);
   assert.deepEqual(SKUNK_STATES, ["patrol", "telegraph", "spray", "recover", "defeated"]);
   assert.deepEqual(MOTH_STATES, ["orbit", "telegraph", "dive", "climb", "defeated"]);
 });
@@ -113,12 +113,12 @@ test("acorn release attachment mirrors from the throwing paw without changing pr
   assert.ok(right.x > squirrel.x + squirrel.w);
 });
 
-test("terrier stops at its surface edge and enters stunned recovery", () => {
+test("terrier stops at its surface edge and enters impact recovery", () => {
   const next = updateTerrier({ state: "charge", x: 590, vx: 420 }, {
     dt: 0.1, patrolMinX: 200, patrolMaxX: 600, obstacleHit: true,
   });
   assert.equal(next.x, 600);
-  assert.equal(next.state, "stunned");
+  assert.equal(next.state, "impact");
   assert.equal(next.vx, 0);
 });
 
@@ -145,15 +145,15 @@ test("terrier resolves its full authored width to the obstacle contact edge", ()
   });
   assert.equal(next.x, obstacle.x - terrier.w);
   assert.equal(next.x + terrier.w, obstacle.x);
-  assert.equal(next.state, "stunned");
+  assert.equal(next.state, "impact");
 });
 
 test("vulnerable recovery windows disable contact but still receive attacks", () => {
-  assert.equal(levelTwoEnemyCanContactDamage("terrier", "stunned"), false);
+  assert.equal(levelTwoEnemyCanContactDamage("terrier", "impact"), false);
   assert.equal(levelTwoEnemyCanContactDamage("terrier", "recover"), false);
   assert.equal(levelTwoEnemyCanContactDamage("moth", "climb"), false);
   assert.equal(levelTwoEnemyCanContactDamage("terrier", "charge"), true);
-  assert.equal(levelTwoEnemyCanReceiveAttack("terrier", "stunned"), true);
+  assert.equal(levelTwoEnemyCanReceiveAttack("terrier", "impact"), true);
   assert.equal(levelTwoEnemyCanReceiveAttack("terrier", "recover"), true);
   assert.equal(levelTwoEnemyCanReceiveAttack("moth", "climb"), true);
 });
@@ -238,21 +238,21 @@ test("authored animation playback exposes key frames and clamps one-shots", () =
 });
 
 test("terrier pause playback uses a short ordered impact then a stable grounded settle", () => {
-  const stunned = levelTwoEnemyAnimation("terrier", "stunned");
+  const impact = levelTwoEnemyAnimation("terrier", "impact");
   const recover = levelTwoEnemyAnimation("terrier", "recover");
-  assert.equal(stunned.row, LEVEL_TWO_ENEMY_ANIMATIONS.terrier.hit.row);
+  assert.equal(impact.row, LEVEL_TWO_ENEMY_ANIMATIONS.terrier.hit.row);
   assert.deepEqual([
-    enemyAnimationFrame(stunned, 0),
-    enemyAnimationFrame(stunned, 0.2),
-    enemyAnimationFrame(stunned, 9),
+    enemyAnimationFrame(impact, 0),
+    enemyAnimationFrame(impact, 0.2),
+    enemyAnimationFrame(impact, 9),
   ], [0, 1, 1]);
   assert.deepEqual([
     enemyAnimationFrame(recover, 0),
     enemyAnimationFrame(recover, 0.2),
     enemyAnimationFrame(recover, 9),
-  ], [1, 1, 1]);
-  assert.notEqual(stunned, recover);
-  assert.equal(stunned.loop, false);
+  ], [0, 1, 3]);
+  assert.notEqual(impact.row, recover.row);
+  assert.equal(impact.loop, false);
   assert.equal(recover.loop, false);
 });
 
@@ -331,7 +331,7 @@ test("compact atlas metadata and pixels obey stable anchors", async () => {
   ));
   const { data, info } = await sharp(atlasPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   assert.equal(info.width, 192 * 4);
-  assert.equal(info.height, 192 * 20);
+  assert.equal(info.height, 192 * 21);
   const colors = new Set();
   const alphaValues = new Set();
   for (let offset = 0; offset < data.length; offset += 4) {
@@ -425,7 +425,7 @@ test("compact atlas metadata and pixels obey stable anchors", async () => {
     return components.sort((left, right) => right.area - left.area);
   };
 
-  for (let row = 0; row < 20; row += 1) {
+  for (let row = 0; row < 21; row += 1) {
     for (let column = 0; column < 4; column += 1) {
       const components = componentStats(row, column);
       const primaryArea = components[0].area;

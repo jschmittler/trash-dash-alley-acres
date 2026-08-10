@@ -10,24 +10,35 @@ const CELL = 192;
 const SOURCE_GRID = 4;
 const columns = 4;
 
-const roster = [
-  { kind: "squirrel", row: 0, grounded: true, maxWidth: 164, maxHeight: 154 },
-  { kind: "terrier", row: 5, grounded: true, maxWidth: 168, maxHeight: 146 },
-  { kind: "skunk", row: 10, grounded: true, maxWidth: 170, maxHeight: 146 },
-  { kind: "moth", row: 15, grounded: false, maxWidth: 172, maxHeight: 164 },
-];
+const standardOutputRows = Object.freeze([
+  Object.freeze([[0, 0], [0, 1], [0, 2], [0, 3]]),
+  Object.freeze([[1, 0], [1, 1], [1, 2], [1, 3]]),
+  Object.freeze([[2, 0], [2, 1], [2, 2], [2, 3]]),
+  Object.freeze([[3, 0], [3, 1], [3, 0], [3, 1]]),
+  Object.freeze([[3, 2], [3, 3], [3, 2], [3, 3]]),
+]);
 
-const outputRows = [
-  { sourceRow: 0, sourceColumns: [0, 1, 2, 3] },
-  { sourceRow: 1, sourceColumns: [0, 1, 2, 3] },
-  { sourceRow: 2, sourceColumns: [0, 1, 2, 3] },
-  { sourceRow: 3, sourceColumns: [0, 1, 0, 1] },
-  { sourceRow: 3, sourceColumns: [2, 3, 2, 3] },
+// The terrier owns an additional recovery row. All cells still come from the
+// approved four-by-four source master; the final recovery cell repeats the
+// first charge pose so returning control cannot introduce a registration pop.
+const terrierOutputRows = Object.freeze([
+  ...standardOutputRows.slice(0, 4),
+  Object.freeze([[3, 1], [3, 2], [3, 3], [2, 0]]),
+  Object.freeze([[3, 2], [1, 0], [3, 2], [1, 0]]),
+]);
+
+const roster = [
+  { kind: "squirrel", row: 0, grounded: true, maxWidth: 164, maxHeight: 154, outputRows: standardOutputRows },
+  { kind: "terrier", row: 5, grounded: true, maxWidth: 168, maxHeight: 146, outputRows: terrierOutputRows },
+  { kind: "skunk", row: 11, grounded: true, maxWidth: 170, maxHeight: 146, outputRows: standardOutputRows },
+  { kind: "moth", row: 16, grounded: false, maxWidth: 172, maxHeight: 164, outputRows: standardOutputRows },
 ];
+const outputRowCount = Math.max(...roster.map(({ row, outputRows }) => row + outputRows.length));
 
 const keyOut = async (input) => {
   const { data, info } = await sharp(input).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   for (let offset = 0; offset < data.length; offset += 4) {
+    if (data[offset + 3] === 0) continue;
     const red = data[offset];
     const green = data[offset + 1];
     const blue = data[offset + 2];
@@ -250,9 +261,9 @@ const normalizedFrames = async (enemy) => {
     ...placementScales,
   );
   const frames = [];
-  for (const [rowOffset, row] of outputRows.entries()) {
-    for (const [column, sourceColumn] of row.sourceColumns.entries()) {
-      const source = cells[row.sourceRow][sourceColumn];
+  for (const [rowOffset, row] of enemy.outputRows.entries()) {
+    for (const [column, [sourceRow, sourceColumn]] of row.entries()) {
+      const source = cells[sourceRow][sourceColumn];
       const resizedWidth = Math.max(1, Math.round(source.width * scale));
       const resizedHeight = Math.max(1, Math.round(source.height * scale));
       const resized = await despillPurple(await cleanDetachedKeyFragments(await sharp(source.cropped)
@@ -269,7 +280,7 @@ const normalizedFrames = async (enemy) => {
         ? CELL - 16 - (primary.top + primary.height)
         : Math.round(CELL / 2 - (primary.top + primary.height / 2));
       if (left < 0 || top < 0 || left + width > CELL || top + height > CELL) {
-        throw new Error(`${enemy.kind} source ${row.sourceRow}:${sourceColumn} clips after primary alignment`);
+        throw new Error(`${enemy.kind} source ${sourceRow}:${sourceColumn} clips after primary alignment`);
       }
       frames.push({
         input: tightlyCropped,
@@ -289,7 +300,7 @@ const atlasPath = path.join(publicDir, "level2-enemy-motion.png");
 await sharp({
   create: {
     width: columns * CELL,
-    height: 20 * CELL,
+    height: outputRowCount * CELL,
     channels: 4,
     background: { r: 0, g: 0, b: 0, alpha: 0 },
   },
@@ -299,8 +310,8 @@ await sharp({
   .toFile(atlasPath);
 
 await sharp(atlasPath)
-  .resize({ width: columns * 96, height: 20 * 96, kernel: "nearest" })
+  .resize({ width: columns * 96, height: outputRowCount * 96, kernel: "nearest" })
   .png()
   .toFile(path.join(root, "level2-enemy-motion-contact-sheet.png"));
 
-console.log(`Built ${path.relative(process.cwd(), atlasPath)} with 20 normalized 192px rows.`);
+console.log(`Built ${path.relative(process.cwd(), atlasPath)} with ${outputRowCount} normalized 192px rows.`);

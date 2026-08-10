@@ -9,7 +9,7 @@ export const ATTACK_TELL_MAX = 0.65;
 export const SQUIRREL_STATES = Object.freeze([
   "idle", "throw-anticipation", "throw-release", "throw-follow-through", "throw-recover", "defeated",
 ]);
-export const TERRIER_STATES = Object.freeze(["sleep", "wake", "charge", "stunned", "recover", "defeated"]);
+export const TERRIER_STATES = Object.freeze(["sleep", "wake", "charge", "impact", "recover", "defeated"]);
 export const SKUNK_STATES = Object.freeze(["patrol", "telegraph", "spray", "recover", "defeated"]);
 export const MOTH_STATES = Object.freeze(["orbit", "telegraph", "dive", "climb", "defeated"]);
 
@@ -27,8 +27,44 @@ export const LEVEL_TWO_ENEMY_RENDER = Object.freeze({
   moth: Object.freeze({ drawWidth: 84, drawHeight: 82, anchor: "center" }),
 });
 
+export const LEVEL_TWO_ENEMY_DRAW_GEOMETRY = Object.freeze({
+  squirrel: Object.freeze({ drawWidth: 76, drawHeight: 76, anchor: "ground" }),
+  terrier: Object.freeze({ drawWidth: 82, drawHeight: 82, anchor: "ground" }),
+  skunk: Object.freeze({ drawWidth: 78, drawHeight: 78, anchor: "ground" }),
+  moth: Object.freeze({ drawWidth: 82, drawHeight: 82, anchor: "center" }),
+});
+
+const LEVEL_TWO_MOTION_CELL = 192;
+const LEVEL_TWO_GROUND_INSET = 16;
+
+export function levelTwoEnemyDrawRect(enemy, renderX = enemy.x) {
+  const render = LEVEL_TWO_ENEMY_DRAW_GEOMETRY[enemy.kind];
+  if (!render) throw new RangeError(`Unknown Level 2 render kind "${enemy.kind}"`);
+  const x = renderX + enemy.w / 2 - render.drawWidth / 2;
+  if (render.anchor === "center") {
+    return {
+      x,
+      y: enemy.y + enemy.h / 2 - render.drawHeight / 2,
+      w: render.drawWidth,
+      h: render.drawHeight,
+    };
+  }
+  return {
+    x,
+    y: enemy.y + enemy.h - render.drawHeight + render.drawHeight * (LEVEL_TWO_GROUND_INSET / LEVEL_TWO_MOTION_CELL),
+    w: render.drawWidth,
+    h: render.drawHeight,
+  };
+}
+
 const SQUIRREL_TELL = 0.48;
-const TERRIER_TELL = 0.5;
+export const TERRIER_SEQUENCE_DURATIONS = Object.freeze({
+  wake: 4 / 7,
+  impact: 2 / 9,
+  recover: 4 / 7,
+});
+
+const TERRIER_TELL = TERRIER_SEQUENCE_DURATIONS.wake;
 const SKUNK_TELL = 0.52;
 const MOTH_TELL = 0.42;
 
@@ -137,18 +173,18 @@ export function updateTerrier(terrier, context) {
     const x = clamp(obstacleX, patrolMinX, patrolMaxX);
     const hitEdge = x === patrolMinX || x === patrolMaxX;
     return obstacle || obstacleHit || hitEdge
-      ? { ...terrier, x, state: "stunned", timer: 0.58, vx: 0 }
+      ? { ...terrier, x, state: "impact", timer: TERRIER_SEQUENCE_DURATIONS.impact, vx: 0 }
       : { ...terrier, x };
   }
-  if (terrier.state === "stunned") {
+  if (terrier.state === "impact") {
     return timer === 0
-      ? { ...terrier, state: "recover", timer: 0.45, vx: 0 }
+      ? { ...terrier, state: "recover", timer: TERRIER_SEQUENCE_DURATIONS.recover, vx: 0 }
       : { ...terrier, timer, vx: 0 };
   }
   if (terrier.state === "recover") {
-    return timer === 0
-      ? { ...terrier, state: "sleep", timer: 0, vx: 0 }
-      : { ...terrier, timer, vx: 0 };
+    if (timer > 0) return { ...terrier, timer, vx: 0 };
+    const facing = terrier.facing === -1 ? 1 : -1;
+    return { ...terrier, state: "charge", timer: 0, facing, vx: facing * 420 };
   }
   return { ...terrier };
 }
@@ -174,7 +210,7 @@ export function selectChargeObstacle(terrier, obstacles, dt) {
 
 export function levelTwoEnemyCanContactDamage(kind, state) {
   if (state === "defeated") return false;
-  if (kind === "terrier" && (state === "stunned" || state === "recover")) return false;
+  if (kind === "terrier" && (state === "impact" || state === "recover")) return false;
   if (kind === "moth" && state === "climb") return false;
   return true;
 }
@@ -304,18 +340,19 @@ export const LEVEL_TWO_ENEMY_ANIMATIONS = Object.freeze({
     hit: animation(3, 2, 9), defeat: animation(4, 2, 5),
   }),
   terrier: Object.freeze({
-    locomotion: animation(5, 4, 9, true), sleep: animation(6, 1, 1), telegraph: animation(6, 4, 7), attack: animation(7, 4, 12, true),
-    hit: animation(8, 2, 9), stunned: animation(8, 2, 6), recover: animation(8, 1, 1, false, 1), defeat: animation(9, 2, 5),
+    locomotion: animation(5, 4, 9, true), sleep: animation(6, 1, 1), wake: animation(6, 4, 7),
+    telegraph: animation(6, 4, 7), charge: animation(7, 4, 12, true), attack: animation(7, 4, 12, true),
+    impact: animation(8, 2, 9), hit: animation(8, 2, 9), recover: animation(9, 4, 7), defeat: animation(10, 2, 5),
   }),
   skunk: Object.freeze({
-    locomotion: animation(10, 4, 7, true), telegraph: animation(11, 4, 7), attack: animation(12, 4, 12),
+    locomotion: animation(11, 4, 7, true), telegraph: animation(12, 4, 7), attack: animation(13, 4, 12),
     // The last spray cell is the authored follow-through/recovery pose.
-    recover: animation(12, 1, 6, false, 3), hit: animation(13, 2, 9), defeat: animation(14, 2, 5),
+    recover: animation(13, 1, 6, false, 3), hit: animation(14, 2, 9), defeat: animation(15, 2, 5),
   }),
   moth: Object.freeze({
-    locomotion: animation(15, 4, 10, true), telegraph: animation(16, 4, 8), attack: animation(17, 4, 12, true),
+    locomotion: animation(16, 4, 10, true), telegraph: animation(17, 4, 8), attack: animation(18, 4, 12, true),
     // Flight locomotion is the compatible authored return motion; it is not a hit reaction.
-    climb: animation(15, 4, 10, true), hit: animation(18, 2, 9), defeat: animation(19, 2, 6),
+    climb: animation(16, 4, 10, true), hit: animation(19, 2, 9), defeat: animation(20, 2, 6),
   }),
 });
 
@@ -325,7 +362,7 @@ export const LEVEL_TWO_ENEMY_STATE_ANIMATION_KEYS = Object.freeze({
     "throw-follow-through": "followThrough", "throw-recover": "recover", hit: "hit", defeated: "defeat",
   }),
   terrier: Object.freeze({
-    sleep: "sleep", wake: "telegraph", charge: "attack", stunned: "stunned", recover: "recover",
+    sleep: "sleep", wake: "wake", charge: "charge", impact: "impact", recover: "recover",
     hit: "hit", defeated: "defeat",
   }),
   skunk: Object.freeze({

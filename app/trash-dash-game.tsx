@@ -110,6 +110,7 @@ import {
   enemyAnimationFrame,
   facingFromVelocity,
   LEVEL_TWO_ENEMY_COLLISION,
+  levelTwoEnemyDrawRect,
   levelTwoEnemyAnimation,
   levelTwoEnemyCanContactDamage,
   levelTwoEnemyCanReceiveAttack,
@@ -2582,19 +2583,13 @@ export function TrashDashGame() {
               MOTION_CELL,
               MOTION_CELL,
             ] as Frame;
-            const drawSizes: Record<"squirrel" | "terrier" | "skunk" | "moth", number> = {
-              squirrel: 76, terrier: 82, skunk: 78, moth: 82,
-            };
-            const drawSize = drawSizes[enemy.kind as keyof typeof drawSizes];
-            const drawY = enemy.kind === "moth"
-              ? enemy.y + enemy.h / 2 - drawSize / 2
-              : enemy.y + enemy.h - drawSize + drawSize * (16 / MOTION_CELL);
+            const draw = levelTwoEnemyDrawRect(enemy, x);
             drawSprite(
               stateFrameRect,
-              x + enemy.w / 2 - drawSize / 2,
-              drawY,
-              drawSize,
-              drawSize,
+              draw.x,
+              draw.y,
+              draw.w,
+              draw.h,
               flip,
               1,
               levelTwoEnemyMotionRef.current,
@@ -2701,7 +2696,10 @@ export function TrashDashGame() {
           context.fillStyle = "rgba(7, 20, 28, 0.82)";
           context.fillRect(x, enemy.y - 14, Math.max(58, (enemy.visualState ?? enemy.animationState ?? enemy.kind).length * 6 + 6), 13);
           context.fillStyle = "#fff8b5";
-          context.fillText(`${enemy.kind}:${enemy.visualState ?? enemy.animationState ?? "move"}`, x + 3, enemy.y - 13);
+          const debugState = levelTwoEnemyKinds.has(enemy.kind)
+            ? enemy.visualState ?? enemy.behaviorState
+            : enemy.visualState ?? enemy.animationState;
+          context.fillText(`${enemy.kind}:${debugState ?? "move"}`, x + 3, enemy.y - 13);
         }
         const visualX = playerX + player.w / 2 - drawW / 2;
         const visualY = player.y + player.h - drawH + playerAnimation.offsetY;
