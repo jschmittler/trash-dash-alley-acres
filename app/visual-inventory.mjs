@@ -11,7 +11,6 @@ import {
   LEVEL_TWO_PROP_ATLAS,
   LEVEL_TWO_PROP_FRAMES,
   LAMP_POST_RENDER_METRICS,
-  hydrantWaterDrawRect,
   lampPostDrawRect,
   lampPostVisibleDrawRect,
 } from "./level-two-props.mjs";
@@ -66,10 +65,13 @@ export function validateFixedAspectDestinations(record, tolerance = 0.01) {
 
 export function validateAnimationStateScale(record, tolerance = 0.01) {
   const states = Object.entries(record?.runtimeDestinations ?? {});
-  const canonical = states[0]?.[1]?.[0];
-  if (!canonical) return [];
+  const canonicalByForm = new Map();
   const errors = [];
   for (const [state, destinations] of states) {
+    const form = /^(small|large)_/.exec(state)?.[1] ?? "all";
+    const canonical = canonicalByForm.get(form) ?? destinations[0];
+    if (!canonical) continue;
+    canonicalByForm.set(form, canonical);
     for (let frame = 0; frame < destinations.length; frame += 1) {
       const destination = destinations[frame];
       if (Math.abs(destination.w - canonical.w) > tolerance || Math.abs(destination.h - canonical.h) > tolerance) {
@@ -402,46 +404,6 @@ const groundedPropRecord = ({ id, category, sourceRects, renderedSize, runtimeDe
   minimumClearance: clearance(4),
 });
 
-const emitterEffectRecord = ({ id, sourceRects, renderedSize, drawRect, runtimeOwner }) => {
-  const effectOrigin = { x: 0, y: 0 };
-  const runtimeBoundsByFacing = {
-    right: drawRect(effectOrigin, 1),
-    left: drawRect(effectOrigin, -1),
-  };
-  const envelope = motionEnvelope(Object.values(runtimeBoundsByFacing));
-  return makeRecord({
-    id,
-    category: "effect",
-    levelIds: ["level-2"],
-    assetSource: LEVEL_TWO_PROP_ASSET,
-    nativeSize: { cellW: LEVEL_TWO_PROP_ATLAS.cell, cellH: LEVEL_TWO_PROP_ATLAS.cell },
-    sourceRects,
-    renderedSize,
-    runtimeDestinations: Object.fromEntries(Object.entries(sourceRects).map(([state, sources]) => [
-      state,
-      repeated(Array.isArray(sources) ? sources.length : 1, renderedSize),
-    ])),
-    runtimeBoundsByFacing,
-    runtimeOwner,
-    origin: "named emitter origin",
-    facing: "mirrored around named emitter origin",
-    animations: null,
-    requiredStates: [],
-  }, {
-    visualBounds: envelope,
-    collisionBounds: rect(0, 0, 0, 0),
-    placementFootprint: envelope,
-    groundAnchor: effectOrigin,
-    renderLayer: "GAMEPLAY_EFFECTS",
-    allowedZones: ["named-emitter-envelope"],
-    forbiddenZones: ["unrelated-emitter", "effect-clip-region"],
-    minimumClearance: clearance(0),
-    scalePolicy: canonicalScale(1, 1),
-    anchorPolicy: FREE_ANCHOR,
-    effectOrigin,
-  });
-};
-
 const lampDraw = lampPostDrawRect({ x: 0, y: 0, w: 96, h: 208 });
 const lampVisibleBounds = lampPostVisibleDrawRect({ x: -48, y: -208, w: 96, h: 208 });
 const lampCollisionBounds = rect(-48, -208, 96, 208);
@@ -474,8 +436,7 @@ const lampPostRecord = makeRecord({
 
 const propRecords = [
   groundedPropRecord({ id: "charge-obstacle", category: "interactive-prop", sourceRects: { idle: [rect(0, 128, 128, 128)] }, renderedSize: { w: 112, h: 112 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
-  groundedPropRecord({ id: "hydrant-body", category: "interactive-prop", sourceRects: animationSourceRects({ idle: LEVEL_TWO_PROP_FRAMES["hydrant-idle"], build: LEVEL_TWO_PROP_FRAMES["hydrant-build"], spray: LEVEL_TWO_PROP_FRAMES["hydrant-spray"], recover: LEVEL_TWO_PROP_FRAMES["hydrant-recover"] }, 128, 128), renderedSize: { w: 96, h: 96 }, renderLayer: "GAMEPLAY", runtimeOwner: "level-two-prop-render" }),
-  emitterEffectRecord({ id: "hydrant-water", sourceRects: animationSourceRects({ burst: LEVEL_TWO_PROP_FRAMES["hydrant-water-burst"], full: LEVEL_TWO_PROP_FRAMES["hydrant-water-full"], taper: LEVEL_TWO_PROP_FRAMES["hydrant-water-taper"] }, 128, 128), renderedSize: { w: 144, h: 144 }, drawRect: hydrantWaterDrawRect, runtimeOwner: "level-two-prop-render" }),
+  groundedPropRecord({ id: "hydrant-body", category: "interactive-prop", sourceRects: { idle: [rect(0, 256, 128, 128)] }, renderedSize: { w: 96, h: 96 }, renderLayer: "GAMEPLAY", runtimeOwner: "brutus-crash-mechanic" }),
 ];
 
 const pickupRecords = [["trash", 46, 46], ["taco", 58, 58], ["cap", 51, 42]].map(([id, w, h]) => makeRecord({
@@ -563,7 +524,7 @@ export const RUNTIME_DRAW_FAMILY_MANIFEST = Object.freeze([
   drawFamily("bosses", "drawEnemy/bossAnimation+brutusDrawRect", ["trash-heap-tyrant", "brutus-bin-hound"]),
   drawFamily("pickups", "drawSprite/trashPickupRows+tacoPowerMotion+sprites.cap", ["trash", "taco", "cap"]),
   drawFamily("victory-dumpster", "drawSprite/dumpsterFrame+dumpsterDrawRect", ["victory-dumpster"]),
-  drawFamily("level-two-props", "drawSprite/levelTwoPropFrame", ["charge-obstacle", "hydrant-body", "hydrant-water"]),
+  drawFamily("level-two-props", "drawSprite/levelTwoPropFrame", ["charge-obstacle", "hydrant-body"]),
   drawFamily("level-two-lamp-post", "drawImage/lampPostDrawRect", ["lamp-post"]),
   drawFamily("level-two-visual-platforms", "drawSprite/levelTwoPlatformDrawRect", ["brutus-platform-left", "brutus-platform-right"]),
   drawFamily("bin-lid-source", "drawSprite/levelTwoPropFrame(acorn)", ["bin-lid-source"]),
@@ -628,6 +589,9 @@ export function inventorySummary(inventory = IMPLEMENTED_VISUAL_INVENTORY) {
 export function validateImplementedVisualInventory(inventory = IMPLEMENTED_VISUAL_INVENTORY) {
   const errors = inventory.flatMap((record) => validateVisualContract(record.contract));
   for (const record of inventory) {
+    if (record.category === "player") {
+      errors.push(...validateAnimationStateScale(record).map((error) => `${record.id}: ${error}`));
+    }
     if (!record.animations) continue;
     const entries = Object.fromEntries(Object.entries(record.animations).map(([name, animation]) => [name, {
       ...animation,

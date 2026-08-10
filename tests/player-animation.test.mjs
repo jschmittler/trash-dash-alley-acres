@@ -89,3 +89,18 @@ test("every reachable player state has an in-bounds atlas row, local completion,
     assert.deepEqual(profile.facing, { authored: "right", flipAnchor: "destination-center" }, `${profile.id} facing anchor`);
   }
 });
+
+test("every canonical player profile uses one runtime destination size per form", () => {
+  for (const profile of Object.values(PLAYABLE_CHARACTERS)) {
+    for (const [form, canonicalSize] of [["small", 84], ["large", 110]]) {
+      for (const state of PLAYER_FORM_STATES[form]) {
+        const animation = profile.animations[`${form}_${state}`];
+        assert.deepEqual(
+          [animation.drawWidth, animation.drawHeight],
+          [canonicalSize, canonicalSize],
+          `${profile.id}:${form}_${state}`,
+        );
+      }
+    }
+  }
+});

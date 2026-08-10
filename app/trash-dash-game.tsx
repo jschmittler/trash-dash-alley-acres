@@ -112,7 +112,6 @@ import {
   levelTwoEnemyAnimation,
   levelTwoEnemyCanContactDamage,
   levelTwoEnemyCanReceiveAttack,
-  levelTwoEnvironmentRecords,
   reflectBinLidFromTail,
   SQUIRREL_THROW,
   selectChargeObstacle,
@@ -120,6 +119,7 @@ import {
   updateLevelTwoEnemy,
   squirrelThrowAttachment,
 } from "./level-two-enemies.mjs";
+import { createLevelTwoEnvironment } from "./level-two-environment.mjs";
 import {
   chargeObstacleDrawRect,
   hydrantDrawRect,
@@ -719,12 +719,7 @@ const makeWorld = (
     player,
     enemies: runtime.enemies.concat(boss),
     binLids: [],
-    environment: level.id === "level-2"
-      ? [
-          ...levelTwoEnvironmentRecords() as EnvironmentCollision[],
-          ...(level.boss.hydrant ? [{ ...level.boss.hydrant, kind: "hydrant", encounterId: "brutus" } as EnvironmentCollision] : []),
-        ]
-      : [],
+    environment: createLevelTwoEnvironment(level) as EnvironmentCollision[],
     pickups: runtime.pickups,
     particles: [],
     cameraX: 0,

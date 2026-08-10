@@ -1,0 +1,4 @@
+interface:
+  display_name: "Overlap Prevention / Spatial QA"
+  short_description: "Prevent unintended visual and gameplay overlaps."
+  default_prompt: "Use $overlap-prevention to audit spatial relationships in a Trash Dash level."

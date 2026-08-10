@@ -1,0 +1,4 @@
+interface:
+  display_name: "Animation / Motion Sprites"
+  short_description: "Build stable state-based sprite animation."
+  default_prompt: "Use $animation to design or repair a Trash Dash sprite animation."

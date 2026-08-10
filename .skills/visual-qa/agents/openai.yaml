@@ -1,0 +1,4 @@
+interface:
+  display_name: "Visual QA"
+  short_description: "Verify visual changes in the running game."
+  default_prompt: "Use $visual-qa to inspect and verify a Trash Dash visual change."

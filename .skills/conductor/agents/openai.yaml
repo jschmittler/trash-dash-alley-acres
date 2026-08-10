@@ -1,0 +1,4 @@
+interface:
+  display_name: "Trash Dash Conductor"
+  short_description: "Direct and validate the Trash Dash soundtrack."
+  default_prompt: "Use $conductor to score or rescore Trash Dash from the playable game."

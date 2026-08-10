@@ -1,0 +1,4 @@
+interface:
+  display_name: "Environment Placement / Z-Order"
+  short_description: "Place visual assets with correct anchors and depth."
+  default_prompt: "Use $environment-placement to place and layer Trash Dash world art."

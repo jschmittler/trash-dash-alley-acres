@@ -5,7 +5,7 @@ import sharp from "sharp";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourcePath = path.join(root, "concepts/level-two/source/level2-props-reference.png");
-const hydrantSourcePath = path.join(root, "concepts/level-two/source/level2-hydrant-water-source.png");
+const hydrantSourcePath = path.join(root, "concepts/level-two/source/level2-hydrant-idle-source.png");
 const lampPostSourcePath = path.join(root, "concepts/level-two/source/level2-lamp-post-source.png");
 const outputPath = path.join(root, "public/assets/generated/level2-props.png");
 const contactPath = path.join(root, "concepts/level-two/level2-props-contact-sheet.png");
@@ -23,14 +23,7 @@ const slots = [
   { name: "boss-platform-left", col: 1, row: 1, crop: [341, 246, 187, 161], fit: [108, 88] },
   { name: "boss-platform-right", col: 2, row: 1, crop: [540, 246, 174, 161], fit: [96, 88] },
   { name: "rolling-can", col: 3, row: 1, crop: [902, 798, 130, 163], fit: [84, 104] },
-  { name: "hydrant-idle", col: 0, row: 2, source: "hydrant", grid: [0, 0], fit: [72, 92], mode: "hydrant-body" },
-  { name: "hydrant-build", col: 1, row: 2, source: "hydrant", grid: [1, 0], fit: [72, 92], mode: "hydrant-body" },
-  { name: "hydrant-spray", col: 2, row: 2, source: "hydrant", grid: [2, 0], fit: [72, 92], mode: "hydrant-body" },
-  { name: "hydrant-recover", col: 3, row: 2, source: "hydrant", grid: [3, 0], fit: [72, 92], mode: "hydrant-body" },
-  { name: "hydrant-water-burst", col: 0, row: 3, source: "hydrant", grid: [0, 1], fit: [120, 76], mode: "water", align: "left", top: 26 },
-  { name: "hydrant-water-full-0", col: 1, row: 3, source: "hydrant", grid: [1, 1], fit: [120, 76], fitMode: "fill", mode: "water", align: "left", top: 26 },
-  { name: "hydrant-water-full-1", col: 2, row: 3, source: "hydrant", grid: [2, 1], fit: [120, 76], fitMode: "fill", mode: "water", align: "left", top: 26 },
-  { name: "hydrant-water-taper", col: 3, row: 3, source: "hydrant", grid: [3, 1], fit: [120, 76], mode: "water", align: "left", top: 26 },
+  { name: "hydrant-idle", col: 0, row: 2, source: "hydrant", fit: [72, 92], mode: "hydrant-body" },
 ];
 
 function despill(raw, slot) {
@@ -61,11 +54,6 @@ function hardKeyGenerated(raw, slot) {
     const magenta = red > 170 && blue > 145 && green < Math.min(red, blue) * 0.62;
     if (magenta) {
       raw[index + 3] = 0;
-      continue;
-    }
-    if (slot.mode === "water") {
-      const water = blue > 105 && green > 92 && blue > red * 1.08 && green > red * 1.02;
-      raw[index + 3] = water ? 255 : 0;
       continue;
     }
     if (slot.mode === "hydrant-body") {
@@ -118,14 +106,7 @@ function keepLargestComponent(raw, info) {
 async function generatedInput(slot) {
   const inputPath = hydrantSourcePath;
   const metadata = await sharp(inputPath).metadata();
-  const extraction = slot.grid
-    ? {
-        left: slot.grid[0] * Math.floor(metadata.width / 4),
-        top: slot.grid[1] * Math.floor(metadata.height / 2),
-        width: Math.floor(metadata.width / 4),
-        height: Math.floor(metadata.height / 2),
-      }
-    : { left: 0, top: 0, width: metadata.width, height: metadata.height };
+  const extraction = { left: 0, top: 0, width: metadata.width, height: metadata.height };
   const result = await sharp(inputPath).extract(extraction).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const keyed = hardKeyGenerated(result.data, slot);
   if (slot.mode === "hydrant-body") keepLargestComponent(keyed, result.info);
@@ -158,37 +139,14 @@ await mkdir(path.dirname(contactPath), { recursive: true });
 const sprites = [];
 for (const slot of slots) sprites.push(await normalizedSprite(slot));
 
-const quantizedAtlas = await sharp({ create: { width: cell * 4, height: cell * 4, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+const quantizedAtlas = await sharp({ create: { width: cell * 4, height: cell * 3, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
   .composite(sprites)
   .png({ palette: true, colours: 28, dither: 0 })
   .toBuffer();
 
-// Reassert one shared four-value water palette after quantization while
-// preserving the authored hard-alpha silhouettes.
-const atlasRaw = await sharp(quantizedAtlas).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-const waterSlots = slots.filter(({ name }) => name.startsWith("hydrant-water"));
-for (const slot of waterSlots) {
-  for (let y = slot.row * cell; y < (slot.row + 1) * cell; y += 1) {
-    for (let x = slot.col * cell; x < (slot.col + 1) * cell; x += 1) {
-      const offset = (y * atlasRaw.info.width + x) * 4;
-      if (atlasRaw.data[offset + 3] === 0) continue;
-      const value = (atlasRaw.data[offset] + atlasRaw.data[offset + 1] + atlasRaw.data[offset + 2]) / 3;
-      const color = value > 190
-        ? [168, 239, 243]
-        : value > 140
-          ? [74, 192, 218]
-          : value > 95
-            ? [37, 135, 177]
-            : [20, 82, 126];
-      atlasRaw.data[offset] = color[0];
-      atlasRaw.data[offset + 1] = color[1];
-      atlasRaw.data[offset + 2] = color[2];
-    }
-  }
-}
-await sharp(atlasRaw.data, { raw: atlasRaw.info }).png().toFile(outputPath);
+await sharp(quantizedAtlas).png().toFile(outputPath);
 
-const checkerSvg = `<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="c" width="32" height="32" patternUnits="userSpaceOnUse"><rect width="32" height="32" fill="#172033"/><rect width="16" height="16" fill="#26344d"/><rect x="16" y="16" width="16" height="16" fill="#26344d"/></pattern></defs><rect width="512" height="512" fill="url(#c)"/><g stroke="#8aa0c0" stroke-opacity=".45">${[128,256,384].map((n) => `<path d="M${n} 0V512"/>`).join("")}${[128,256,384].map((n) => `<path d="M0 ${n}H512"/>`).join("")}</g></svg>`;
+const checkerSvg = `<svg width="512" height="384" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="c" width="32" height="32" patternUnits="userSpaceOnUse"><rect width="32" height="32" fill="#172033"/><rect width="16" height="16" fill="#26344d"/><rect x="16" y="16" width="16" height="16" fill="#26344d"/></pattern></defs><rect width="512" height="384" fill="url(#c)"/><g stroke="#8aa0c0" stroke-opacity=".45">${[128,256,384].map((n) => `<path d="M${n} 0V384"/>`).join("")}${[128,256].map((n) => `<path d="M0 ${n}H512"/>`).join("")}</g></svg>`;
 await sharp(Buffer.from(checkerSvg))
   .composite([{ input: outputPath }])
   .png()

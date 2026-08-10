@@ -21,8 +21,6 @@ import { pickupYAboveSurface } from "../app/pickup-layout.mjs";
 import { levelTwoEnvironmentRecords } from "../app/level-two-enemies.mjs";
 import {
   hydrantDrawRect,
-  hydrantNozzleOrigin,
-  hydrantWaterDrawRect,
   lampPostVisibleDrawRect,
   LEVEL_TWO_PROP_FRAMES,
   levelTwoPlatformDrawRect,
@@ -370,25 +368,4 @@ test("boss utility-platform art, collision tops, floor contacts, and symmetry ag
   const leftOffset = arenaCenter - (platforms[0].x + platforms[0].w / 2);
   const rightOffset = platforms[1].x + platforms[1].w / 2 - arenaCenter;
   assert.ok(Math.abs(leftOffset - rightOffset) <= 1, `platform asymmetry ${leftOffset}/${rightOffset}`);
-});
-
-test("hydrant water remains attached to its named emitter with independent bounds", () => {
-  const item = { ...LEVEL_TWO.boss.hydrant, kind: "hydrant", encounterId: "brutus" };
-  for (const direction of [-1, 1]) {
-    const body = hydrantDrawRect(item);
-    const origin = hydrantNozzleOrigin(item, direction);
-    const water = hydrantWaterDrawRect(origin, direction);
-    assert.ok(origin.x >= body.x && origin.x <= body.x + body.w && origin.y >= body.y && origin.y <= body.y + body.h,
-      `${item.id} emitter leaves body`);
-    assert.ok(origin.x >= water.x && origin.x <= water.x + water.w && origin.y >= water.y && origin.y <= water.y + water.h,
-      `${item.id} water detached from emitter`);
-    const relationship = classifyWorldObjectPlacement({
-      id: `${item.id}:water:${direction}`,
-      bounds: water,
-      placementType: PLACEMENT_TYPES.EXPLICITLY_PLATFORM_ATTACHED,
-      structureId: item.id,
-    }, LEVEL_TWO.surfaces);
-    assert.equal(relationship.valid, true);
-    assert.equal(relationship.support.structureId, item.id);
-  }
 });

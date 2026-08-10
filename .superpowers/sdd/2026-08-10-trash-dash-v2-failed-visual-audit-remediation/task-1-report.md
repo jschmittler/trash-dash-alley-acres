@@ -99,3 +99,40 @@ Systemic deletion required scoped changes to `app/level-two-enemies.mjs`, `app/b
 ## Concerns
 
 None blocking. Unrelated dirty and untracked work was preserved. Existing unrelated hunks in `app/trash-dash-game.tsx` were excluded from the Task 1 staging scope.
+
+## Fix Round 1
+
+Status: DONE
+
+### RED evidence
+
+- C1/C2 focused RED: 25/30 passed and five tests failed on the retained 4-row/512×512 atlas, water/nozzle metrics, and real Trashy/Jimothy per-state runtime destination sizes.
+- I1 lifecycle RED: `tests/v2-visual-remediation.test.mjs` failed with `ERR_MODULE_NOT_FOUND` for the absent importable runtime environment owner.
+- C3 exact-tree RED: `git archive HEAD` followed by `npm run validate:skills` failed with `Missing script: "validate:skills"`.
+
+### Fixes
+
+- Removed the non-idle hydrant body and water cells, helpers, metrics, palette path, inventory effect, draw binding, builder slots, source art, and dependent water tests. The generated prop atlas is now 512×384 and contains exactly nine occupied cells: four acorn frames, four static runtime props, and the single idle hydrant cell required by the Brutus crash mechanic.
+- Added `LEVEL_TWO_PROP_RUNTIME_OWNERS` and exact tests that equate its six frame families to the complete atlas manifest, verify their concrete runtime/surface owners, and reject any unowned opaque atlas cell.
+- Normalized actual runtime destination dimensions to 84×84 for every small state and 110×110 for every large state in both Trashy and Jimothy. `validateAnimationStateScale` now groups by form, and `validateImplementedVisualInventory` applies it to every real player inventory record.
+- Added `app/level-two-environment.mjs` as the importable materialization owner used by `makeWorld`. Its lifecycle transition contract rematerializes from authoritative data and rejects duplicate IDs across entry, retry, checkpoint recovery, boss phase change, and re-entry.
+- Made the canonical skill system self-contained by including `AGENTS.md`, the registry, seven skill metadata files, all referenced guides, Conductor, the validator, its tests, and default package wiring. `npm test` now runs skill validation/tests and includes the V2 remediation suite.
+
+### GREEN evidence
+
+- Focused runtime/deletion/scale/placement matrix: 46/46 passed.
+- Dirty-worktree default gate: production build passed; canonical skill tests 5/5 and default suite 289/289 passed.
+- Exact staged-tree and post-commit archive gates: `npm run validate:skills` passed; production build passed; canonical skill tests 5/5 and default suite 288/288 passed. The one-test count difference is the intentionally unstaged unrelated `tests/rendered-html.test.mjs` user change.
+- Shipped-code residual search for non-idle/water hydrant cells, helpers, metrics, and the deleted source filename returned no matches.
+- `git diff --check` and `git diff --cached --check` passed.
+- Deterministic reduced artifacts:
+  - `public/assets/generated/level2-props.png`: `efb67c980d5d781d5aab85ce6624d342c446c28029690916226be1d718ef143b`
+  - `concepts/level-two/level2-props-contact-sheet.png`: `1610d75b113e68c06ee4039a38c598faef65e74c9969aeb101056e98949a9c7e`
+
+### Running-game Visual QA
+
+CANNOT VERIFY for this fix round: the in-app browser route was explicitly aborted/not retried per coordination instruction. The prior Task 1 running-game evidence remains recorded above; this round's authoritative runtime lifecycle, atlas occupancy, player destination, build, and exact-archive gates are green.
+
+### Fix-round concerns
+
+No implementation blocker. Unrelated dirty/untracked work remains preserved and excluded, including the crate-position/formatting hunks in `app/trash-dash-game.tsx` and the unrelated rendered-HTML test changes.

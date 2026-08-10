@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sprite / Art Asset"
+  short_description: "Create and assess source pixel-art assets."
+  default_prompt: "Use $sprite-art to define or revise a Trash Dash source sprite."

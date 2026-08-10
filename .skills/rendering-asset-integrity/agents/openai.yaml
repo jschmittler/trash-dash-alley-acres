@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rendering / Asset Integrity"
+  short_description: "Preserve assets faithfully through rendering."
+  default_prompt: "Use $rendering-asset-integrity to diagnose or implement Trash Dash visual rendering work."

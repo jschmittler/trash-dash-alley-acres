@@ -11,9 +11,6 @@ import {
   HYDRANT_RENDER_METRICS,
   LAMP_POST_RENDER_METRICS,
   hydrantDrawRect,
-  hydrantNozzleOrigin,
-  hydrantVisualState,
-  hydrantWaterDrawRect,
   levelTwoPlatformDrawRect,
   levelTwoPropFrame,
   lampEmitterOrigin,
@@ -24,13 +21,11 @@ import { LEVEL_TWO } from "../app/level-two.mjs";
 
 const atlasUrl = new URL("../public/assets/generated/level2-props.png", import.meta.url);
 
-test("Level 2 prop atlas exposes the reduced replacement and hydrant manifest", () => {
-  assert.deepEqual(LEVEL_TWO_PROP_ATLAS, { cell: 128, columns: 4, rows: 4, baseline: 112 });
+test("Level 2 prop atlas exposes only runtime-owned frames", () => {
+  assert.deepEqual(LEVEL_TWO_PROP_ATLAS, { cell: 128, columns: 4, rows: 3, baseline: 112 });
   assert.deepEqual(Object.keys(LEVEL_TWO_PROP_FRAMES), [
     "acorn", "charge-obstacle", "boss-platform-left", "boss-platform-right",
     "rolling-can", "hydrant-idle",
-    "hydrant-build", "hydrant-spray", "hydrant-recover", "hydrant-water-burst",
-    "hydrant-water-full", "hydrant-water-taper",
   ]);
   assert.equal(LEVEL_TWO_PROP_FRAMES.acorn.frames.length, 4);
   assert.notDeepEqual(levelTwoPropFrame("acorn", 0), levelTwoPropFrame("acorn", 0.2));
@@ -41,11 +36,11 @@ test("prop atlas is deterministic hard-alpha pixel art with grounded utility spr
   await access(new URL("../concepts/level-two/build-prop-atlas.mjs", import.meta.url));
   await access(new URL("../concepts/level-two/level2-props-contact-sheet.png", import.meta.url));
   const { data, info } = await sharp(fileURLToPath(atlasUrl)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  await access(new URL("../concepts/level-two/source/level2-hydrant-water-source.png", import.meta.url));
+  await access(new URL("../concepts/level-two/source/level2-hydrant-idle-source.png", import.meta.url));
   await access(new URL("../concepts/level-two/source/level2-lamp-post-source.png", import.meta.url));
   await access(new URL("../public/assets/generated/level2-lamp-post.png", import.meta.url));
   await access(new URL("../concepts/level-two/level2-lamp-post-contact-sheet.png", import.meta.url));
-  assert.deepEqual([info.width, info.height], [512, 512]);
+  assert.deepEqual([info.width, info.height], [512, 384]);
 
   const alpha = new Set();
   const colors = new Set();
@@ -74,7 +69,22 @@ test("prop atlas is deterministic hard-alpha pixel art with grounded utility spr
     }
   }
 
-  for (const name of ["charge-obstacle", "boss-platform-left", "boss-platform-right", "rolling-can", "hydrant-idle", "hydrant-build", "hydrant-spray", "hydrant-recover"]) {
+  const occupiedCells = [];
+  for (let row = 0; row < LEVEL_TWO_PROP_ATLAS.rows; row += 1) {
+    for (let column = 0; column < LEVEL_TWO_PROP_ATLAS.columns; column += 1) {
+      let occupied = false;
+      for (let y = 0; y < LEVEL_TWO_PROP_ATLAS.cell && !occupied; y += 1) {
+        for (let x = 0; x < LEVEL_TWO_PROP_ATLAS.cell; x += 1) {
+          const offset = (((row * 128 + y) * info.width) + column * 128 + x) * 4;
+          if (data[offset + 3] > 0) { occupied = true; break; }
+        }
+      }
+      if (occupied) occupiedCells.push(`${column},${row}`);
+    }
+  }
+  assert.deepEqual(occupiedCells, ["0,0", "1,0", "2,0", "3,0", "0,1", "1,1", "2,1", "3,1", "0,2"]);
+
+  for (const name of ["charge-obstacle", "boss-platform-left", "boss-platform-right", "rolling-can", "hydrant-idle"]) {
     const [sourceX, sourceY, width, height] = LEVEL_TWO_PROP_FRAMES[name].frames[0];
     let bottom = -1;
     for (let y = 0; y < height; y += 1) {
@@ -87,19 +97,13 @@ test("prop atlas is deterministic hard-alpha pixel art with grounded utility spr
   }
 });
 
-test("hydrant render metrics share one ground anchor and named nozzle origin", () => {
+test("the retained idle hydrant has only grounded body metrics", () => {
   assert.deepEqual(HYDRANT_RENDER_METRICS, {
-    drawWidth: 96, drawHeight: 96, sourceNozzle: { x: 96, y: 54 }, waterWidth: 144, waterHeight: 144,
+    drawWidth: 96, drawHeight: 96,
   });
   const item = { x: 5810, y: 400, w: 42, h: 68 };
   const draw = hydrantDrawRect(item);
   assert.equal(draw.y + LEVEL_TWO_PROP_ATLAS.baseline / LEVEL_TWO_PROP_ATLAS.cell * draw.h, 468);
-  const right = hydrantNozzleOrigin(item, 1);
-  const left = hydrantNozzleOrigin(item, -1);
-  assert.equal(right.y, left.y);
-  assert.equal(right.x + left.x, item.x * 2 + item.w);
-  assert.equal(hydrantWaterDrawRect(right, 1).x, right.x - 4);
-  assert.equal(hydrantWaterDrawRect(left, -1).x + HYDRANT_RENDER_METRICS.waterWidth, left.x + 4);
 });
 
 test("the boss arena owns one canonically scaled hydrant", () => {
@@ -107,54 +111,6 @@ test("the boss arena owns one canonically scaled hydrant", () => {
   const visibleGround = draw.y + LEVEL_TWO_PROP_ATLAS.baseline / LEVEL_TWO_PROP_ATLAS.cell * draw.h;
   assert.equal(visibleGround, 468);
   assert.deepEqual([draw.w, draw.h], [HYDRANT_RENDER_METRICS.drawWidth, HYDRANT_RENDER_METRICS.drawHeight]);
-});
-
-test("hydrant attack phases expose startup, sustained spray, taper, and stop artwork", () => {
-  assert.deepEqual(hydrantVisualState(false, 0), { body: "hydrant-idle", water: null });
-  assert.deepEqual(hydrantVisualState(true, 0.05), { body: "hydrant-build", water: "hydrant-water-burst" });
-  assert.deepEqual(hydrantVisualState(true, 0.5), { body: "hydrant-spray", water: "hydrant-water-full" });
-  assert.deepEqual(hydrantVisualState(true, 0.94), { body: "hydrant-recover", water: "hydrant-water-taper" });
-});
-
-test("hydrant water has broken far edges instead of a rectangular terminal column", async () => {
-  const { data, info } = await sharp(fileURLToPath(atlasUrl)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  for (const name of ["hydrant-water-burst", "hydrant-water-full", "hydrant-water-taper"]) {
-    for (const [sourceX, sourceY, width, height] of LEVEL_TWO_PROP_FRAMES[name].frames) {
-      const rowRights = new Set();
-      let opaque = 0;
-      let terminal = 0;
-      for (let y = 0; y < height; y += 1) {
-        let right = -1;
-        for (let x = 0; x < width; x += 1) {
-          const alpha = data[((sourceY + y) * info.width + sourceX + x) * 4 + 3];
-          if (!alpha) continue;
-          opaque += 1;
-          right = x;
-          if (x === width - 1) terminal += 1;
-        }
-        if (right >= 0) rowRights.add(right);
-      }
-      assert.ok(opaque > 150, `${name} is empty`);
-      assert.ok(rowRights.size >= 5, `${name} has a flat far edge`);
-      assert.equal(terminal, 0, `${name} touches the terminal column`);
-    }
-  }
-});
-
-test("sustained hydrant water frames keep a stable full-spray footprint", async () => {
-  const { data, info } = await sharp(fileURLToPath(atlasUrl)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  const widths = [];
-  for (const [sourceX, sourceY, width, height] of LEVEL_TWO_PROP_FRAMES["hydrant-water-full"].frames) {
-    let left = width;
-    let right = -1;
-    for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) {
-      if (data[((sourceY + y) * info.width + sourceX + x) * 4 + 3] === 0) continue;
-      left = Math.min(left, x);
-      right = Math.max(right, x);
-    }
-    widths.push(right - left + 1);
-  }
-  assert.ok(Math.max(...widths) - Math.min(...widths) <= 8, `full spray width jitters: ${widths}`);
 });
 
 test("lamp post is a finished grounded sprite with an explicit fixture glow", async () => {
@@ -216,7 +172,6 @@ test("lamp uses uniform scale with grounded visible bounds and a named light ori
 test("fixed-aspect Level 2 atlas cells use one uniform runtime scale", () => {
   const obstacle = chargeObstacleDrawRect({ x: 2960, y: 356, w: 72, h: 112 });
   const hydrant = hydrantDrawRect({ x: 5810, y: 400, w: 42, h: 68 });
-  const hydrantWater = hydrantWaterDrawRect({ x: 5850, y: 420 }, 1);
   const platforms = ["brutus-platform-left", "brutus-platform-right"].map((id) => (
     levelTwoPlatformDrawRect(LEVEL_TWO.surfaces.find((surface) => surface.id === id))
   ));
@@ -224,7 +179,6 @@ test("fixed-aspect Level 2 atlas cells use one uniform runtime scale", () => {
   for (const [name, rect] of [
     ["charge obstacle", obstacle],
     ["hydrant body", hydrant],
-    ["hydrant water", hydrantWater],
     ["left Brutus platform", platforms[0]],
     ["right Brutus platform", platforms[1]],
   ]) {

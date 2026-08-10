@@ -1,7 +1,7 @@
 export const LEVEL_TWO_PROP_ATLAS = Object.freeze({
   cell: 128,
   columns: 4,
-  rows: 4,
+  rows: 3,
   baseline: 112,
 });
 
@@ -17,20 +17,20 @@ export const LEVEL_TWO_PROP_FRAMES = Object.freeze({
   "boss-platform-right": Object.freeze({ frames: Object.freeze([cell(2, 1)]), fps: 0, loop: false }),
   "rolling-can": Object.freeze({ frames: Object.freeze([cell(3, 1)]), fps: 0, loop: false }),
   "hydrant-idle": Object.freeze({ frames: Object.freeze([cell(0, 2)]), fps: 0, loop: false }),
-  "hydrant-build": Object.freeze({ frames: Object.freeze([cell(1, 2)]), fps: 0, loop: false }),
-  "hydrant-spray": Object.freeze({ frames: Object.freeze([cell(2, 2)]), fps: 0, loop: false }),
-  "hydrant-recover": Object.freeze({ frames: Object.freeze([cell(3, 2)]), fps: 0, loop: false }),
-  "hydrant-water-burst": Object.freeze({ frames: Object.freeze([cell(0, 3)]), fps: 0, loop: false }),
-  "hydrant-water-full": Object.freeze({ frames: Object.freeze([cell(1, 3), cell(2, 3)]), fps: 12, loop: true }),
-  "hydrant-water-taper": Object.freeze({ frames: Object.freeze([cell(3, 3)]), fps: 0, loop: false }),
+});
+
+export const LEVEL_TWO_PROP_RUNTIME_OWNERS = Object.freeze({
+  acorn: "bin-lid-source",
+  "charge-obstacle": "level-two-environment",
+  "boss-platform-left": "brutus-platform-left",
+  "boss-platform-right": "brutus-platform-right",
+  "rolling-can": "brutus-rolling-can",
+  "hydrant-idle": "brutus-crash-mechanic",
 });
 
 export const HYDRANT_RENDER_METRICS = Object.freeze({
   drawWidth: 96,
   drawHeight: 96,
-  sourceNozzle: Object.freeze({ x: 96, y: 54 }),
-  waterWidth: 144,
-  waterHeight: 144,
 });
 
 export const CHARGE_OBSTACLE_RENDER_METRICS = Object.freeze({
@@ -84,35 +84,6 @@ export function hydrantDrawRect(item) {
     w,
     h,
   };
-}
-
-export function hydrantNozzleOrigin(item, direction = 1) {
-  const draw = hydrantDrawRect(item);
-  const sourceX = direction < 0
-    ? LEVEL_TWO_PROP_ATLAS.cell - HYDRANT_RENDER_METRICS.sourceNozzle.x
-    : HYDRANT_RENDER_METRICS.sourceNozzle.x;
-  return {
-    x: draw.x + sourceX / LEVEL_TWO_PROP_ATLAS.cell * draw.w,
-    y: draw.y + HYDRANT_RENDER_METRICS.sourceNozzle.y / LEVEL_TWO_PROP_ATLAS.cell * draw.h,
-  };
-}
-
-export function hydrantWaterDrawRect(origin, direction = 1) {
-  const { waterWidth: w, waterHeight: h } = HYDRANT_RENDER_METRICS;
-  return {
-    x: direction < 0 ? origin.x + 4 - w : origin.x - 4,
-    y: origin.y - h / 2,
-    w,
-    h,
-  };
-}
-
-export function hydrantVisualState(active, progress = 0) {
-  if (!active) return { body: "hydrant-idle", water: null };
-  const phase = Math.max(0, Math.min(1, progress));
-  if (phase < 0.18) return { body: "hydrant-build", water: "hydrant-water-burst" };
-  if (phase < 0.82) return { body: "hydrant-spray", water: "hydrant-water-full" };
-  return { body: "hydrant-recover", water: "hydrant-water-taper" };
 }
 
 export function porchLightDrawRect(item) {
