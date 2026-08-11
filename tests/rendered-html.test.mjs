@@ -2,17 +2,19 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
-async function render() {
+async function render(pathname = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
-    new Request("http://localhost/", { headers: { accept: "text/html" } }),
+    new Request(new URL(pathname, "http://localhost"), { headers: { accept: "text/html" } }),
     { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
     { waitUntil() {}, passThroughOnException() {} },
   );
 }
+
+const visibleGameShell = (html) => html.slice(html.indexOf("<body"), html.indexOf('<script id="_R_">'));
 
 test("server-renders the finished game shell", async () => {
   const response = await render();
@@ -25,6 +27,23 @@ test("server-renders the finished game shell", async () => {
   assert.match(html, /Alley Acres/);
   assert.match(html, /brief-pinned-raccoon-world/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
+});
+
+test("production rendering keeps Level 2 and direct-test queries out of the visible shell", async () => {
+  const [response, canonicalResponse] = await Promise.all([
+    render("/?level=2&levelTest=drainage&encounterTest=drainage-mastery&bossTest=brutus"),
+    render(),
+  ]);
+  assert.equal(response.status, 200);
+  assert.equal(canonicalResponse.status, 200);
+
+  const html = await response.text();
+  const shell = visibleGameShell(html);
+  assert.equal(shell, visibleGameShell(await canonicalResponse.text()));
+  assert.match(shell, /class="game-cabinet"/);
+  assert.match(shell, /class="game-stage /);
+  assert.match(shell, /class="game-canvas"/);
+  assert.doesNotMatch(shell, /levelTest|encounterTest|bossTest|Test route|Debug route/i);
 });
 
 test("ships the playable assets and removes the starter preview", async () => {
@@ -52,6 +71,7 @@ test("ships the playable assets and removes the starter preview", async () => {
   assert.match(game, /levelTwoTestStarts/);
   assert.match(game, /levelTest === "level2-start"/);
   assert.match(game, /devParams\?\.get\("level"\) === "2"/);
+  assert.match(game, /const devParams = import\.meta\.env\.DEV && !levelIdOverride/);
   assert.match(game, /const levelId = levelIdOverride[\s\S]{0,800}makeWorld\(selectedProfile\.id, levelId/);
   assert.match(styles, /character-cards/);
   assert.match(game, /aria-label="Sprint"/);

@@ -1,0 +1,57 @@
+<h2>Asset construction, integration, and testing</h2>
+<p class="subtitle">A reproducible pipeline replaces hand-entered crop rectangles and makes every hero state inspectable before it reaches gameplay.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Build pipeline</div>
+  <div class="mockup-body" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center">
+    <div class="placeholder" style="min-width:170px"><strong>1. Lock reference</strong><br>Face, scarf, belt, palette, outlines</div><strong>→</strong>
+    <div class="placeholder" style="min-width:170px"><strong>2. Recover poses</strong><br>Extract clean existing artwork first</div><strong>→</strong>
+    <div class="placeholder" style="min-width:170px"><strong>3. Repair gaps</strong><br>Redraw only missing transition frames</div><strong>→</strong>
+    <div class="placeholder" style="min-width:170px"><strong>4. Normalize</strong><br>192×192 cells, shared baseline and margins</div><strong>→</strong>
+    <div class="placeholder" style="min-width:170px"><strong>5. Pack + manifest</strong><br>State rows, cadence, looping, offsets</div>
+  </div>
+</div>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Visual acceptance checks</div>
+    <div class="mockup-body">
+      <ul>
+        <li>No opaque pixels touch a cell edge.</li>
+        <li>Feet share one baseline across grounded frames.</li>
+        <li>Head height and body mass stay consistent within each form.</li>
+        <li>Small and large forms preserve the same face, scarf, belt, and tail pattern.</li>
+        <li>Facing flips around the optical center without horizontal jumping.</li>
+        <li>Contact-sheet previews are generated automatically for review.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Gameplay acceptance checks</div>
+    <div class="mockup-body">
+      <ul>
+        <li>Every reachable player state resolves to a valid animation.</li>
+        <li>Tail-swipe hitbox timing matches the active frames.</li>
+        <li>Hurt completes before shrink, checkpoint reset, or paw loss.</li>
+        <li>Pits still bypass hurt and resolve immediately.</li>
+        <li>Rapid input cannot restart committed sequences.</li>
+        <li>Desktop and mobile rendering use the same state manifest.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Incremental delivery</h3>
+  <p><strong>Checkpoint 1:</strong> canonical atlas, manifest, and contact sheet. <strong>Checkpoint 2:</strong> locomotion and air states in-game. <strong>Checkpoint 3:</strong> tail swipe, hurt, shrink, glide, victory, and defeat. <strong>Checkpoint 4:</strong> full local playtest and polish pass.</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="approve-final-design" onclick="toggleSelect(this)">
+    <div class="letter">✓</div><div class="content"><h3>Approve the complete design</h3><p>Write the design specification and prepare the implementation plan.</p></div>
+  </div>
+  <div class="option" data-choice="revise-final-design" onclick="toggleSelect(this)">
+    <div class="letter">↺</div><div class="content"><h3>Revise it</h3><p>Tell me which pipeline or acceptance requirement should change.</p></div>
+  </div>
+</div>

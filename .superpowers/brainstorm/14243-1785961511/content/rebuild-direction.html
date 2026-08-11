@@ -1,0 +1,39 @@
+<h2>How far should the hero rebuild go?</h2>
+<p class="subtitle">All three approaches fix cell size, baseline, centering, and state naming. The difference is how much we redraw.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="min-height:220px;display:grid;place-items:center;background:repeating-conic-gradient(#3b5552 0 25%,#48625f 0 50%) 0/24px 24px">
+      <img src="http://localhost:3002/assets/player-motion.png" alt="Current movement sheet" style="width:100%;image-rendering:pixelated">
+    </div>
+    <div class="card-body">
+      <h3>A — Extraction cleanup</h3>
+      <p>Keep every existing drawing untouched and isolate the cleanest available poses. Fastest, but missing actions remain limited by the source sheet.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="min-height:220px;display:grid;place-items:center;background:linear-gradient(transparent 78%,#ffb13b 78% 80%,transparent 80%),repeating-linear-gradient(90deg,#3b5552 0 119px,#48625f 119px 120px)">
+      <img src="http://localhost:3002/assets/player-motion.png" alt="Current raccoon normalized to a shared baseline" style="width:100%;image-rendering:pixelated">
+    </div>
+    <div class="card-body">
+      <h3>B — Hybrid rebuild (recommended)</h3>
+      <p>Lock the current face, costume, palette, and personality; redraw or repair only the poses needed for complete small/large animation sets.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="min-height:220px;display:grid;place-items:center;background:#808080;overflow:hidden">
+      <img src="http://localhost:3002/assets/raccoon-sprites.png" alt="Original hero source sheet" style="width:120%;transform:translateY(-4%);image-rendering:pixelated">
+    </div>
+    <div class="card-body">
+      <h3>C — Full sprite redesign</h3>
+      <p>Rebuild the hero from scratch with a stricter SNES-era silhouette and palette. Maximum consistency, largest change from the character you already like.</p>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros"><h4>My recommendation: B</h4><ul><li>Keeps the raccoon recognizable</li><li>Supports every required action</li><li>Lets us enforce one baseline and scale system</li></ul></div>
+  <div class="cons"><h4>Tradeoff</h4><ul><li>Some rebuilt frames will not be pixel-identical to the original sheet</li><li>Requires a new canonical atlas rather than more raw crops</li></ul></div>
+</div>

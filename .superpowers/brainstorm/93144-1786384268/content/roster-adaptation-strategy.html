@@ -1,0 +1,57 @@
+<h2>How should the approved enemy cast become gameplay sprites?</h2>
+<p class="subtitle">All ten designs stay recognizable. The decision is how aggressively we simplify them for 64–94px gameplay rendering.</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Current visual language</div>
+    <div class="mockup-body" style="display:flex;gap:12px;align-items:flex-start;justify-content:center;background:#090b12;padding:16px;max-height:330px;overflow:hidden">
+      <img src="/files/current-level1.png" alt="Current Level 1 enemy atlas" style="width:43%;height:290px;object-fit:contain;image-rendering:pixelated">
+      <img src="/files/current-level2.png" alt="Current Level 2 enemy atlas" style="width:28%;height:290px;object-fit:contain;image-rendering:pixelated">
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">Approved character direction</div>
+    <div class="mockup-body" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;background:#17100e;padding:10px;max-height:330px;overflow:hidden">
+      <img src="/files/spider.png" alt="Spider" style="width:100%;height:125px;object-fit:cover;object-position:50% 8%">
+      <img src="/files/pigeon.png" alt="Pigeon" style="width:100%;height:125px;object-fit:cover;object-position:50% 8%">
+      <img src="/files/mosquito.png" alt="Mosquito" style="width:100%;height:125px;object-fit:cover;object-position:50% 8%">
+      <img src="/files/opossum.png" alt="Opossum" style="width:100%;height:125px;object-fit:cover;object-position:50% 8%">
+      <img src="/files/snake.png" alt="Snake" style="width:100%;height:125px;object-fit:cover;object-position:50% 8%">
+      <img src="/files/squirrel.png" alt="Squirrel" style="width:100%;height:125px;object-fit:cover;object-position:50% 8%">
+      <img src="/files/dog.png" alt="Dog" style="width:100%;height:125px;object-fit:cover;object-position:50% 8%">
+      <img src="/files/skunk.png" alt="Skunk" style="width:100%;height:125px;object-fit:cover;object-position:50% 8%">
+      <img src="/files/moth.png" alt="Moth" style="width:100%;height:125px;object-fit:cover;object-position:50% 8%">
+      <img src="/files/bee.png" alt="Bee" style="width:100%;height:125px;object-fit:cover;object-position:50% 8%">
+    </div>
+  </div>
+</div>
+
+<div class="cards" style="margin-top:24px">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:14px;background:linear-gradient(135deg,#28211d,#161519)">
+      <img src="/files/squirrel.png" alt="Squirrel reference" style="width:100%;height:190px;object-fit:cover;object-position:50% 8%;image-rendering:pixelated">
+    </div>
+    <div class="card-body">
+      <h3>A — Trashpunk Distillation · Recommended</h3>
+      <p>Preserve every signature prop, costume, silhouette, attitude, and attack. Rebuild with hard dark contours, 3–4 shade ramps, restrained texture, and nearest-neighbor pixels sized for gameplay readability.</p>
+    </div>
+  </div>
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:14px;background:linear-gradient(135deg,#342018,#17120f)">
+      <img src="/files/dog.png" alt="Dog reference" style="width:100%;height:190px;object-fit:cover;object-position:50% 8%">
+    </div>
+    <div class="card-body">
+      <h3>B — Literal Illustrated Miniatures</h3>
+      <p>Retain almost all painted texture and surface detail while shrinking the approved sheets. Closest to the source artwork, but busiest at 64–94px and most likely to produce muddy edges or inconsistent animation silhouettes.</p>
+    </div>
+  </div>
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:14px;background:#080b11">
+      <img src="/files/current-level1.png" alt="Current simplified Level 1 reference" style="width:100%;height:190px;object-fit:contain;image-rendering:pixelated">
+    </div>
+    <div class="card-body">
+      <h3>C — Current-Level Minimalism</h3>
+      <p>Reduce the new cast to very simple silhouettes and broad color blocks matching today’s Level 1 atlas. Maximum clarity, but it sacrifices much of the fresh personality, scavenged gear, and species-specific storytelling you approved.</p>
+    </div>
+  </div>
+</div>

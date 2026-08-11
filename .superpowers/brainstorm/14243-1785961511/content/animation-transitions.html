@@ -1,0 +1,55 @@
+<h2>Animation behavior and transition design</h2>
+<p class="subtitle">Gameplay owns physics and outcomes. The animation controller selects one visual state from explicit priorities and lets committed reactions finish.</p>
+
+<div class="mockup">
+  <div class="mockup-header">State priority — highest priority wins</div>
+  <div class="mockup-body" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center">
+    <div class="placeholder" style="min-width:120px">Defeat</div><strong>→</strong>
+    <div class="placeholder" style="min-width:120px">Hurt / shrink</div><strong>→</strong>
+    <div class="placeholder" style="min-width:120px">Victory</div><strong>→</strong>
+    <div class="placeholder" style="min-width:120px">Tail swipe</div><strong>→</strong>
+    <div class="placeholder" style="min-width:120px">Glide / air</div><strong>→</strong>
+    <div class="placeholder" style="min-width:120px">Skid</div><strong>→</strong>
+    <div class="placeholder" style="min-width:120px">Run / walk / idle</div>
+  </div>
+</div>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Committed sequences</div>
+    <div class="mockup-body">
+      <h3>Damage</h3>
+      <p>Impact frame → recoil frame → recovery frame → apply shrink, checkpoint respawn, or defeat. Pit falls remain immediate and skip the animation.</p>
+      <h3>Tail swipe</h3>
+      <p>Wind-up → active sweep → impact → follow-through → recovery. The hitbox is active only during the middle two frames; repeated input cannot restart the sequence.</p>
+      <h3>Transformation</h3>
+      <p>Large-form hurt completes, then four shrink frames bridge into the small idle state without a scale pop.</p>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Responsive locomotion</div>
+    <div class="mockup-body">
+      <h3>Ground</h3>
+      <p>Idle, walk, and run use velocity thresholds with a short hysteresis band so frames do not flicker near boundaries.</p>
+      <h3>Air</h3>
+      <p>Jump rises through two frames, fall uses two frames, and landing plays only after meaningful airtime. Glide overrides ordinary air states.</p>
+      <h3>Direction changes</h3>
+      <p>A fast reversal triggers skid/turn; facing flips at the designated turn frame, never halfway through a sprite draw.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Defensive behavior</h3>
+  <p>If a state or frame is missing, the manifest falls back to that form’s idle frame and reports a development warning. Atlas bounds, frame counts, baseline, and transparent margins are checked automatically before builds.</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="approve-transitions" onclick="toggleSelect(this)">
+    <div class="letter">✓</div><div class="content"><h3>Approve behavior and transitions</h3><p>Proceed to asset construction and testing design.</p></div>
+  </div>
+  <div class="option" data-choice="revise-transitions" onclick="toggleSelect(this)">
+    <div class="letter">↺</div><div class="content"><h3>Revise it</h3><p>Tell me which priority or sequence should change.</p></div>
+  </div>
+</div>

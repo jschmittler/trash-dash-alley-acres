@@ -1,0 +1,150 @@
+{
+  "version": "2026-08-10-v2",
+  "authority": "docs/game/DECISIONS.md",
+  "levels": {
+    "1": {
+      "name": "Woodlands to City Limits",
+      "boss": "Trash Dash, the Toxic Trashbag",
+      "environment_references": [
+        "reference/environments/level-01/level-1-01-deep-woodland.png",
+        "reference/environments/level-01/level-1-02-creek-and-ruined-mill.png",
+        "reference/environments/level-01/level-1-03-forest-edge-highway.png",
+        "reference/environments/level-01/level-1-04-industrial-city-fringe.png",
+        "reference/environments/level-01/level-1-05-urban-park-transition.png"
+      ],
+      "concept_references": [
+        "reference/characters/level-01/concepts/boss.png",
+        "reference/characters/level-01/concepts/common-enemies.png"
+      ],
+      "sprite_references": [
+        "reference/characters/level-01/sprites/boss-trash-dash.png",
+        "reference/characters/level-01/sprites/mosquito.png",
+        "reference/characters/level-01/sprites/opossum-pilfer.png",
+        "reference/characters/level-01/sprites/pigeon.png",
+        "reference/characters/level-01/sprites/snake.png",
+        "reference/characters/level-01/sprites/spider.png"
+      ],
+      "foreground_asset_sheet": "reference/foreground-assets/level-01/foreground-gameplay-assets.png"
+    },
+    "2": {
+      "name": "Suburban After Dark",
+      "boss": "Brutus the Bin-Hound",
+      "environment_references": [
+        "reference/environments/level-02/level-2-01-moonlit-backyard.png",
+        "reference/environments/level-02/level-2-02-garbage-night-street.png",
+        "reference/environments/level-02/level-2-03-backyard-obstacle-course.png",
+        "reference/environments/level-02/level-2-04-drainage-ditch-and-culvert.png",
+        "reference/environments/level-02/level-2-05-suburban-main-street.png"
+      ],
+      "concept_references": [
+        "reference/characters/level-02/concepts/approved-direction-a-supplement.png",
+        "reference/characters/level-02/concepts/boss.png",
+        "reference/characters/level-02/concepts/common-enemies.png"
+      ],
+      "sprite_references": [
+        "reference/characters/level-02/sprites/bee.png",
+        "reference/characters/level-02/sprites/boss-brutus-bin-hound.png",
+        "reference/characters/level-02/sprites/dog.png",
+        "reference/characters/level-02/sprites/moth-dustwing.png",
+        "reference/characters/level-02/sprites/skunk.png",
+        "reference/characters/level-02/sprites/squirel.png"
+      ],
+      "foreground_asset_sheet": "reference/foreground-assets/level-02/foreground-gameplay-assets.png"
+    },
+    "3": {
+      "name": "Downtown Mayhem",
+      "boss": "His Greasiness, the Pizza Rat King",
+      "environment_references": [
+        "reference/environments/level-03/level-3-01-restaurant-alley.png",
+        "reference/environments/level-03/level-3-02-rainy-downtown-avenue.png",
+        "reference/environments/level-03/level-3-03-rooftop-run.png",
+        "reference/environments/level-03/level-3-04-subway-maintenance-tunnels.png",
+        "reference/environments/level-03/level-3-05-construction-site-finale.png"
+      ],
+      "concept_references": [
+        "reference/characters/level-03/concepts/boss.png",
+        "reference/characters/level-03/concepts/common-enemies.png"
+      ],
+      "sprite_references": [
+        "reference/characters/level-03/sprites/alley-cat-burglar.png",
+        "reference/characters/level-03/sprites/boss-pizza-rat-king.png",
+        "reference/characters/level-03/sprites/sewer-rat-courier.png",
+        "reference/characters/level-03/sprites/subway-roach.png",
+        "reference/characters/level-03/sprites/traffic-cone-crab.png"
+      ],
+      "foreground_asset_sheet": "reference/foreground-assets/level-03/foreground-gameplay-assets.png"
+    },
+    "4": {
+      "name": "Secret Space Center",
+      "boss": "Project O.P.O.S.S.U.M.",
+      "environment_references": [
+        "reference/environments/level-04/level-4-01-hidden-service-entrance.png",
+        "reference/environments/level-04/level-4-02-experimental-laboratory.png",
+        "reference/environments/level-04/level-4-03-robotics-assembly-chamber.png",
+        "reference/environments/level-04/level-4-04-zero-gravity-research-chamber.png",
+        "reference/environments/level-04/level-4-05-rocket-hangar-finale.png"
+      ],
+      "concept_references": [
+        "reference/characters/level-04/concepts/boss.png",
+        "reference/characters/level-04/concepts/common-enemies.png"
+      ],
+      "sprite_references": [
+        "reference/characters/level-04/sprites/beaker-slime.png",
+        "reference/characters/level-04/sprites/boss-project-opossum.png",
+        "reference/characters/level-04/sprites/clipboard-hamster.png",
+        "reference/characters/level-04/sprites/mop-bot-3000.png",
+        "reference/characters/level-04/sprites/phase-gecko.png"
+      ],
+      "foreground_asset_sheet": "reference/foreground-assets/level-04/foreground-gameplay-assets.png"
+    },
+    "5": {
+      "name": "Raccoon in Space",
+      "boss": "Galactogobbler, Hoarder of Worlds",
+      "environment_references": [
+        "reference/environments/level-05/level-5-01-low-earth-orbit.png",
+        "reference/environments/level-05/level-5-02-satellite-graveyard.png",
+        "reference/environments/level-05/level-5-03-nebula-asteroid-mine.png",
+        "reference/environments/level-05/level-5-04-abandoned-alien-station.png",
+        "reference/environments/level-05/level-5-05-intergalactic-junk-world.png"
+      ],
+      "concept_references": [
+        "reference/characters/level-05/concepts/boss.png",
+        "reference/characters/level-05/concepts/common-enemies.png"
+      ],
+      "sprite_references": [
+        "reference/characters/level-05/sprites/asteroid-armadillo.png",
+        "reference/characters/level-05/sprites/boss-galactogobbler.png",
+        "reference/characters/level-05/sprites/rocket-roach.png",
+        "reference/characters/level-05/sprites/satellite-hermit-crab.png",
+        "reference/characters/level-05/sprites/vacuum-jelly.png"
+      ],
+      "foreground_asset_sheet": "reference/foreground-assets/level-05/foreground-gameplay-assets.png"
+    },
+    "6": {
+      "name": "The Abandoned Ballpark",
+      "boss": "The Diamond Don",
+      "secret": true,
+      "access": "TBD",
+      "environment_references": [
+        "reference/environments/level-06/level-6-01-entryway.png",
+        "reference/environments/level-06/level-6-02-concessions.png",
+        "reference/environments/level-06/level-6-03-stadium-seats.png",
+        "reference/environments/level-06/level-6-04-outfield.png",
+        "reference/environments/level-06/level-6-05-infield-boss-arena.png"
+      ],
+      "concept_references": [
+        "reference/characters/level-06/concepts/boss.png",
+        "reference/characters/level-06/concepts/common-enemies.png"
+      ],
+      "sprite_references": [
+        "reference/characters/level-06/sprites/baserunning-beaver.png",
+        "reference/characters/level-06/sprites/boss-diamond-don.png",
+        "reference/characters/level-06/sprites/clobbering-cub.png",
+        "reference/characters/level-06/sprites/sliding-seagull.png",
+        "reference/characters/level-06/sprites/windup-weasel.png"
+      ],
+      "foreground_asset_sheet": "reference/foreground-assets/level-06/foreground-gameplay-assets.png"
+    }
+  },
+  "known_external_assets": []
+}

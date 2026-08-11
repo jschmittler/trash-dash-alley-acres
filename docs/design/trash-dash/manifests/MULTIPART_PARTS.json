@@ -1,0 +1,19 @@
+{
+  "required": [
+    "trash-dash-00-core-docs-manifests.zip",
+    "trash-dash-01-shared-heroes-items-ui-reward.zip",
+    "trash-dash-02-level-01.zip",
+    "trash-dash-03-level-02.zip",
+    "trash-dash-04-level-03.zip",
+    "trash-dash-05-level-04.zip",
+    "trash-dash-06-level-05.zip",
+    "trash-dash-07-level-06.zip"
+  ],
+  "optional_history": [
+    "trash-dash-08-archive-superseded-images.zip",
+    "trash-dash-09-archive-legacy-main-characters.zip",
+    "trash-dash-10-archive-legacy-level-layouts.zip"
+  ],
+  "extract_to_same_parent": true,
+  "shared_root": "trash-dash-codex-import-master-2026-08-11"
+}

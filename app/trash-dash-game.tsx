@@ -530,7 +530,7 @@ const makeCratePlatform = (x: number, groundY = GROUND_Y): Platform => ({
 
 const cratePlatforms: Platform[] = [
   makeCratePlatform(878),
-  makeCratePlatform(938),
+  makeCratePlatform(990),
   makeCratePlatform(5100),
   makeCratePlatform(6150),
 ];
@@ -583,12 +583,22 @@ const makeEnemy = (
   const visualRecord = IMPLEMENTED_VISUAL_INVENTORY.find(({ category, id }) => category === "enemy" && id === kind);
   const patrol = visualRecord
     ? resolveEnemyWorldPatrol({
-        spawn, supports, flightBands, collisionWidth: w,
-        contract: visualRecord.contract, grounded, patrolRadius,
+        spawn,
+        supports,
+        flightBands,
+        collisionWidth: w,
+        contract: visualRecord.contract,
+        grounded,
+        patrolRadius,
       })
     : createEnemyPatrol({
-        x, width: w, surfaceY: spawn.y ?? GROUND_Y, surfaceId: spawn.surfaceId,
-        patrolRadius, grounded, patrolBounds: spawn.patrol,
+        x,
+        width: w,
+        surfaceY: spawn.y ?? GROUND_Y,
+        surfaceId: spawn.surfaceId,
+        patrolRadius,
+        grounded,
+        patrolBounds: spawn.patrol,
       }, supports);
   if (!patrol) return null;
   const patrolMinX = patrol.minX;

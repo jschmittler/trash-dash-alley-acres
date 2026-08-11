@@ -1,0 +1,31 @@
+<h2>Decorative asset viewpoint</h2>
+<p class="subtitle">Which camera language should every prop share?</p>
+
+<div class="cards">
+  <div class="card" data-choice="side-on" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:linear-gradient(#78cee8 0 62%,#78c85b 62%);padding:18px;display:flex;align-items:end;gap:12px;min-height:180px">
+      <div style="width:72px;height:46px;background:#3a6650;border:4px solid #162f35;border-radius:8px 8px 4px 4px;box-shadow:0 6px #5a3523"></div>
+      <div style="width:48px;height:68px;background:#2f8e91;border:4px solid #162f35;border-radius:6px;box-shadow:0 6px #5a3523"></div>
+      <div style="width:58px;height:30px;background:#8d5b34;border:4px solid #162f35;box-shadow:0 6px #5a3523"></div>
+    </div>
+    <div class="card-body"><h3>A · Side-on orthographic</h3><p>Recommended. Flat 2-D silhouettes, consistent ground baselines, and natural horizontal scaling for platforms.</p></div>
+  </div>
+  <div class="card" data-choice="front-flat" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:linear-gradient(#78cee8 0 62%,#78c85b 62%);padding:18px;display:flex;align-items:end;justify-content:center;gap:16px;min-height:180px">
+      <div style="width:58px;height:62px;background:#3a6650;border:4px solid #162f35;border-radius:50% 50% 6px 6px;box-shadow:0 6px #5a3523"></div>
+      <div style="width:58px;height:62px;background:#2f8e91;border:4px solid #162f35;border-radius:6px;box-shadow:0 6px #5a3523"></div>
+      <div style="width:58px;height:62px;background:#8d5b34;border:4px solid #162f35;box-shadow:0 6px #5a3523"></div>
+    </div>
+    <div class="card-body"><h3>B · Front-facing flat</h3><p>Readable and graphic, but less compatible with the side-scrolling depth cues and existing sign/crate silhouettes.</p></div>
+  </div>
+  <div class="card" data-choice="three-quarter" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:linear-gradient(#78cee8 0 62%,#78c85b 62%);padding:18px;display:flex;align-items:end;justify-content:center;gap:14px;min-height:180px">
+      <div style="width:74px;height:48px;background:#3a6650;border:4px solid #162f35;border-radius:12px 22px 5px 5px;transform:skewY(-8deg);box-shadow:0 6px #5a3523"></div>
+      <div style="width:58px;height:64px;background:#2f8e91;border:4px solid #162f35;border-radius:8px;transform:skewY(-8deg);box-shadow:0 6px #5a3523"></div>
+      <div style="width:64px;height:34px;background:#8d5b34;border:4px solid #162f35;transform:skewY(-8deg);box-shadow:0 6px #5a3523"></div>
+    </div>
+    <div class="card-body"><h3>C · Three-quarter perspective</h3><p>More dimensional, but it recreates the floating/squished look we are removing from the current assets.</p></div>
+  </div>
+</div>
+
+<p class="subtitle">Select the direction you want me to use for the full 1–6 cleanup pass.</p>

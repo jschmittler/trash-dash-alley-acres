@@ -1,0 +1,22 @@
+{
+  "bundle": "trash-dash-codex-import-master-2026-08-11",
+  "authority": "reference/ plus docs/game/APPROVED_ASSET_POLICY.md",
+  "directional_not_literal": [
+    "reference/level-layouts/dynamic-approved",
+    "reference/gameplay-tiles"
+  ],
+  "categories": {
+    "main_characters": "reference/main-characters",
+    "enemies_and_bosses": "reference/characters",
+    "environments": "reference/environments",
+    "foreground_assets": "reference/foreground-assets",
+    "collectibles_and_powerups": "reference/items",
+    "powerup_splash_ui": "reference/ui-powerups",
+    "end_level_reward": "reference/rewards",
+    "interactive_platforms_and_hazards": "reference/gameplay-tiles",
+    "dynamic_level_layouts": "reference/level-layouts/dynamic-approved"
+  },
+  "non_authoritative": [
+    "archive"
+  ]
+}

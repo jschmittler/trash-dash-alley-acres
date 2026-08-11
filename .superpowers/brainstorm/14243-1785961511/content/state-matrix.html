@@ -1,0 +1,55 @@
+<h2>Proposed canonical hero animation set</h2>
+<p class="subtitle">Every cell is 192×192 with a shared foot baseline, optical center, facing direction, palette, and transparent margin.</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Small form — vulnerable and nimble</div>
+    <div class="mockup-body">
+      <table style="width:100%;border-collapse:collapse">
+        <tr><th style="text-align:left;padding:8px">State</th><th>Frames</th><th style="text-align:left">Purpose</th></tr>
+        <tr><td style="padding:8px">Idle</td><td style="text-align:center">4</td><td>Breathing and tail movement</td></tr>
+        <tr><td style="padding:8px">Walk</td><td style="text-align:center">6</td><td>Controlled low-speed travel</td></tr>
+        <tr><td style="padding:8px">Run</td><td style="text-align:center">6</td><td>Longer stride and stronger lean</td></tr>
+        <tr><td style="padding:8px">Jump / fall / land</td><td style="text-align:center">2 / 2 / 2</td><td>Distinct airborne silhouette</td></tr>
+        <tr><td style="padding:8px">Hurt</td><td style="text-align:center">3</td><td>Impact, recoil, recovery</td></tr>
+        <tr><td style="padding:8px">Skid / turn</td><td style="text-align:center">3</td><td>Direction reversal feedback</td></tr>
+        <tr><td style="padding:8px">Defeat</td><td style="text-align:center">4</td><td>Final paw loss only</td></tr>
+        <tr><td style="padding:8px">Victory</td><td style="text-align:center">4</td><td>End-of-level celebration</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Large form — powered and expressive</div>
+    <div class="mockup-body">
+      <table style="width:100%;border-collapse:collapse">
+        <tr><th style="text-align:left;padding:8px">State</th><th>Frames</th><th style="text-align:left">Purpose</th></tr>
+        <tr><td style="padding:8px">Idle</td><td style="text-align:center">4</td><td>Confident breathing and tail movement</td></tr>
+        <tr><td style="padding:8px">Walk</td><td style="text-align:center">6</td><td>Heavy controlled travel</td></tr>
+        <tr><td style="padding:8px">Run</td><td style="text-align:center">6</td><td>Powerful stride and forward lean</td></tr>
+        <tr><td style="padding:8px">Jump / fall / land</td><td style="text-align:center">2 / 2 / 2</td><td>Distinct airborne silhouette</td></tr>
+        <tr><td style="padding:8px">Tail swipe</td><td style="text-align:center">5</td><td>Wind-up, sweep, impact, recovery</td></tr>
+        <tr><td style="padding:8px">Hurt / shrink</td><td style="text-align:center">3 / 4</td><td>Readable hit before transformation</td></tr>
+        <tr><td style="padding:8px">Glide</td><td style="text-align:center">6</td><td>Existing glider cycle, normalized</td></tr>
+        <tr><td style="padding:8px">Skid / victory</td><td style="text-align:center">3 / 4</td><td>Movement polish and finish</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Runtime structure</h3>
+  <p>One manifest maps gameplay states to atlas rows, frame counts, cadence, loop behavior, and draw offsets. Rendering reads only this manifest—no raw coordinates remain inside the game loop.</p>
+  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:16px">
+    <div class="placeholder">Idle</div><div class="placeholder">Walk</div><div class="placeholder">Run</div><div class="placeholder">Air</div><div class="placeholder">Action</div><div class="placeholder">Reaction</div>
+  </div>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="approve-state-matrix" onclick="toggleSelect(this)">
+    <div class="letter">✓</div><div class="content"><h3>Approve this state matrix</h3><p>Proceed to the behavior and transition design.</p></div>
+  </div>
+  <div class="option" data-choice="revise-state-matrix" onclick="toggleSelect(this)">
+    <div class="letter">↺</div><div class="content"><h3>Revise it</h3><p>Tell me which state or frame count you want changed.</p></div>
+  </div>
+</div>
