@@ -30,6 +30,7 @@ Read [Level and Arena Placement](references/level-arena-placement.md) for the co
 ## Project guides
 
 - Read `../../docs/guides/parallax-backgrounds.md` for layered background work.
+- Read `../../docs/guides/trash-dash-v2-parallax-contract.md` before creating, validating, importing, or wiring a new three-layer background set. Treat its 960×540 camera, 1320×540 plate, naming, ownership, validation, and renderer rules as mandatory for new work.
 - Read `../../docs/guides/enemy-placement-and-grounding.md` for enemy supports, patrols, encounter spacing, or arenas.
 
 ## Handoff

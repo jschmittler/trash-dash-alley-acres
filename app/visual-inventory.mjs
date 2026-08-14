@@ -13,6 +13,7 @@ import {
 import { LEVEL_ONE_ENEMY_ANIMATIONS } from "./level-one-enemy-animation.mjs";
 import { LEVEL_ONE, LEVEL_ONE_ENEMY_KINDS } from "./level-one.mjs";
 import { LEVEL_TWO, LEVEL_TWO_ENEMY_KINDS } from "./level-two.mjs";
+import { levelBackgroundPlateContract } from "./level-background.mjs";
 import {
   LEVEL_TWO_ENEMY_ANIMATIONS,
   LEVEL_TWO_ENEMY_COLLISION,
@@ -202,15 +203,19 @@ const playerRecords = Object.values(PLAYABLE_CHARACTERS).map((profile) => {
     category: "player",
     assetSource: profile.atlasSrc,
   nativeSize: { w: 1152, h: 4224, cellW: 192, cellH: 192 },
-  renderedSize: { small: [84, 84], large: [110, 110], maximum: [envelope.w, envelope.h] },
+  renderedSize: {
+    small: [profile.small.drawWidth, profile.small.drawHeight],
+    large: [profile.large.drawWidth, profile.large.drawHeight],
+    maximum: [envelope.w, envelope.h],
+  },
     sourceRects: animationSourceRects(animations, 192, 192),
-    runtimeDestinations: animationDestinations(animations, { w: 84, h: 84 }),
+    runtimeDestinations: animationDestinations(animations, { w: profile.small.drawWidth, h: profile.small.drawHeight }),
     origin: "destination center-bottom",
     facing: "right-authored; horizontal flip around destination center",
     animations,
     animationScalePolicy: Object.freeze({
       kind: "FORM_CANONICAL",
-      destinationByForm: Object.freeze({ small: 84, large: 110 }),
+      destinationByForm: Object.freeze({ small: profile.small.drawWidth, large: profile.large.drawWidth }),
       stateExceptions: Object.freeze([]),
     }),
     requiredStates: Object.freeze([...PLAYER_FORM_STATES.small.map((state) => `small_${state}`), ...PLAYER_FORM_STATES.large.map((state) => `large_${state}`)]),
@@ -230,7 +235,7 @@ const playerRecords = Object.values(PLAYABLE_CHARACTERS).map((profile) => {
 
 const levelOneDraw = Object.freeze({
   snake: [64, 64], pigeon: [66, 66], wasp: [66, 66], mosquito: [64, 64],
-  possum: [78, 78], spider: [64, 64], fox: [72, 72],
+  possum: [78, 78], spider: [64, 64], fox: [108, 108],
 });
 const levelOneCollision = Object.freeze({
   snake: [58, 28], pigeon: [46, 38], wasp: [48, 32], mosquito: [46, 30],
@@ -303,20 +308,24 @@ const bossRecords = [
 ];
 
 const backgroundRecords = [LEVEL_ONE, LEVEL_TWO].flatMap((level) => level.backgroundSets.flatMap(({ zoneId, stage }) => (
-  ["far", "middle", "close"].map((layerName) => makeRecord({
+  ["far", "middle", "close"].map((layerName) => {
+    const plateContract = levelBackgroundPlateContract(level);
+    const nativeSize = { w: plateContract.width, h: plateContract.height };
+    return makeRecord({
     id: `${level.id}-${stage}-${layerName}`,
     category: "background",
     levelIds: [level.id],
     assetSource: `assets/backgrounds/${level.id.replace("level-", "level")}-${stage}-${layerName}.png`,
-    nativeSize: { w: 2048, h: 716 }, renderedSize: { w: 2048, h: 716 },
+    nativeSize, renderedSize: nativeSize,
     origin: "viewport tile top-left", facing: "not applicable", animations: null, requiredStates: [],
   }, {
-    visualBounds: rect(0, 0, 2048, 716), collisionBounds: rect(0, 0, 0, 0), placementFootprint: rect(0, 0, 2048, 716),
-    groundAnchor: { x: 0, y: 603 }, renderLayer: layerName === "far" ? "FAR_BACKGROUND" : "BACKGROUND_SCENERY",
+    visualBounds: rect(0, 0, nativeSize.w, nativeSize.h), collisionBounds: rect(0, 0, 0, 0), placementFootprint: rect(0, 0, nativeSize.w, nativeSize.h),
+    groundAnchor: { x: 0, y: plateContract.height - 1 }, renderLayer: layerName === "far" ? "FAR_BACKGROUND" : "BACKGROUND_SCENERY",
     allowedZones: [zoneId], forbiddenZones: ["gameplay-layer"], minimumClearance: clearance(0),
     scalePolicy: { kind: SCALE_POLICIES.VIEWPORT_COVER, min: 1, max: 1, preserveAspectRatio: true },
     viewportBehavior: VIEWPORT_BEHAVIORS.PARALLAX_TILE,
-  }))
+    });
+  })
 )));
 
 const surfaceRecords = [LEVEL_ONE, LEVEL_TWO].flatMap((level) => level.surfaces

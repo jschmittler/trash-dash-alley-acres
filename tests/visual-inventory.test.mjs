@@ -61,6 +61,42 @@ test("inventory covers every implemented level, hero, enemy roster, boss and ren
   ]) assert.ok(summary.categories.includes(category), category);
 });
 
+test("enemy inventory records each approved presentation scale", () => {
+  const record = (id) => IMPLEMENTED_VISUAL_INVENTORY.find((candidate) => candidate.id === id);
+  assert.deepEqual(record("fox").renderedSize, { w: 108, h: 108 });
+  assert.deepEqual(record("squirrel").renderedSize, { w: 114, h: 114 });
+  assert.deepEqual(record("terrier").renderedSize, { w: 185, h: 185 });
+  assert.deepEqual(record("skunk").renderedSize, { w: 117, h: 117 });
+});
+
+test("player inventory records the approved uniform presentation scale without changing collision", () => {
+  const players = IMPLEMENTED_VISUAL_INVENTORY.filter(({ category }) => category === "player");
+  for (const record of players) {
+    assert.deepEqual(record.renderedSize.small, [126, 126], record.id);
+    assert.deepEqual(record.renderedSize.large, [132, 132], record.id);
+    assert.deepEqual(record.animationScalePolicy.destinationByForm, { small: 126, large: 132 }, record.id);
+    assert.deepEqual(record.contract.collisionBounds, { x: -19, y: -58, w: 38, h: 58 }, record.id);
+  }
+});
+
+test("Level 1 background inventory points at all 15 v2 plates with native geometry", () => {
+  const records = IMPLEMENTED_VISUAL_INVENTORY.filter(({ category, levelIds }) => (
+    category === "background" && levelIds.includes("level-1")
+  ));
+  assert.equal(records.length, 15);
+  assert.deepEqual(records.map(({ assetSource }) => assetSource).sort(), [
+    ...["woodland", "creek", "highway", "industrial", "park"].flatMap((stage) => (
+      ["far", "middle", "close"].map((layer) => `assets/backgrounds/level1-${stage}-${layer}.png`)
+    )),
+  ].sort());
+  for (const record of records) {
+    assert.deepEqual(record.nativeSize, { w: 1320, h: 540 }, record.id);
+    assert.deepEqual(record.renderedSize, { w: 1320, h: 540 }, record.id);
+    assert.deepEqual(record.contract.visualBounds, { x: 0, y: 0, w: 1320, h: 540 }, record.id);
+    assert.equal(record.contract.viewportBehavior, "PARALLAX_TILE", record.id);
+  }
+});
+
 test("renderer draw-family manifest binds every named runtime path to canonical inventory records", () => {
   const ids = new Set(IMPLEMENTED_VISUAL_INVENTORY.map(({ id }) => id));
   const families = new Set(RUNTIME_DRAW_FAMILY_MANIFEST.map(({ id }) => id));

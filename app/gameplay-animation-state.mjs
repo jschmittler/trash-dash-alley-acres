@@ -64,15 +64,8 @@ export function resolvePitFall(lives) {
   };
 }
 
-export function presentPitDefeat({ pit, defeatAnimation }) {
-  if (pit.outcome !== "gameover") {
-    return { ...pit, animationName: null, duration: 0 };
-  }
-  return {
-    ...pit,
-    animationName: "small_defeat",
-    duration: defeatAnimation.frames / defeatAnimation.fps,
-  };
+export function presentPitDefeat({ pit }) {
+  return { ...pit, animationName: null, duration: 0 };
 }
 
 export function beginPitFallTransition({ playerY, viewportHeight, lives, pit = resolvePitFall(lives), defeatAnimation }) {

@@ -94,7 +94,7 @@ test("every reachable player state has an in-bounds atlas row, local completion,
 
 test("every canonical player profile uses one runtime destination size per form", () => {
   for (const profile of Object.values(PLAYABLE_CHARACTERS)) {
-    for (const [form, canonicalSize] of [["small", 84], ["large", 110]]) {
+    for (const [form, canonicalSize] of [["small", 126], ["large", 132]]) {
       for (const state of PLAYER_FORM_STATES[form]) {
         const animation = profile.animations[`${form}_${state}`];
         assert.deepEqual(
@@ -109,7 +109,7 @@ test("every canonical player profile uses one runtime destination size per form"
 
 test("pre-victory and victory use the same bottom-center destination and collision contract", () => {
   const actor = { x: 320, y: 180, w: 38, h: 58 };
-  for (const [form, canonicalSize] of [["small", 84], ["large", 110]]) {
+  for (const [form, canonicalSize] of [["small", 126], ["large", 132]]) {
     const profile = PLAYABLE_CHARACTERS.jimothy;
     const idle = profile.animations[`${form}_idle`];
     const victory = profile.animations[`${form}_victory`];

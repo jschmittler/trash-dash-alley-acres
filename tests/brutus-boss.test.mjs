@@ -47,9 +47,9 @@ test("ordinary collisions and attacks against closed armor cannot damage Brutus"
   assert.equal(closedHit.hp, 3);
 });
 
-test("Brutus stomp requires a downward crossing of the narrow authored top band", () => {
+test("Brutus only accepts a forgiving stomp during the hydrant-open interval", () => {
   const boss = { x: 6100, y: 372, w: 96, h: 96 };
-  const state = createBrutusState();
+  const state = { ...createBrutusState(), mode: "stunned-open" };
   const region = brutusTopHitRegion(boss, state, 0);
   assert.ok(region.y < boss.y - 30, `idle rendered top stayed at collider y=${region.y}`);
   assert.deepEqual({ x: region.x, w: region.w, h: region.h }, { x: 6118, w: 60, h: 14 });
@@ -59,6 +59,9 @@ test("Brutus stomp requires a downward crossing of the narrow authored top band"
   const visibleTopCrossing = { x: 6130, y: region.y - 50, w: 38, h: 58, vy: 220 };
   assert.ok(visibleTopCrossing.y + visibleTopCrossing.h < boss.y);
   assert.equal(isBrutusTopHit(visibleTopCrossing, boss, region.y - 2, state, 0), true);
+  assert.equal(isBrutusTopHit(visibleTopCrossing, boss, region.y - 2, { ...state, mode: "charge" }, 0), false);
+  assert.equal(isBrutusTopHit(visibleTopCrossing, boss, region.y - 2, { ...state, mode: "recover" }, 0), false);
+  assert.equal(isBrutusTopHit({ ...visibleTopCrossing, x: boss.x + 8, w: 6 }, boss, region.y - 2, state, 0), true);
   assert.equal(isBrutusTopHit({ ...visibleTopCrossing, vy: -20 }, boss, region.y - 2, state, 0), false);
   assert.equal(isBrutusTopHit({ ...visibleTopCrossing, y: region.y + 20 }, boss, region.y + 18, state, 0), false);
   assert.equal(isBrutusTopHit({ ...visibleTopCrossing, x: 6090, w: 20 }, boss, region.y - 2, state, 0), false);

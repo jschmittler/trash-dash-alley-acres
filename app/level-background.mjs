@@ -4,6 +4,16 @@ export const PARALLAX_SPEEDS = Object.freeze({
   close: 0.13,
 });
 
+export const BACKGROUND_PLATE_CONTRACTS = Object.freeze({
+  "level-1": Object.freeze({ width: 1320, height: 540, drawY: 0 }),
+  "level-2": Object.freeze({ width: 1320, height: 540, drawY: 0 }),
+});
+
+export function levelBackgroundPlateContract(activeLevel) {
+  return BACKGROUND_PLATE_CONTRACTS[activeLevel.id]
+    ?? Object.freeze({ width: 1320, height: 540, drawY: 0 });
+}
+
 const clamp01 = (value) => Math.max(0, Math.min(1, value));
 
 export function levelBackgroundAssetEntries(activeLevel) {

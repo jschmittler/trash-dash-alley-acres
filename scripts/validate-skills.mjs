@@ -65,6 +65,7 @@ const SKIP_DIRECTORIES = new Set([
   ".next",
   ".vinext",
   ".wrangler",
+  ".worktrees",
   "dist",
   "dist-pages",
   "node_modules",

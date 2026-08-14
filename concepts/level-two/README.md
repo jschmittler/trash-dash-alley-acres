@@ -7,13 +7,12 @@ plate is cut from or flattened from a concept image.
 
 ## Runtime contract
 
-- Runtime dimensions: 2048×716 pixels.
+- Runtime dimensions: 1320×540 pixels.
 - Far plates are fully opaque.
 - Middle and close plates have hard object-shaped alpha.
 - Source key for middle and close plates: flat `#FF00FF`.
-- Prompted source middle contact-row target: 610.
-- Runtime middle contact row: 603.
-- Every substantial middle component ends within two pixels of row 603.
+- Runtime middle contact-row target: 500.
+- Every substantial middle component ends within two pixels of row 500.
 - Close plates retain their authored framing and are not normalized as a strip.
 - All resizing uses nearest-neighbor sampling.
 - Far runtime RGB uses a deterministic 32-step value ladder (at most nine
@@ -31,7 +30,7 @@ plate is cut from or flattened from a concept image.
 | Drainage | Downtown skyline, dark hills | Whole culvert, guardrails, utility poles | Reeds, banks, foreground grasses |
 | Main street | Downtown towers, night sky | Whole storefronts, laundromat, water tower | Alley walls, awnings, curb framing |
 
-Generated sources live under `concepts/level-two/source/`. Run
+Generated V2 parallax sources live under `concepts/level-two/source-v2/`. Run
 `npm run build:level-two-backgrounds` to remove the chroma key, normalize only
 substantial middle silhouettes, resize with nearest-neighbor sampling, and
 install the 15 runtime plates under `public/assets/backgrounds/`.

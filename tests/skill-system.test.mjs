@@ -86,3 +86,11 @@ test("active skill files outside .skills are rejected while deprecated history i
   errors = await validateSkillSystem(root);
   assert.deepEqual(errors, []);
 });
+
+test("linked Git worktrees are excluded from the active project skill scan", async () => {
+  const root = await makeFixture();
+  const worktreeSkill = path.join(root, ".worktrees", "feature", ".skills", "animation", "SKILL.md");
+  await mkdir(path.dirname(worktreeSkill), { recursive: true });
+  await writeFile(worktreeSkill, "---\nname: animation\ndescription: Canonical skill in another worktree.\n---\n");
+  assert.deepEqual(await validateSkillSystem(root), []);
+});

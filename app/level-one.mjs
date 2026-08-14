@@ -125,7 +125,7 @@ const encounters = [
     spawnX: 3550,
     sizeClass: "large",
     enemies: [
-      { kind: "fox", x: 3490, patrol: [3440, 3535], surfaceId: "ground-highway" },
+      { kind: "fox", x: 3490, patrol: [3440, 3517], surfaceId: "ground-highway" },
       { kind: "mosquito", x: 3380, y: 276, patrol: [3320, 3403], flightBand: "highway-airspace" },
     ],
     bypass: "highway-culvert-route",

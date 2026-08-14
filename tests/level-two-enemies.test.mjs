@@ -16,7 +16,9 @@ import {
   facingFromVelocity,
   LEVEL_TWO_ENEMY_ANIMATIONS,
   LEVEL_TWO_ENEMY_COLLISION,
+  LEVEL_TWO_ENEMY_DRAW_GEOMETRY,
   levelTwoEnemyAnimation,
+  levelTwoEnemyDrawRect,
   levelTwoEnemyCanContactDamage,
   levelTwoEnemyCanReceiveAttack,
   MOTH_STATES,
@@ -45,6 +47,18 @@ test("exports the authored state sets", () => {
   ]);
   assert.deepEqual(SKUNK_STATES, ["patrol", "telegraph", "spray", "recover", "defeated"]);
   assert.deepEqual(MOTH_STATES, ["orbit", "telegraph", "dive", "climb", "defeated"]);
+});
+
+test("level-two enemies keep their authored runtime presentation scale", () => {
+  assert.deepEqual(LEVEL_TWO_ENEMY_DRAW_GEOMETRY.squirrel, { drawWidth: 114, drawHeight: 114, anchor: "ground" });
+  assert.deepEqual(LEVEL_TWO_ENEMY_DRAW_GEOMETRY.terrier, { drawWidth: 185, drawHeight: 185, anchor: "ground" });
+  assert.deepEqual(LEVEL_TWO_ENEMY_DRAW_GEOMETRY.skunk, { drawWidth: 117, drawHeight: 117, anchor: "ground" });
+  assert.deepEqual(levelTwoEnemyDrawRect({ kind: "terrier", x: 400, y: 426, w: 64, h: 42 }), {
+    x: 339.5,
+    y: 298.4166666666667,
+    w: 185,
+    h: 185,
+  });
 });
 
 test("every authored attack tell stays within the readability contract", () => {
@@ -332,7 +346,10 @@ test("encounter routes reject unknown names and drifted metadata", () => {
 });
 
 test("compact atlas metadata and pixels obey stable anchors", async () => {
-  await access(new URL("../concepts/level-two/source/squirrel-throw-source.png", import.meta.url));
+  await access(new URL("../concepts/level-two/source/squirrel-updated-sheet.png", import.meta.url));
+  await access(new URL("../concepts/level-two/source/terrier-updated-sheet.png", import.meta.url));
+  await access(new URL("../concepts/level-two/source/squirrel-motion-source.png", import.meta.url));
+  await access(new URL("../concepts/level-two/source/terrier-motion-source.png", import.meta.url));
   const atlasPath = fileURLToPath(new URL(
     "../public/assets/generated/level2-enemy-motion.png",
     import.meta.url,
@@ -404,12 +421,16 @@ test("compact atlas metadata and pixels obey stable anchors", async () => {
         let red = 0;
         let green = 0;
         let blue = 0;
+        let left = 192;
+        let right = -1;
         while (stack.length > 0) {
           const point = stack.pop();
           const pointX = point % 192;
           const pointY = (point - pointX) / 192;
           const pixel = ((row * 192 + pointY) * info.width + column * 192 + pointX) * 4;
           area += 1;
+          left = Math.min(left, pointX);
+          right = Math.max(right, pointX);
           red += data[pixel];
           green += data[pixel + 1];
           blue += data[pixel + 2];
@@ -427,7 +448,7 @@ test("compact atlas metadata and pixels obey stable anchors", async () => {
             }
           }
         }
-        components.push({ area, red: red / area, green: green / area, blue: blue / area });
+        components.push({ area, left, right, width: right - left + 1, red: red / area, green: green / area, blue: blue / area });
       }
     }
     return components.sort((left, right) => right.area - left.area);
@@ -458,4 +479,23 @@ test("compact atlas metadata and pixels obey stable anchors", async () => {
     )),
     "squirrel release frame needs a detached warm-brown acorn component",
   );
+
+  const squirrelLocomotionWidths = Array.from({ length: 4 }, (_, column) => componentStats(0, column)[0].width);
+  const squirrelAttackWidths = Array.from({ length: 4 }, (_, column) => componentStats(2, column)[0].width);
+  assert.ok(
+    Math.min(...squirrelAttackWidths) >= Math.min(...squirrelLocomotionWidths) - 2
+      && Math.max(...squirrelAttackWidths) <= Math.max(...squirrelLocomotionWidths) + 2,
+    `squirrel attack envelope ${Math.min(...squirrelAttackWidths)}-${Math.max(...squirrelAttackWidths)}px must fit locomotion ${Math.min(...squirrelLocomotionWidths)}-${Math.max(...squirrelLocomotionWidths)}px`,
+  );
+
+  for (let row = 0; row < 5; row += 1) {
+    for (let column = 0; column < 4; column += 1) {
+      const components = componentStats(row, column);
+      const primaryArea = components[0].area;
+      assert.ok(
+        components.slice(1).every(({ area }) => area < primaryArea * 0.3),
+        `squirrel ${row}:${column} contains a second character-sized component: ${JSON.stringify(components.map(({ area, width }) => ({ area, width })))}`,
+      );
+    }
+  }
 });

@@ -899,7 +899,6 @@ button {
   }
 
   .touch-controls {
-    display: flex;
     inset:
       auto
       max(12px, var(--safe-right))

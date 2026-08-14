@@ -155,6 +155,20 @@ test("touch-first landscape exposes the complete five-action input deck", async 
   assert.match(controls, /aria-label="Jump"[\s\S]*touchProps\("Space"\)/);
 });
 
+test("Pocket Controls is an onboarding hint that dismisses with gameplay input", async () => {
+  const game = await readFile(new URL("../app/trash-dash-game.tsx", import.meta.url), "utf8");
+  const startGame = game.slice(game.indexOf("const startGame = useCallback"), game.indexOf("const continueCampaign = useCallback"));
+  const onKeyDown = game.slice(game.indexOf("const onKeyDown ="), game.indexOf("const onKeyUp ="));
+  const touchProps = game.slice(game.indexOf("const touchProps ="), game.indexOf("const showOrientationPrompt"));
+
+  assert.match(game, /const \[showTouchDeckHint, setShowTouchDeckHint\] = useState\(true\)/);
+  assert.match(game, /const dismissTouchDeckHint = useCallback\(\(\) => \{\s*if \(screenRef\.current === "playing"\) setShowTouchDeckHint\(false\);\s*\}, \[\]\)/);
+  assert.match(startGame, /setShowTouchDeckHint\(true\);/);
+  assert.match(onKeyDown, /dismissTouchDeckHint\(\);/);
+  assert.match(touchProps, /dismissTouchDeckHint\(\);/);
+  assert.match(game, /\{showTouchDeckHint && \(<div className="touch-deck-hint" aria-hidden="true">/);
+});
+
 test("every game-screen transition clears held and newly pressed input", async () => {
   const game = await readFile(new URL("../app/trash-dash-game.tsx", import.meta.url), "utf8");
   const changeScreen = game.slice(
@@ -198,6 +212,12 @@ test("responsive shell protects browser chrome, safe areas, and touch interactio
   assert.match(styles, /\.touch-button \{[\s\S]*touch-action: none;[\s\S]*-webkit-user-select: none;/);
   assert.match(styles, /100svh/);
   assert.match(styles, /100dvh/);
+  const narrowViewportRules = styles.slice(
+    styles.indexOf("@media (max-width: 760px)"),
+    styles.indexOf("@media (hover: none), (pointer: coarse)"),
+  );
+  assert.doesNotMatch(narrowViewportRules, /\.touch-controls \{\s*display: flex;/);
+  assert.match(styles, /@media \(hover: none\), \(pointer: coarse\) \{\s*\.touch-controls \{\s*display: flex;/);
 });
 
 test("short desktop viewports preserve the 16:9 cabinet instead of stretching the canvas", async () => {

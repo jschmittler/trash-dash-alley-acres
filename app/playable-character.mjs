@@ -1,5 +1,5 @@
 import { JIMOTHY_ANIMATIONS } from "../concepts/jimothy/jimothy-animation.mjs";
-import { PLAYER_ANIMATIONS, selectPlayerAnimation } from "./player-animation.mjs";
+import { PLAYER_ANIMATIONS, PLAYER_FORM_DRAW_SIZES, selectPlayerAnimation } from "./player-animation.mjs";
 
 const atlas = (path) => path;
 const animationEnvelope = (animations) => {
@@ -20,15 +20,15 @@ const raccoon = {
   small: {
     width: 32,
     height: 46,
-    drawWidth: 84,
-    drawHeight: 84,
+    drawWidth: PLAYER_FORM_DRAW_SIZES.small,
+    drawHeight: PLAYER_FORM_DRAW_SIZES.small,
     hitbox: { x: 4, y: 3, w: 24, h: 43 },
   },
   large: {
     width: 38,
     height: 58,
-    drawWidth: 110,
-    drawHeight: 110,
+    drawWidth: PLAYER_FORM_DRAW_SIZES.large,
+    drawHeight: PLAYER_FORM_DRAW_SIZES.large,
     hitbox: { x: 4, y: 4, w: 30, h: 54 },
   },
   animations: PLAYER_ANIMATIONS,
@@ -45,15 +45,15 @@ const jimothy = {
   small: {
     width: 32,
     height: 46,
-    drawWidth: 84,
-    drawHeight: 84,
+    drawWidth: PLAYER_FORM_DRAW_SIZES.small,
+    drawHeight: PLAYER_FORM_DRAW_SIZES.small,
     hitbox: { x: 4, y: 3, w: 24, h: 43 },
   },
   large: {
     width: 38,
     height: 58,
-    drawWidth: 110,
-    drawHeight: 110,
+    drawWidth: PLAYER_FORM_DRAW_SIZES.large,
+    drawHeight: PLAYER_FORM_DRAW_SIZES.large,
     hitbox: { x: 4, y: 4, w: 30, h: 54 },
   },
   animations: JIMOTHY_ANIMATIONS,

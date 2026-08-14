@@ -1093,3 +1093,51 @@ worktree-preservation evidence is recorded in
 - **Verification:** focused tests passed 16/16, the related matrix passed 51/51,
   and the production build plus complete default suite passed 315/315. Lint
   reported zero errors and the pre-existing `<img>` performance warning.
+## 2026-08-13 — Level 1 v2 semantic parallax replacement
+
+- Replaced all 15 Level 1 `woodland`, `creek`, `highway`, `industrial`, and
+  `park` far/middle/close runtime plates with exact 1320×540 PNGs. Far plates
+  are opaque; middle and close plates use hard object-shaped alpha.
+- The initial alpha pass was rejected after the offline sweep exposed magenta
+  key spill; the final pass despilled moving-layer edges and reduced maximum
+  close coverage of the player corridor to 0.170. Temporary generation and
+  staging artifacts were removed after verification so delivery contains only
+  the 15 requested runtime PNGs.
+- The production-time audit covered five 960×540 forward sweeps, five reverse
+  sweeps, and four boundary sweeps at far `0.018`, middle `0.055`, and close
+  `0.13`. No empty bands, alpha gaps, doubled landmarks, or abrupt transition
+  resets were observed. The industrial moon was removed after runtime review
+  to prevent duplication during the park cross-fade.
+- Updated the renderer and visual inventory to use each loaded plate's native
+  dimensions. Level 1 now draws 1320×540 at y=0; Level 2 retains legacy
+  2048×716 support at y=-46. Aspect ratio remains unchanged at runtime.
+- Validation: `npm run validate:parallax -- public/assets/backgrounds level1
+  woodland creek highway industrial park` passed; focused contract/background
+  tests passed; `npm run build` passed.
+- Running-game Visual QA used cache-busted woodland, creek, highway,
+  industrial, and park routes at the production canvas size. All five loaded
+  cleanly with crisp sampling, correct layering, readable traversal space, and
+  no browser warnings or errors. PASS.
+- Import/wiring follow-up centralized per-level plate geometry in
+  `app/level-background.mjs`; the runtime loader derives all 15 Level 1 URLs
+  from `LEVEL_ONE.backgroundSets`, the renderer tiles loaded images at native
+  dimensions, and the visual inventory records the same paths and 1320×540
+  contract. The production build copied all 15 plates into both
+  `dist/client/assets/backgrounds/` and `dist/server/assets/backgrounds/`.
+  Cache-busted Level 1 highway and legacy Level 2 street routes both rendered
+  on the 960×540 canvas with no browser warnings or errors. PASS.
+
+## 2026-08-13 — Pocket Controls onboarding hint
+
+- **Issue:** the `Pocket controls` instruction card rendered throughout every
+  active session and remained over the middle of the mobile game stage.
+- **Root cause:** its JSX depended only on `screen === "playing"`; no
+  session-local dismissal state existed.
+- **Fix:** a `showTouchDeckHint` state now resets when `startGame` begins a
+  new or retried session, then is dismissed by the first keyboard or touch
+  gameplay input. The five existing touch buttons and their input mappings are
+  unchanged.
+- **Verification:** at 390×844, a fresh run visibly showed the hint; pressing
+  Jump removed it immediately while all five touch controls remained present.
+  A desktop run likewise dismissed it after ArrowRight. The focused mobile
+  suite passed 13/13 and the production build completed successfully. PASS.

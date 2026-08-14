@@ -5,14 +5,15 @@ import { normalizeGroundedComponents } from "../../scripts/parallax-baseline.mjs
 
 const STAGES = ["backyard", "street", "obstacle", "drainage", "main-street"];
 const LAYERS = ["far", "middle", "close"];
-const WIDTH = 2048;
-const HEIGHT = 716;
-const RUNTIME_BASELINE = 603;
+const WIDTH = 1320;
+const HEIGHT = 540;
+const RUNTIME_BASELINE = 500;
 const FAR_VALUE_STEP = 32;
 const KEY = Object.freeze({ red: 255, green: 0, blue: 255 });
 const TRANSPARENT_KEY_DISTANCE = 118;
+const CONTINUATION_MARGIN = 120;
 
-const sourceRoot = new URL("./source/", import.meta.url);
+const sourceRoot = new URL("./source-v2/", import.meta.url);
 const outputRoot = new URL("../../public/assets/backgrounds/", import.meta.url);
 const contactSheetPath = fileURLToPath(new URL("./level2-backgrounds-contact-sheet.png", import.meta.url));
 
@@ -64,6 +65,35 @@ function quantizeRgbValues(data, info) {
   return data;
 }
 
+function normalizeFarHorizontalSeam(data, info) {
+  for (let y = 0; y < info.height; y += 1) {
+    for (let distance = 0; distance < CONTINUATION_MARGIN; distance += 1) {
+      const left = (y * info.width + distance) * info.channels;
+      const right = (y * info.width + (info.width - 1 - distance)) * info.channels;
+      for (let channel = 0; channel < 3; channel += 1) {
+        const shared = Math.round((data[left + channel] + data[right + channel]) / 2);
+        data[left + channel] = shared;
+        data[right + channel] = shared;
+      }
+    }
+  }
+  return data;
+}
+
+function clearMovingContinuationMargins(data, info) {
+  for (let y = 0; y < info.height; y += 1) {
+    for (let x = 0; x < info.width; x += 1) {
+      if (x >= CONTINUATION_MARGIN && x < info.width - CONTINUATION_MARGIN) continue;
+      const offset = (y * info.width + x) * info.channels;
+      data[offset] = 0;
+      data[offset + 1] = 0;
+      data[offset + 2] = 0;
+      data[offset + 3] = 0;
+    }
+  }
+  return data;
+}
+
 function despillMagentaBoundary(data, info, radius = 2) {
   const output = Buffer.from(data);
   for (let y = 0; y < info.height; y += 1) {
@@ -103,7 +133,8 @@ async function buildFar(stage) {
     .resize(WIDTH, HEIGHT, { fit: "fill", kernel: sharp.kernel.nearest })
     .raw()
     .toBuffer({ resolveWithObject: true });
-  const quantized = quantizeRgbValues(resized.data, resized.info);
+  const seamless = normalizeFarHorizontalSeam(resized.data, resized.info);
+  const quantized = quantizeRgbValues(seamless, resized.info);
   await sharp(quantized, { raw: resized.info })
     .png({ palette: false })
     .toFile(outputPath(stage, "far"));
@@ -125,6 +156,7 @@ async function keyedRuntimeImage(stage, layer) {
     baseline: RUNTIME_BASELINE,
     })
     : resized;
+  clearMovingContinuationMargins(normalized.data, normalized.info);
   return {
     data: despillMagentaBoundary(normalized.data, normalized.info),
     info: normalized.info,

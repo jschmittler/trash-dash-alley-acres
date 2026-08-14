@@ -102,6 +102,7 @@ import {
 import {
   levelBackgroundAssetEntries,
   levelBackgroundBlendAt,
+  levelBackgroundPlateContract,
   PARALLAX_SPEEDS,
 } from "./level-background.mjs";
 import {
@@ -441,7 +442,7 @@ const varietyEnemyDrawSizes: Record<keyof typeof varietyEnemyMotion, [number, nu
   spider: [70, 64],
   rat: [72, 66],
   hedgehog: [70, 66],
-  fox: [82, 72],
+  fox: [108, 108],
   crow: [72, 70],
   boar: [84, 74],
   frog: [66, 62],
@@ -823,6 +824,7 @@ export function TrashDashGame() {
   const [loaded, setLoaded] = useState(false);
   const [muted, setMuted] = useState(false);
   const [portraitDismissed, setPortraitDismissed] = useState(false);
+  const [showTouchDeckHint, setShowTouchDeckHint] = useState(true);
   const [browserExperience, setBrowserExperience] = useState(INITIAL_BROWSER_EXPERIENCE);
   const [hud, setHud] = useState({ trash: 0, score: 0, lives: 3, time: 0, glider: 0 });
   const [best, setBest] = useState({ score: 0, time: 0 });
@@ -900,6 +902,10 @@ export function TrashDashGame() {
 
   const clearHeldInput = useCallback(() => {
     clearInputState(keysRef.current, pressedRef.current);
+  }, []);
+
+  const dismissTouchDeckHint = useCallback(() => {
+    if (screenRef.current === "playing") setShowTouchDeckHint(false);
   }, []);
 
   const interruptGame = useCallback(() => {
@@ -987,6 +993,7 @@ export function TrashDashGame() {
     environmentTransition = "entry",
   ) => {
     clearHeldInput();
+    setShowTouchDeckHint(true);
     dismissPowerupNotice();
     setVictoryRecord({ score: false, time: false });
     if (!audioRef.current) {
@@ -1347,6 +1354,7 @@ export function TrashDashGame() {
       if (handled.has(event.code)) event.preventDefault();
       if (!keysRef.current.has(event.code)) pressedRef.current.add(event.code);
       keysRef.current.add(event.code);
+      dismissTouchDeckHint();
 
       if ((event.code === "Enter" || event.code === "Space") && screenRef.current === "title") {
         openCharacterSelect();
@@ -1377,7 +1385,7 @@ export function TrashDashGame() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       clearHeldInput();
     };
-  }, [clearHeldInput, confirmCharacter, interruptGame, moveCharacter, openCharacterSelect, startGame, toggleMute, togglePause]);
+  }, [clearHeldInput, confirmCharacter, dismissTouchDeckHint, interruptGame, moveCharacter, openCharacterSelect, startGame, toggleMute, togglePause]);
 
   useEffect(() => {
     let animationFrameId = 0;
@@ -2345,10 +2353,13 @@ export function TrashDashGame() {
       const stageZone = campaignZoneAt(activeLevel, stageCenterX);
       const stageBackground = levelBackgroundRefs.current[stageZone.id] ?? null;
       if (stageBackground) {
+        const plateContract = levelBackgroundPlateContract(activeLevel);
         const drawStageSet = (layers: { far: HTMLImageElement | null; middle: HTMLImageElement | null; close: HTMLImageElement | null }, alpha: number) => {
-          drawTiledLayer(layers.far, camera, PARALLAX_SPEEDS.far, -46, 2048, 716, alpha);
-          drawTiledLayer(layers.middle, camera, PARALLAX_SPEEDS.middle, -46, 2048, 716, alpha);
-          drawTiledLayer(layers.close, camera, PARALLAX_SPEEDS.close, -46, 2048, 716, alpha);
+          for (const layer of ["far", "middle", "close"] as const) {
+            const image = layers[layer];
+            if (!image) continue;
+            drawTiledLayer(image, camera, PARALLAX_SPEEDS[layer], plateContract.drawY, image.naturalWidth, image.naturalHeight, alpha);
+          }
         };
         const blendState = levelBackgroundBlendAt(stageCenterX, activeLevel.zones);
         const leftBackground = levelBackgroundRefs.current[blendState.leftId] ?? null;
@@ -2611,8 +2622,8 @@ export function TrashDashGame() {
         const varietyKind = enemy.kind as keyof typeof varietyEnemyMotion;
         const varietyFrames = varietyEnemyMotion[varietyKind];
         if (varietyFrames && !(world.levelId === "level-2" && levelTwoEnemyKinds.has(enemy.kind))) {
-          const [, drawSize] = varietyEnemyDrawSizes[varietyKind];
-          drawEnemy(varietyFrames[frameIndex], drawSize, drawSize, 1, varietyEnemyMotionRef.current);
+          const [drawWidth, drawHeight] = varietyEnemyDrawSizes[varietyKind];
+          drawEnemy(varietyFrames[frameIndex], drawWidth, drawHeight, 1, varietyEnemyMotionRef.current);
         }
         if (world.levelId === "level-2" && levelTwoEnemyKinds.has(enemy.kind)) {
           const animation = levelTwoEnemyAnimation(enemy.kind, enemy.visualState ?? enemy.behaviorState);
@@ -2934,6 +2945,7 @@ export function TrashDashGame() {
       event.preventDefault();
       event.currentTarget.setPointerCapture(event.pointerId);
       event.currentTarget.classList.add("is-pressed");
+      dismissTouchDeckHint();
       setTouchKey(code, true);
     },
     onPointerUp: (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -3030,10 +3042,10 @@ export function TrashDashGame() {
 
           {screen === "playing" && (
             <>
-              <div className="touch-deck-hint" aria-hidden="true">
+              {showTouchDeckHint && (<div className="touch-deck-hint" aria-hidden="true">
                 <strong>Pocket controls</strong>
                 <span>Hold Jump to glide · Action swings your tail</span>
-              </div>
+              </div>)}
               <div className="touch-controls" aria-label="Touch game controls">
                 <div className="touch-cluster">
                   <button className="touch-button" type="button" aria-label="Move left" {...touchProps("ArrowLeft")}>Left</button>

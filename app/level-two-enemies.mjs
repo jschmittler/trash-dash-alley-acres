@@ -23,16 +23,16 @@ export const LEVEL_TWO_ENEMY_COLLISION = Object.freeze({
 });
 
 export const LEVEL_TWO_ENEMY_RENDER = Object.freeze({
-  squirrel: Object.freeze({ drawWidth: 78, drawHeight: 76, anchor: "ground" }),
-  terrier: Object.freeze({ drawWidth: 94, drawHeight: 82, anchor: "ground" }),
-  skunk: Object.freeze({ drawWidth: 90, drawHeight: 78, anchor: "ground" }),
+  squirrel: Object.freeze({ drawWidth: 114, drawHeight: 114, anchor: "ground" }),
+  terrier: Object.freeze({ drawWidth: 185, drawHeight: 185, anchor: "ground" }),
+  skunk: Object.freeze({ drawWidth: 117, drawHeight: 117, anchor: "ground" }),
   moth: Object.freeze({ drawWidth: 84, drawHeight: 82, anchor: "center" }),
 });
 
 export const LEVEL_TWO_ENEMY_DRAW_GEOMETRY = Object.freeze({
-  squirrel: Object.freeze({ drawWidth: 76, drawHeight: 76, anchor: "ground" }),
-  terrier: Object.freeze({ drawWidth: 82, drawHeight: 82, anchor: "ground" }),
-  skunk: Object.freeze({ drawWidth: 78, drawHeight: 78, anchor: "ground" }),
+  squirrel: Object.freeze({ drawWidth: 114, drawHeight: 114, anchor: "ground" }),
+  terrier: Object.freeze({ drawWidth: 185, drawHeight: 185, anchor: "ground" }),
+  skunk: Object.freeze({ drawWidth: 117, drawHeight: 117, anchor: "ground" }),
   moth: Object.freeze({ drawWidth: 82, drawHeight: 82, anchor: "center" }),
 });
 

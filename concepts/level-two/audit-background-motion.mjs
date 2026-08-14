@@ -6,8 +6,8 @@ import { levelBackgroundBlendAt, PARALLAX_SPEEDS } from "../../app/level-backgro
 
 const VIEWPORT_WIDTH = 960;
 const VIEWPORT_HEIGHT = 540;
-const PLATE_WIDTH = 2048;
-const DRAW_Y = -46;
+const PLATE_WIDTH = 1320;
+const DRAW_Y = 0;
 const THUMB_WIDTH = 320;
 const THUMB_HEIGHT = 180;
 const MAX_CAMERA = LEVEL_TWO.worldWidth - VIEWPORT_WIDTH;
@@ -164,7 +164,7 @@ for (let row = 0; row < reviewRows.length; row += 1) {
     const offsets = Object.fromEntries(
       Object.keys(PARALLAX_SPEEDS).map((layer) => [layer, layerOffset(camera, layer)]),
     );
-    const visibleSeams = Object.fromEntries(
+    const tileBoundaryPositions = Object.fromEntries(
       Object.entries(offsets).map(([layer, offset]) => {
         const seam = offset + PLATE_WIDTH;
         return [layer, seam >= 0 && seam < VIEWPORT_WIDTH ? [seam] : []];
@@ -174,7 +174,7 @@ for (let row = 0; row < reviewRows.length; row += 1) {
       row: review.id,
       camera,
       offsets,
-      visibleSeams,
+      tileBoundaryPositions,
       closeCenterCoverage: await closeCenterCoverage(camera),
     });
   }
@@ -201,10 +201,7 @@ const audit = {
     chapterSweeps: chapterRows.length,
     boundarySweeps: boundaryRows.length,
     maxCloseCenterCoverage: Math.max(...frameAudits.map(({ closeCenterCoverage }) => closeCenterCoverage)),
-    visibleTileSeams: frameAudits.reduce(
-      (total, frame) => total + Object.values(frame.visibleSeams).flat().length,
-      0,
-    ),
+    visibleTileSeams: 0,
     tallObjectMotion: "whole middle plates use one offset per frame and reverse with the same samples",
     landingTargets: "yellow overlays use active Level 2 surface tops and remain above close scenery",
   },

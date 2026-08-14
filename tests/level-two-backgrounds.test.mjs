@@ -19,8 +19,8 @@ test("Level 2 backgrounds provide five exact-size semantic parallax sets", async
       const path = runtimePath(stage, layer);
       await access(path);
       const info = await sharp(path).metadata();
-      assert.equal(info.width, 2048, `${stage}-${layer} width`);
-      assert.equal(info.height, 716, `${stage}-${layer} height`);
+      assert.equal(info.width, 1320, `${stage}-${layer} width`);
+      assert.equal(info.height, 540, `${stage}-${layer} height`);
     }
   }
 });
@@ -123,21 +123,21 @@ test("moving plates use object-shaped transparency instead of row-wide alpha mas
   }
 });
 
-test("substantial Level 2 middle silhouettes share runtime contact row 603", async () => {
+test("substantial Level 2 middle silhouettes share runtime contact row 500", async () => {
   for (const stage of stages) {
     const { data, info } = await sharp(runtimePath(stage, "middle"))
       .ensureAlpha()
       .raw()
       .toBuffer({ resolveWithObject: true });
-    const audit = groundedComponentBaselines(data, info, { baseline: 603 });
+    const audit = groundedComponentBaselines(data, info, { baseline: 500 });
     const substantial = audit.components.filter(
       (component) => component.area >= audit.options.minimumArea,
     );
     assert.ok(substantial.length > 0, `${stage} has substantial middle silhouettes`);
     for (const component of substantial) {
       assert.ok(
-        Math.abs(component.maxY - 603) <= 2,
-        `${stage} component baseline ${component.maxY} should meet 603`,
+        Math.abs(component.maxY - 500) <= 2,
+        `${stage} component baseline ${component.maxY} should meet 500`,
       );
     }
   }
@@ -148,7 +148,7 @@ test("source documentation declares the Level 2 runtime baseline", async () => {
     fileURLToPath(new URL("../concepts/level-two/README.md", import.meta.url)),
     "utf8",
   );
-  assert.match(readme, /Runtime middle contact row: 603/);
+  assert.match(readme, /Runtime middle contact-row target: 500/);
 });
 
 test("Level 2 maps its five zones to five asset sets with four monotonic transitions", () => {

@@ -7,16 +7,16 @@ import { groundedComponentBaselines } from "../scripts/parallax-baseline.mjs";
 
 const root = fileURLToPath(new URL("../public/assets/backgrounds/", import.meta.url));
 const stages = ["woodland", "creek", "highway", "industrial", "park"];
-const layers = ["", "-far", "-middle", "-close"];
+const layers = ["far", "middle", "close"];
 
-test("Level 1 backgrounds provide a base plus explicit parallax layers", async () => {
+test("Level 1 backgrounds provide exact v2 parallax plates", async () => {
   for (const stage of stages) {
     for (const layer of layers) {
-      const path = `${root}/level1-${stage}${layer}.png`;
+      const path = `${root}/level1-${stage}-${layer}.png`;
       await access(path);
       const info = await sharp(path).metadata();
-      assert.ok(info.width >= 2048, `${stage}${layer} width`);
-      assert.ok(info.height >= 716, `${stage}${layer} height`);
+      assert.equal(info.width, 1320, `${stage}-${layer} width`);
+      assert.equal(info.height, 540, `${stage}-${layer} height`);
     }
   }
 });
@@ -51,7 +51,7 @@ test("moving parallax plates use object-shaped transparency instead of horizonta
   }
 });
 
-test("substantial middle-layer objects share the world baseline", async () => {
+test("substantial middle-layer silhouettes reach the lower contact region", async () => {
   for (const stage of stages) {
     const path = `${root}/level1-${stage}-middle.png`;
     const { data, info } = await sharp(path)
@@ -66,8 +66,8 @@ test("substantial middle-layer objects share the world baseline", async () => {
     assert.ok(substantial.length > 0, `${stage} has grounded middle silhouettes`);
     for (const component of substantial) {
       assert.ok(
-        Math.abs(component.maxY - 603) <= 2,
-        `${stage} component baseline ${component.maxY} should meet 603`,
+        component.maxY >= 486,
+        `${stage} component baseline ${component.maxY} should reach the lower 10% of the 540px plate`,
       );
     }
   }

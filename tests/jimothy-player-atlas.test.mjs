@@ -7,6 +7,7 @@ import {
   JIMOTHY_ANIMATIONS,
   JIMOTHY_ANIMATION_BASELINES,
   JIMOTHY_SOURCE_STATE_IDENTITY,
+  JIMOTHY_VICTORY_CONTRACT,
 } from "../concepts/jimothy/jimothy-animation.mjs";
 
 const CELL = 192;
@@ -89,6 +90,7 @@ test("Jimothy victory source is a canonical four-cell bottom-center strip", asyn
 });
 
 test("Jimothy victory retains the idle body scale and shared visible baseline", async () => {
+  assert.deepEqual(JIMOTHY_VICTORY_CONTRACT.destinationByForm, { small: 126, large: 132 });
   const idle = await visibleBoundsForFrame("small_idle", 0);
   const victory = await Promise.all(Array.from({ length: 4 }, (_, frame) => visibleBoundsForFrame("small_victory", frame)));
 

@@ -1,0 +1,139 @@
+# Level Two Squirrel and Terrier Source-Sheet Refresh Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Rebuild the squirrel and terrier rows of the Level 2 enemy atlas from the approved updated sheets without changing gameplay behavior or runtime geometry.
+
+**Architecture:** Add a declarative extraction manifest to the atlas builder that names the approved source-sheet rectangles for every existing output cell. The builder will chroma-key green, preserve meaningful detached effects, apply a uniform per-family scale, and register each resulting 192 px atlas cell to the current shared ground baseline; the gameplay animation manifest remains unchanged.
+
+**Tech Stack:** Node.js ES modules, Sharp, generated PNG atlas/contact sheet, Node.js built-in test runner, Next.js/Vinext.
+
+## Global Constraints
+
+- Input sheets are the supplied 1536×1024 RGBA squirrel and dog files named by the approved design.
+- Key only the bright-green backdrop; retain character art, outlines, dust, acorn/projectile, spit, debris, and impact effects.
+- Preserve 192×192 transparent atlas cells, safe margins, nearest-neighbor resizing, uniform aspect-preserving scale, and the shared ground baseline.
+- Preserve squirrel runtime geometry at 114×114 and terrier runtime geometry at 123×123.
+- Do not change physics, hitboxes, state selection, FPS, frame counts, release timing, acorn attachment, encounter placement, camera, or any non-squirrel/non-terrier art.
+- Do not run automated browser/UI checks until the user reports their required manual test; non-UI asset tests and the production build may run before then.
+
+---
+
+### Task 1: Add auditable updated-sheet extraction inputs
+
+**Files:**
+- Create: `concepts/level-two/source/squirrel-motion-source.png`
+- Create: `concepts/level-two/source/terrier-motion-source.png`
+- Modify: `concepts/level-two/build-atlases.mjs:1-285`
+- Test: `tests/level-two-enemies.test.mjs:440-487`
+- Test: `tests/terrier-animation-integrity.test.mjs:52-125`
+
+**Interfaces:**
+- Consumes: the two approved 1536×1024 source paths and `sharp(...).extract({ left, top, width, height })`.
+- Produces: transparent, registered 4×4 squirrel and terrier source masters at `768×768`, plus `UPDATED_SHEET_POSE_MAP` consumed by the atlas builder.
+
+- [ ] **Step 1: Write failing source-master assertions**
+
+Extend the squirrel/terrier source tests to require `{ width: 768, height: 768, channels: 4 }`, a 4×4 grid of 192 px cells, nonempty alpha in every used cell, green-free opaque pixels, and safe margins. The green check must fail when an opaque pixel satisfies:
+
+```js
+green > 180 && green > red * 1.35 && green > blue * 1.35
+```
+
+For every grounded source cell, assert its largest connected component’s lower edge is `175` and its center is within one pixel of `96`.
+
+- [ ] **Step 2: Run the source checks before creating the masters**
+
+Run: `node --test tests/level-two-enemies.test.mjs tests/terrier-animation-integrity.test.mjs`
+
+Expected: FAIL because the existing masters are not extracted from the supplied updated sheets and do not satisfy the updated provenance check.
+
+- [ ] **Step 3: Define pose ownership and extract source masters**
+
+In `concepts/level-two/build-atlases.mjs`, add `UPDATED_SHEET_POSE_MAP`, keyed by `squirrel` and `terrier`. Each value is a 4×4 matrix of `{ left, top, width, height }` source rectangles selected from its 1536×1024 sheet. Assign rows in this exact output order:
+
+```js
+const squirrelRows = ["locomotion", "telegraph", "throw", "hit", "defeat"];
+const terrierRows = ["locomotion", "wake", "charge", "impact-hit", "recover", "defeat"];
+```
+
+Use the updated sheets only for squirrel and terrier. For each selected pose: extract, chroma-key the green background, remove only green-key fragments, crop alpha bounds, uniformly resize to fit the family envelope, center its primary body horizontally, align its feet to output y=175, then composite it into a transparent 192×192 cell. Preserve detached effects in their authored relationship to the primary body; do not discard the squirrel’s acorn release effect.
+
+Write the 4×4 prepared masters to `concepts/level-two/source/squirrel-motion-source.png` and `concepts/level-two/source/terrier-motion-source.png`. Keep the existing `standardOutputRows` and `terrierOutputRows` state-to-cell ownership so `LEVEL_TWO_ENEMY_ANIMATIONS` does not need a gameplay change.
+
+- [ ] **Step 4: Rebuild atlas and inspect the generated source/contact artifacts**
+
+Run: `node concepts/level-two/build-atlases.mjs`
+
+Expected: regenerated `public/assets/generated/level2-enemy-motion.png` and `concepts/level-two/level2-enemy-motion-contact-sheet.png` with green-free squirrel and terrier cells; skunk and moth rows remain generated by their existing inputs.
+
+- [ ] **Step 5: Run source and atlas integrity tests**
+
+Run: `node --test tests/level-two-enemies.test.mjs tests/terrier-animation-integrity.test.mjs`
+
+Expected: PASS. Every source/output cell is transparent around its art, feet-registered, and free of green-key background or atlas clipping.
+
+### Task 2: Protect state storytelling and runtime contracts
+
+**Files:**
+- Modify: `tests/level-two-enemies.test.mjs:440-487`
+- Modify: `tests/terrier-animation-integrity.test.mjs:68-149`
+- Modify: `tests/visual-inventory.test.mjs:61-80`
+- Verify: `app/level-two-enemies.mjs:339-420`
+
+**Interfaces:**
+- Consumes: `LEVEL_TWO_ENEMY_ANIMATIONS`, `LEVEL_TWO_ENEMY_DRAW_GEOMETRY`, `enemyAnimationFrame`, and the rebuilt atlas rows.
+- Produces: regression coverage proving updated art has not changed state ownership, attack timing, runtime dimensions, or collision geometry.
+
+- [ ] **Step 1: Write behavior-preservation assertions**
+
+Keep the existing squirrel release component assertion and add an assertion that its four attack primary-body widths stay within two pixels of the locomotion range. Keep terrier’s exact state-cell ownership test and assert recovery cells do not overlap impact or hit cells. Assert the unchanged values:
+
+```js
+assert.deepEqual(LEVEL_TWO_ENEMY_DRAW_GEOMETRY.squirrel, { drawWidth: 114, drawHeight: 114, anchor: "ground" });
+assert.deepEqual(LEVEL_TWO_ENEMY_DRAW_GEOMETRY.terrier, { drawWidth: 123, drawHeight: 123, anchor: "ground" });
+assert.deepEqual(LEVEL_TWO_ENEMY_COLLISION.squirrel, [50, 36]);
+assert.deepEqual(LEVEL_TWO_ENEMY_COLLISION.terrier, [64, 42]);
+```
+
+- [ ] **Step 2: Run the focused behavior suite**
+
+Run: `node --test tests/level-two-enemies.test.mjs tests/terrier-animation-integrity.test.mjs tests/visual-inventory.test.mjs tests/boss-animation.test.mjs`
+
+Expected: PASS with current state rows, frame counts, FPS, action timing, fixed draw geometry, and collision values unchanged.
+
+- [ ] **Step 3: Run the production build**
+
+Run: `npm run build`
+
+Expected: PASS with the regenerated atlas included in the production bundle.
+
+- [ ] **Step 4: Commit the art-pipeline refresh**
+
+```bash
+git add concepts/level-two/build-atlases.mjs concepts/level-two/source/squirrel-motion-source.png concepts/level-two/source/terrier-motion-source.png concepts/level-two/level2-enemy-motion-contact-sheet.png public/assets/generated/level2-enemy-motion.png tests/level-two-enemies.test.mjs tests/terrier-animation-integrity.test.mjs tests/visual-inventory.test.mjs
+git commit -m "feat: rebuild squirrel and terrier animation sprites"
+```
+
+### Task 3: Respect manual UI testing before final visual QA
+
+**Files:**
+- Modify: `docs/visual-audit.md`
+- Verify: `http://localhost:3000/?encounterTest=squirrel&visualQa=l2-squirrel`
+- Verify: `http://localhost:3000/?encounterTest=terrier&visualQa=l2-terrier`
+
+**Interfaces:**
+- Consumes: the rebuilt atlas, existing encounter test routes, and user manual-test result.
+- Produces: running-game visual evidence in the audit after the explicit manual-test gate opens.
+
+- [ ] **Step 1: Pause for the user’s manual test**
+
+Ask the user to test both Level 2 encounters locally. They should observe squirrel patrol, throw anticipation/release/recovery, hit and defeat; terrier sleep/wake, charge, obstacle impact, damage hit/recovery, and defeat. They should confirm no green background, no clipping, grounded feet, no size pops, readable effects, and unchanged combat contact.
+
+- [ ] **Step 2: Run browser/UI inspection only after the user reports manual results**
+
+Open each direct encounter route after manual confirmation. Capture screenshots at normal play scale and inspect consecutive frames around squirrel release and terrier wake/impact/recovery. Verify green-free alpha, bottom-ground registration, fixed presentation dimensions, no terrain penetration, no frame bleed, and unchanged desktop controls.
+
+- [ ] **Step 3: Record final visual evidence**
+
+Append the actual routes, viewport, states exercised, screenshots, observed source-to-runtime result, automated checks, and unresolved conditions to `docs/visual-audit.md`. Use `PASS` only for observed running-game results; label anything not observed as `INCOMPLETE`.

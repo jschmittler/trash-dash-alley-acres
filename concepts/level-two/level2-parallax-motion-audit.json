@@ -165,12 +165,12 @@
         "middle": 0,
         "close": 0
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
         "close": []
       },
-      "closeCenterCoverage": 0.04160786290322581
+      "closeCenterCoverage": 0
     },
     {
       "row": "moonlit-backyard",
@@ -180,12 +180,12 @@
         "middle": -26,
         "close": -62
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
         "close": []
       },
-      "closeCenterCoverage": 0.002116935483870968
+      "closeCenterCoverage": 0
     },
     {
       "row": "moonlit-backyard",
@@ -195,7 +195,7 @@
         "middle": -53,
         "close": -125
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
         "close": []
@@ -210,7 +210,7 @@
         "middle": -42,
         "close": -100
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
         "close": []
@@ -225,7 +225,7 @@
         "middle": -69,
         "close": -163
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
         "close": []
@@ -240,7 +240,7 @@
         "middle": -95,
         "close": -225
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
         "close": []
@@ -255,12 +255,12 @@
         "middle": -122,
         "close": -289
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
         "close": []
       },
-      "closeCenterCoverage": 0.0025789650537634407
+      "closeCenterCoverage": 0
     },
     {
       "row": "backyard-obstacle-course",
@@ -270,12 +270,12 @@
         "middle": -149,
         "close": -351
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
         "close": []
       },
-      "closeCenterCoverage": 0.0012012768817204302
+      "closeCenterCoverage": 0.0008568548387096774
     },
     {
       "row": "backyard-obstacle-course",
@@ -285,12 +285,14 @@
         "middle": -175,
         "close": -413
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
-        "close": []
+        "close": [
+          907
+        ]
       },
-      "closeCenterCoverage": 0.0003024193548387097
+      "closeCenterCoverage": 0.010114247311827957
     },
     {
       "row": "drainage-ditch",
@@ -300,12 +302,14 @@
         "middle": -205,
         "close": -484
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
-        "close": []
+        "close": [
+          836
+        ]
       },
-      "closeCenterCoverage": 0
+      "closeCenterCoverage": 0.0009912634408602151
     },
     {
       "row": "drainage-ditch",
@@ -315,12 +319,14 @@
         "middle": -231,
         "close": -546
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
-        "close": []
+        "close": [
+          774
+        ]
       },
-      "closeCenterCoverage": 0
+      "closeCenterCoverage": 0.0009912634408602151
     },
     {
       "row": "drainage-ditch",
@@ -330,12 +336,14 @@
         "middle": -257,
         "close": -608
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
-        "close": []
+        "close": [
+          712
+        ]
       },
-      "closeCenterCoverage": 0
+      "closeCenterCoverage": 0.0009912634408602151
     },
     {
       "row": "suburban-main-street",
@@ -345,10 +353,12 @@
         "middle": -279,
         "close": -659
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
-        "close": []
+        "close": [
+          661
+        ]
       },
       "closeCenterCoverage": 0
     },
@@ -360,10 +370,12 @@
         "middle": -305,
         "close": -722
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
-        "close": []
+        "close": [
+          598
+        ]
       },
       "closeCenterCoverage": 0
     },
@@ -375,10 +387,12 @@
         "middle": -332,
         "close": -784
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
-        "close": []
+        "close": [
+          536
+        ]
       },
       "closeCenterCoverage": 0
     },
@@ -390,12 +404,12 @@
         "middle": -36,
         "close": -86
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
         "close": []
       },
-      "closeCenterCoverage": 0.00022681451612903227
+      "closeCenterCoverage": 0
     },
     {
       "row": "moonlit-backyard-to-next",
@@ -405,7 +419,7 @@
         "middle": -42,
         "close": -100
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
         "close": []
@@ -420,7 +434,7 @@
         "middle": -48,
         "close": -114
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
         "close": []
@@ -435,7 +449,7 @@
         "middle": -116,
         "close": -274
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
         "close": []
@@ -450,12 +464,12 @@
         "middle": -122,
         "close": -289
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
         "close": []
       },
-      "closeCenterCoverage": 0.0025789650537634407
+      "closeCenterCoverage": 0
     },
     {
       "row": "garbage-night-street-to-next",
@@ -465,12 +479,12 @@
         "middle": -128,
         "close": -303
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
         "close": []
       },
-      "closeCenterCoverage": 0.0025369623655913977
+      "closeCenterCoverage": 0
     },
     {
       "row": "backyard-obstacle-course-to-next",
@@ -480,12 +494,14 @@
         "middle": -199,
         "close": -469
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
-        "close": []
+        "close": [
+          851
+        ]
       },
-      "closeCenterCoverage": 0
+      "closeCenterCoverage": 0.0231434811827957
     },
     {
       "row": "backyard-obstacle-course-to-next",
@@ -495,12 +511,14 @@
         "middle": -205,
         "close": -484
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
-        "close": []
+        "close": [
+          836
+        ]
       },
-      "closeCenterCoverage": 0
+      "closeCenterCoverage": 0.0009912634408602151
     },
     {
       "row": "backyard-obstacle-course-to-next",
@@ -510,12 +528,14 @@
         "middle": -211,
         "close": -498
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
-        "close": []
+        "close": [
+          822
+        ]
       },
-      "closeCenterCoverage": 0
+      "closeCenterCoverage": 0.0009912634408602151
     },
     {
       "row": "drainage-ditch-to-next",
@@ -525,12 +545,14 @@
         "middle": -273,
         "close": -645
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
-        "close": []
+        "close": [
+          675
+        ]
       },
-      "closeCenterCoverage": 0
+      "closeCenterCoverage": 0.0009912634408602151
     },
     {
       "row": "drainage-ditch-to-next",
@@ -540,10 +562,12 @@
         "middle": -279,
         "close": -659
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
-        "close": []
+        "close": [
+          661
+        ]
       },
       "closeCenterCoverage": 0
     },
@@ -555,10 +579,12 @@
         "middle": -285,
         "close": -673
       },
-      "visibleSeams": {
+      "tileBoundaryPositions": {
         "far": [],
         "middle": [],
-        "close": []
+        "close": [
+          647
+        ]
       },
       "closeCenterCoverage": 0
     }
@@ -566,7 +592,7 @@
   "summary": {
     "chapterSweeps": 5,
     "boundarySweeps": 4,
-    "maxCloseCenterCoverage": 0.04160786290322581,
+    "maxCloseCenterCoverage": 0.0231434811827957,
     "visibleTileSeams": 0,
     "tallObjectMotion": "whole middle plates use one offset per frame and reverse with the same samples",
     "landingTargets": "yellow overlays use active Level 2 surface tops and remain above close scenery"

@@ -6,6 +6,7 @@ import { LEVEL_TWO } from "../app/level-two.mjs";
 import {
   levelBackgroundAssetEntries,
   levelBackgroundBlendAt,
+  levelBackgroundPlateContract,
   PARALLAX_SPEEDS,
 } from "../app/level-background.mjs";
 
@@ -35,4 +36,9 @@ test("background asset entries are scoped to only the selected active level", ()
   assert.equal(levelTwo.every(({ source }) => source.includes("/level2-")), true);
   assert.equal(levelOne.some(({ source }) => source.includes("/level2-")), false);
   assert.equal(levelTwo.some(({ source }) => source.includes("/level1-")), false);
+});
+
+test("background plate contracts preserve v2 geometry for Levels 1 and 2", () => {
+  assert.deepEqual(levelBackgroundPlateContract(LEVEL_ONE), { width: 1320, height: 540, drawY: 0 });
+  assert.deepEqual(levelBackgroundPlateContract(LEVEL_TWO), { width: 1320, height: 540, drawY: 0 });
 });

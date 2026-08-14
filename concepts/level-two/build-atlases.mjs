@@ -22,9 +22,12 @@ const standardOutputRows = Object.freeze([
 // approved four-by-four source master; the final recovery cell repeats the
 // first charge pose so returning control cannot introduce a registration pop.
 const terrierOutputRows = Object.freeze([
-  ...standardOutputRows.slice(0, 4),
-  Object.freeze([[3, 1], [3, 2], [3, 3], [2, 0]]),
-  Object.freeze([[3, 2], [1, 0], [3, 2], [1, 0]]),
+  Object.freeze([[0, 0], [0, 1], [0, 2], [0, 3]]),
+  Object.freeze([[1, 0], [1, 1], [1, 2], [1, 3]]),
+  Object.freeze([[2, 0], [2, 1], [2, 2], [2, 3]]),
+  Object.freeze([[3, 0], [3, 1], [3, 2], [3, 3]]),
+  Object.freeze([[3, 1], [1, 3], [2, 0], [2, 1]]),
+  Object.freeze([[3, 2], [3, 3], [3, 2], [3, 3]]),
 ]);
 
 const roster = [
@@ -35,6 +38,44 @@ const roster = [
 ];
 const outputRowCount = Math.max(...roster.map(({ row, outputRows }) => row + outputRows.length));
 
+const sheetPose = (left, top, width, height = 192) => Object.freeze({ left, top, width, height });
+
+const UPDATED_SHEET_POSE_MAP = Object.freeze({
+  squirrel: Object.freeze([
+    [sheetPose(202, 348, 194, 155), sheetPose(429, 348, 210, 155), sheetPose(648, 348, 204, 155), sheetPose(860, 348, 234, 155)],
+    [sheetPose(167, 491, 170, 190), sheetPose(337, 491, 185, 190), sheetPose(522, 491, 185, 190), sheetPose(672, 491, 183, 190)],
+    [sheetPose(167, 491, 170, 190), sheetPose(337, 491, 185, 190), sheetPose(522, 491, 185, 190), sheetPose(672, 491, 183, 190)],
+    [sheetPose(181, 673, 196, 215), sheetPose(382, 673, 193, 215), sheetPose(181, 673, 196, 215), sheetPose(382, 673, 193, 215)],
+  ]),
+  terrier: Object.freeze([
+    [sheetPose(152, 188, 242, 187), sheetPose(393, 188, 234, 187), sheetPose(618, 188, 214, 187), sheetPose(821, 188, 230, 187)],
+    [sheetPose(135, 510, 242, 211), sheetPose(377, 510, 242, 211), sheetPose(627, 510, 263, 211), sheetPose(898, 510, 296, 211)],
+    [sheetPose(143, 360, 295, 165), sheetPose(448, 360, 334, 165), sheetPose(792, 360, 331, 165), sheetPose(1121, 360, 364, 165)],
+    [sheetPose(168, 702, 180, 187), sheetPose(406, 702, 187, 187), sheetPose(168, 702, 180, 187), sheetPose(406, 702, 187, 187)],
+  ]),
+});
+
+// This source-sheet element is an effects-layer tail used to illustrate the
+// acorn's flight. It is not a squirrel pose and must never enter a runtime cell.
+const SQUIRREL_EXCLUDED_SOURCE_REGIONS = Object.freeze([
+  Object.freeze({ left: 1020, top: 520, width: 190, height: 150, label: "detached-flight-tail" }),
+]);
+
+const rectanglesOverlap = (left, right) => (
+  left.left < right.left + right.width
+  && left.left + left.width > right.left
+  && left.top < right.top + right.height
+  && left.top + left.height > right.top
+);
+
+const assertPoseAvoidsExcludedRegions = (kind, pose) => {
+  if (kind !== "squirrel") return;
+  const excluded = SQUIRREL_EXCLUDED_SOURCE_REGIONS.find((region) => rectanglesOverlap(pose, region));
+  if (excluded) {
+    throw new Error(`squirrel pose overlaps excluded source element "${excluded.label}"`);
+  }
+};
+
 const keyOut = async (input) => {
   const { data, info } = await sharp(input).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   for (let offset = 0; offset < data.length; offset += 4) {
@@ -42,8 +83,9 @@ const keyOut = async (input) => {
     const red = data[offset];
     const green = data[offset + 1];
     const blue = data[offset + 2];
-    const chromaDistance = Math.hypot(255 - red, green, 255 - blue);
-    if (chromaDistance < 118 || (red > 185 && blue > 145 && green < 110)) {
+    const magentaDistance = Math.hypot(255 - red, green, 255 - blue);
+    const greenScreen = green > 100 && green > red * 1.5 && green > blue * 1.5;
+    if (magentaDistance < 118 || greenScreen || (red > 185 && blue > 145 && green < 110)) {
       data[offset + 3] = 0;
       continue;
     }
@@ -134,7 +176,8 @@ const cleanDetachedKeyFragments = async (input) => {
   const primaryArea = components[0].area;
   for (const component of components.slice(1)) {
     const purpleBiased = (component.red + component.blue) / 2 > component.green * 1.35;
-    if (component.area >= primaryArea * 0.02 || !purpleBiased) continue;
+    const keyedFragment = component.area < primaryArea * 0.02 && purpleBiased;
+    if (component.area > 8 && !keyedFragment) continue;
     for (const pixel of component.pixels) data[pixel * 4 + 3] = 0;
   }
   return sharp(data, { raw: info }).png().toBuffer();
@@ -171,6 +214,56 @@ const alphaBounds = async (input) => {
   return { left, top, width: right - left + 1, height: bottom - top + 1 };
 };
 
+const buildUpdatedSourceMaster = async (enemy) => {
+  const layout = UPDATED_SHEET_POSE_MAP[enemy.kind];
+  if (!layout) return;
+  const sheetPath = path.join(sourceDir, `${enemy.kind}-updated-sheet.png`);
+  const prepared = [];
+  for (const row of layout) {
+    for (const pose of row) {
+      assertPoseAvoidsExcludedRegions(enemy.kind, pose);
+      const { left, top, width, height } = pose;
+      const extracted = await sharp(sheetPath).extract({ left, top, width, height }).png().toBuffer();
+      const transparent = await cleanDetachedKeyFragments(await keyOut(extracted));
+      const bounds = await alphaBounds(transparent);
+      const cropped = await sharp(transparent).extract(bounds).png().toBuffer();
+      const metadata = await sharp(cropped).metadata();
+      prepared.push({ cropped, width: metadata.width, height: metadata.height, primary: await primaryAlphaBounds(cropped) });
+    }
+  }
+  const scale = Math.min(
+    1,
+    enemy.maxWidth / Math.max(...prepared.map(({ primary }) => primary.width)),
+    enemy.maxHeight / Math.max(...prepared.map(({ primary }) => primary.height)),
+    (CELL - 8) / Math.max(...prepared.map(({ width }) => width)),
+    (CELL - 24) / Math.max(...prepared.map(({ height }) => height)),
+  );
+  const composites = [];
+  for (const [index, pose] of prepared.entries()) {
+    const resized = await sharp(pose.cropped)
+      .resize(
+        Math.max(1, Math.round((await sharp(pose.cropped).metadata()).width * scale)),
+        Math.max(1, Math.round((await sharp(pose.cropped).metadata()).height * scale)),
+        { kernel: "nearest" },
+      )
+      .png()
+      .toBuffer();
+    const primary = await primaryAlphaBounds(resized);
+    const resizedMeta = await sharp(resized).metadata();
+    const left = Math.max(4, Math.min(CELL - 4 - resizedMeta.width, Math.round(CELL / 2 - (primary.left + primary.width / 2))));
+    const top = Math.max(4, Math.min(176 - resizedMeta.height, 176 - resizedMeta.height));
+    const row = Math.floor(index / SOURCE_GRID);
+    const column = index % SOURCE_GRID;
+    composites.push({ input: resized, left: column * CELL + left, top: row * CELL + top });
+  }
+  await sharp({
+    create: { width: SOURCE_GRID * CELL, height: SOURCE_GRID * CELL, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+  })
+    .composite(composites)
+    .png({ palette: true, colours: 32, dither: 0 })
+    .toFile(path.join(sourceDir, `${enemy.kind}-motion-source.png`));
+};
+
 const sourceCells = async (kind) => {
   const file = path.join(sourceDir, `${kind}-motion-source.png`);
   const metadata = await sharp(file).metadata();
@@ -204,25 +297,30 @@ const sourceCells = async (kind) => {
     }
   }
   if (kind === "squirrel") {
-    const throwFile = path.join(sourceDir, "squirrel-throw-source.png");
-    const throwMetadata = await sharp(throwFile).metadata();
-    const throwWidth = Math.floor(throwMetadata.width / SOURCE_GRID);
+    const locomotionWidth = Math.round(
+      cells[0].reduce((sum, { primaryWidth }) => sum + primaryWidth, 0) / cells[0].length,
+    );
     for (let column = 0; column < SOURCE_GRID; column += 1) {
-      const extracted = await sharp(throwFile)
-        .extract({ left: column * throwWidth, top: 0, width: throwWidth, height: throwMetadata.height })
+      const source = cells[2][column];
+      const scale = locomotionWidth / source.primaryWidth;
+      const normalized = await sharp(source.cropped)
+        .resize(
+          Math.max(1, Math.round(source.width * scale)),
+          Math.max(1, Math.round(source.height * scale)),
+          { kernel: "nearest" },
+        )
         .png()
         .toBuffer();
-      const transparent = await cleanDetachedKeyFragments(await keyOut(extracted));
-      const bounds = await alphaBounds(transparent);
-      const primary = await primaryAlphaBounds(transparent);
+      const metadata = await sharp(normalized).metadata();
+      const primary = await primaryAlphaBounds(normalized);
       cells[2][column] = {
-        cropped: await sharp(transparent).extract(bounds).png().toBuffer(),
-        width: bounds.width,
-        height: bounds.height,
+        cropped: normalized,
+        width: metadata.width,
+        height: metadata.height,
         primaryWidth: primary.width,
         primaryHeight: primary.height,
-        primaryLeft: primary.left - bounds.left,
-        primaryTop: primary.top - bounds.top,
+        primaryLeft: primary.left,
+        primaryTop: primary.top,
       };
     }
   }
@@ -266,7 +364,7 @@ const normalizedFrames = async (enemy) => {
       const source = cells[sourceRow][sourceColumn];
       const resizedWidth = Math.max(1, Math.round(source.width * scale));
       const resizedHeight = Math.max(1, Math.round(source.height * scale));
-      const resized = await despillPurple(await cleanDetachedKeyFragments(await sharp(source.cropped)
+      const resized = await cleanDetachedKeyFragments(await despillPurple(await sharp(source.cropped)
         .resize(resizedWidth, resizedHeight, { kernel: "nearest" })
         .png({ palette: true, colours: 28, dither: 0 })
         .toBuffer()));
@@ -277,7 +375,7 @@ const normalizedFrames = async (enemy) => {
       const primary = await primaryAlphaBounds(tightlyCropped);
       const left = Math.round(CELL / 2 - (primary.left + primary.width / 2));
       const top = enemy.grounded
-        ? CELL - 16 - (primary.top + primary.height)
+        ? CELL - 16 - height
         : Math.round(CELL / 2 - (primary.top + primary.height / 2));
       if (left < 0 || top < 0 || left + width > CELL || top + height > CELL) {
         throw new Error(`${enemy.kind} source ${sourceRow}:${sourceColumn} clips after primary alignment`);
@@ -291,6 +389,10 @@ const normalizedFrames = async (enemy) => {
   }
   return frames;
 };
+
+for (const enemy of roster.filter(({ kind }) => kind === "squirrel" || kind === "terrier")) {
+  await buildUpdatedSourceMaster(enemy);
+}
 
 const composites = [];
 for (const enemy of roster) composites.push(...await normalizedFrames(enemy));

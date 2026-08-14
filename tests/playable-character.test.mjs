@@ -28,6 +28,12 @@ test("registry exposes raccoon and Jimothy with complete profile metadata", () =
     assert.ok(profile.selectionPortraitSrc.endsWith("-selection-portrait.png"));
     assert.ok(profile.small.width < profile.large.width);
     assert.ok(profile.small.height < profile.large.height);
+    assert.deepEqual(
+      [profile.small.drawWidth, profile.small.drawHeight, profile.large.drawWidth, profile.large.drawHeight],
+      [126, 126, 132, 132],
+    );
+    assert.deepEqual(profile.small.hitbox, { x: 4, y: 3, w: 24, h: 43 });
+    assert.deepEqual(profile.large.hitbox, { x: 4, y: 4, w: 30, h: 54 });
     assert.ok(profile.small.hitbox.w > 0 && profile.large.hitbox.h > 0);
     assert.ok(profile.attackFrames.includes(1));
     assert.ok(profile.animations.small_idle);

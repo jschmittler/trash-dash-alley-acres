@@ -24,8 +24,8 @@ const zones = [
   { id: "moonlit-backyard", startX: 0, endX: 1250, background: "backyard", lighting: "moonlit", landmark: "porch-and-fence" },
   { id: "garbage-night-street", startX: 1250, endX: 2700, background: "street", lighting: "night", landmark: "parked-cars" },
   { id: "backyard-obstacle-course", startX: 2700, endX: 4200, background: "obstacle", lighting: "moonlit", landmark: "treehouse" },
-  { id: "drainage-ditch", startX: 4200, endX: 5550, background: "drainage", lighting: "pre-dawn", landmark: "culvert" },
-  { id: "suburban-main-street", startX: 5550, endX: 7200, background: "main-street", lighting: "pre-dawn", landmark: "cul-de-sac" },
+  { id: "drainage-ditch", startX: 4200, endX: 5550, background: "drainage", lighting: "night", landmark: "culvert" },
+  { id: "suburban-main-street", startX: 5550, endX: 7200, background: "main-street", lighting: "night", landmark: "cul-de-sac" },
 ];
 
 // Support records are the only standable geometry. Hazards stay out of this
@@ -38,7 +38,7 @@ const surfaces = [
   { id: "street-mailbox", x: 2070, y: 382, w: 100, h: 22, kind: "branch" },
   { id: "parked-car-west", x: 2190, y: 358, w: 185, h: 26, kind: "metal" },
   { id: "parked-car-east", x: 2415, y: 358, w: 185, h: 26, kind: "metal" },
-  { id: "street-fence-east", x: 2510, y: 332, w: 145, h: 24, kind: "branch" },
+  { id: "street-fence-east", x: 2510, y: 332, w: 160, h: 24, kind: "branch" },
   { id: "obstacle-lawn", x: 2700, y: 468, w: 1500, h: 90, kind: "ground" },
   { id: "trampoline-landing", x: 3030, y: 400, w: 145, h: 22, kind: "metal" },
   { id: "obstacle-fence", x: 3280, y: 338, w: 220, h: 24, kind: "branch" },
@@ -65,15 +65,15 @@ const flightBands = [
 const encounters = [
   {
     id: "backyard-squirrel-tutorial", zoneId: "moonlit-backyard", spawnX: 740, sizeClass: "small",
-    enemies: [{ kind: "squirrel", movement: "platform", x: 800, patrol: [720, 911], surfaceId: "backyard-fence" }],
+    enemies: [{ kind: "squirrel", movement: "platform", x: 800, patrol: [738, 892], surfaceId: "backyard-fence" }],
   },
   {
     id: "street-terrier-tutorial", zoneId: "garbage-night-street", spawnX: 1540, sizeClass: "large", recoveryEndX: 2500,
-    enemies: [{ kind: "terrier", movement: "grounded", x: 1580, patrol: [1420, 2340], surfaceId: "street-ground" }],
+    enemies: [{ kind: "terrier", movement: "grounded", x: 1580, patrol: [1420, 2270], surfaceId: "street-ground" }],
   },
   {
     id: "street-squirrel-repeat", zoneId: "garbage-night-street", spawnX: 2520, sizeClass: "small", bypass: "parked-car-route",
-    enemies: [{ kind: "squirrel", movement: "platform", x: 2570, patrol: [2539, 2576], surfaceId: "street-fence-east" }],
+    enemies: [{ kind: "squirrel", movement: "platform", x: 2570, patrol: [2558, 2572], surfaceId: "street-fence-east" }],
   },
   {
     id: "obstacle-skunk-tutorial", zoneId: "backyard-obstacle-course", spawnX: 2900, sizeClass: "medium",
@@ -82,7 +82,7 @@ const encounters = [
   {
     id: "obstacle-interaction-test", zoneId: "backyard-obstacle-course", spawnX: 3480, sizeClass: "medium", bypass: "treehouse-route",
     enemies: [
-      { kind: "squirrel", movement: "platform", x: 3640, patrol: [3580, 3751], surfaceId: "treehouse-platform" },
+      { kind: "squirrel", movement: "platform", x: 3640, patrol: [3598, 3732], surfaceId: "treehouse-platform" },
       { kind: "skunk", movement: "grounded", x: 3440, patrol: [3300, 3550], surfaceId: "obstacle-lawn" },
     ],
   },
@@ -95,7 +95,7 @@ const encounters = [
     enemies: [
       { kind: "moth", movement: "flying", x: 4400, flightY: 280, flightBand: "drainage-moth-low", patrol: [4328, 4542] },
       { kind: "moth", movement: "flying", x: 4680, flightY: 205, flightBand: "drainage-moth-high", patrol: [4528, 4742] },
-      { kind: "terrier", movement: "grounded", x: 5030, patrol: [4955, 5250], surfaceId: "drainage-landing" },
+      { kind: "terrier", movement: "grounded", x: 5030, patrol: [5007, 5250], surfaceId: "drainage-landing" },
     ],
   },
   // This is a population marker, not an ordinary hostile group. It keeps the

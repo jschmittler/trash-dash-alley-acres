@@ -110,8 +110,15 @@ export function brutusTopHitRegion(boss, state = createBrutusState(), elapsed = 
 }
 
 export function isBrutusTopHit(player, boss, previousBottom, state = createBrutusState(), elapsed = 0) {
-  const region = brutusTopHitRegion(boss, state, elapsed);
-  if (!region) return false;
+  if (state?.mode !== "stunned-open") return false;
+  const visibleTop = brutusTopHitRegion(boss, state, elapsed);
+  if (!visibleTop) return false;
+  const region = {
+    x: boss.x + (boss.w - 76) / 2,
+    y: visibleTop.y,
+    w: 76,
+    h: 24,
+  };
   const currentBottom = player.y + player.h;
   return player.vy > 80
     && previousBottom <= region.y

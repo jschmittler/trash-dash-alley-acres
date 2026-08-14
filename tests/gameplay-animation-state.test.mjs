@@ -108,15 +108,15 @@ test("pit fall consumes exactly one paw immediately", () => {
   assert.deepEqual(resolvePitFall(0), { lives: 0, outcome: "gameover" });
 });
 
-test("terminal pit fall preserves instant death but commits small_defeat before gameover", () => {
+test("terminal pit fall moves straight to gameover without an offscreen defeat delay", () => {
   assert.deepEqual(presentPitDefeat({
     pit: resolvePitFall(1),
     defeatAnimation: { frames: 4, fps: 6 },
   }), {
     lives: 0,
     outcome: "gameover",
-    animationName: "small_defeat",
-    duration: 4 / 6,
+    animationName: null,
+    duration: 0,
   });
 });
 
@@ -132,7 +132,7 @@ test("non-terminal pit fall does not queue a defeat presentation", () => {
   });
 });
 
-test("actual pit threshold carries Jimothy through defeat's final frame before gameover", () => {
+test("actual terminal pit threshold reaches gameover without retaining an offscreen animation", () => {
   const viewportHeight = 540;
   const jimothy = getPlayableCharacter("jimothy");
   const transition = beginPitFallTransition({
@@ -147,8 +147,8 @@ test("actual pit threshold carries Jimothy through defeat's final frame before g
     outcome: "gameover",
     respawn: false,
     checkpoint: "preserve",
-    animationName: "small_defeat",
-    duration: 4 / 6,
+    animationName: null,
+    duration: 0,
     player: {
       large: false,
       hurtTimer: 0,
@@ -157,27 +157,15 @@ test("actual pit threshold carries Jimothy through defeat's final frame before g
       glider: 0,
       shrinkTimer: 0,
       endSequence: "gameover",
-      endTimer: 4 / 6,
-      animationName: "small_defeat",
+      endTimer: 0,
+      animationName: null,
       animationElapsed: 0,
       vx: 0,
       vy: 0,
       grounded: true,
     },
   });
-  assert.equal(selectCharacterAnimation(jimothy, {
-    form: "small", defeated: transition.player.endSequence === "gameover", grounded: true, vx: 0,
-  }), "small_defeat");
-
-  const held = advanceEndSequence({
-    sequence: transition.player.endSequence,
-    timer: transition.duration,
-    dt: transition.duration - 1 / 120,
-  });
-  assert.equal(held.completedScreen, null);
-  assert.equal(held.sequence, "gameover");
-  assert.equal(animationFrame(jimothy.animations.small_defeat, transition.duration - held.timer), 3);
-  assert.deepEqual(advanceEndSequence({ sequence: held.sequence, timer: held.timer, dt: held.timer }), {
+  assert.deepEqual(advanceEndSequence({ sequence: transition.player.endSequence, timer: transition.duration, dt: 1 / 60 }), {
     sequence: null,
     timer: 0,
     completedScreen: "gameover",
